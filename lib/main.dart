@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:rumble/utils/permissions.dart';
+import 'package:rumble/components/audio_input_indicator.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,7 +36,9 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
+        child: Stack(
+          children: [
+            Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -53,8 +57,25 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               const SizedBox(height: 32),
               ShadButton(
-                onPressed: () {
-                  // TODO: Implement server connection
+                onPressed: () async {
+                  final granted = await PermissionUtils.requestMicrophonePermission();
+                  if (mounted) {
+                    if (granted) {
+                      ShadToaster.of(context).show(
+                        const ShadToast(
+                          description: Text('Microphone permission granted!'),
+                        ),
+                      );
+                      // Refresh the UI to show the indicator is active
+                      setState(() {});
+                    } else {
+                      ShadToaster.of(context).show(
+                        const ShadToast.destructive(
+                          description: Text('Microphone access is required.'),
+                        ),
+                      );
+                    }
+                  }
                 },
                 child: const Text('Connect to Server'),
               ),
@@ -67,6 +88,13 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ],
           ),
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: AudioInputIndicator(),
+            ),
+          ],
         ),
       ),
     );
