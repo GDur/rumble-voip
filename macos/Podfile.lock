@@ -4,11 +4,14 @@ PODS:
   - flutter_macos_permissions (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - record_macos (1.2.0):
+    - FlutterMacOS
 
 DEPENDENCIES:
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
   - flutter_macos_permissions (from `Flutter/ephemeral/.symlinks/plugins/flutter_macos_permissions/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
 
 EXTERNAL SOURCES:
   device_info_plus:
@@ -17,11 +20,14 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_macos_permissions/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  record_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/record_macos/macos
 
 SPEC CHECKSUMS:
   device_info_plus: 1b14eed9bf95428983aed283a8d51cce3d8c4215
   flutter_macos_permissions: ec12b9e8b22da91abcbd572582b59e4278f97d4b
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  record_macos: 4680f37daeebf52162e715efb7ff682f0a5ce4fd
 
 PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
 

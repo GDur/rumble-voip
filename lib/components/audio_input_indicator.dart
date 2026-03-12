@@ -18,6 +18,7 @@ class _AudioInputIndicatorState extends State<AudioInputIndicator> {
   double _currentVolume = 0.0;
   bool _hasPermission = false;
   bool _isMonitoring = false;
+  Timer? _statusTimer;
 
   @override
   void initState() {
@@ -26,15 +27,31 @@ class _AudioInputIndicatorState extends State<AudioInputIndicator> {
   }
 
   Future<void> _checkPermissionAndStart() async {
-    final granted = await PermissionUtils.isMicrophonePermissionGranted();
+    // Check using our utility AND the recorder's own check
+    final statusGranted = await PermissionUtils.isMicrophonePermissionGranted();
+    final recorderGranted = await _audioRecorder.hasPermission();
+    final granted = statusGranted || recorderGranted;
+    
+    debugPrint('[AudioInputIndicator] Permission check: status=$statusGranted, recorder=$recorderGranted');
+    
     if (mounted) {
-      setState(() {
-        _hasPermission = granted;
-      });
-      if (granted) {
+      if (granted && !_hasPermission) {
+        setState(() => _hasPermission = true);
         _startMonitoring();
+        _statusTimer?.cancel(); // Stop checking once granted
+      } else if (!granted && _statusTimer == null) {
+        // Start polling every second if we don't have permission yet
+        _statusTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          _checkPermissionAndStart();
+        });
       }
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant AudioInputIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkPermissionAndStart();
   }
 
   Future<void> _startMonitoring() async {
@@ -60,25 +77,42 @@ class _AudioInputIndicatorState extends State<AudioInputIndicator> {
           return;
         }
 
-        final amplitude = await _audioRecorder.getAmplitude();
-        if (mounted) {
-          setState(() {
-            // Amplitude current value is usually -160 to 0 (dBfs)
-            // We want to show movement even for quiet sounds
-            // Range: -50dB (silence) to 0dB (loud)
-            double volume = (amplitude.current + 50) / 50;
-            _currentVolume = volume.clamp(0.0, 1.0);
-          });
+        try {
+          final isRecording = await _audioRecorder.isRecording();
+          if (!isRecording && _hasPermission) {
+             // Try to restart if it stopped for some reason
+             final tempDir = await getTemporaryDirectory();
+             final path = '${tempDir.path}/rumble_mic_monitor.m4a';
+             await _audioRecorder.start(const RecordConfig(), path: path);
+          }
+
+          final amplitude = await _audioRecorder.getAmplitude();
+          if (mounted) {
+            setState(() {
+              // We want to show movement even for quiet sounds
+              // Range: -50dB (silence) to 0dB (loud)
+              // If current is -160, it means no data
+              if (amplitude.current <= -100) {
+                 _currentVolume = 0.0;
+              } else {
+                double volume = (amplitude.current + 50) / 50;
+                _currentVolume = volume.clamp(0.0, 1.0);
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint('[AudioInputIndicator] Monitoring error: $e');
         }
       });
     } catch (e) {
-      debugPrint('Error monitoring audio: $e');
+      debugPrint('[AudioInputIndicator] Error monitoring audio: $e');
       _isMonitoring = false;
     }
   }
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _isMonitoring = false;
     _amplitudeSubscription?.cancel();
     _audioRecorder.dispose();
@@ -90,56 +124,91 @@ class _AudioInputIndicatorState extends State<AudioInputIndicator> {
     final theme = ShadTheme.of(context);
     
     return Container(
-      width: 120,
-      padding: const EdgeInsets.all(8),
+      width: 140, // Increased width
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.popover.withAlpha(200),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.border),
+        color: theme.colorScheme.popover.withAlpha(220),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(50),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'MIC STATUS',
-            style: theme.textTheme.muted.copyWith(fontSize: 10, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          // The "Progress" item
-          Container(
-            height: 6,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: _hasPermission ? Colors.grey.withAlpha(50) : Colors.grey.withAlpha(100),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: _hasPermission ? _currentVolume : 1.0, // Full width gray if no permission
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 50),
-                decoration: BoxDecoration(
-                  color: _hasPermission 
-                      ? Colors.green.withAlpha(150) // Transparent green
-                      : Colors.transparent, // Let the background gray show
-                  borderRadius: BorderRadius.circular(3),
-                  boxShadow: _hasPermission && _currentVolume > 0.05 ? [
-                    BoxShadow(
-                      color: Colors.green.withAlpha(100),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    )
-                  ] : null,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'MIC STATUS',
+                style: theme.textTheme.muted.copyWith(
+                  fontSize: 10, 
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
                 ),
               ),
+              if (_isMonitoring)
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // The "Progress" item
+          Container(
+            height: 10, // Thicker bar
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey.withAlpha(30),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Stack(
+              children: [
+                FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: _hasPermission ? _currentVolume : 1.0,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 40), // Faster response
+                    decoration: BoxDecoration(
+                      color: _hasPermission 
+                          ? Colors.green.withAlpha(180) // More solid green
+                          : Colors.grey.withAlpha(80), // Pure gray for no permission
+                      borderRadius: BorderRadius.circular(5),
+                      boxShadow: _hasPermission && _currentVolume > 0.1 ? [
+                        BoxShadow(
+                          color: Colors.green.withAlpha(150),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        )
+                      ] : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (!_hasPermission) ...[
-            const SizedBox(height: 4),
-            Text(
-              'No Access',
-              style: theme.textTheme.muted.copyWith(fontSize: 8, color: Colors.orange),
+            const SizedBox(height: 6),
+            Center(
+              child: Text(
+                'Awaiting Permission',
+                style: theme.textTheme.muted.copyWith(
+                  fontSize: 9, 
+                  color: Colors.orange.withAlpha(200),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ]
         ],
