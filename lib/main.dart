@@ -31,6 +31,16 @@ class MyApp extends StatelessWidget {
             backgroundColor: const Color(0xFF64FFDA),
             foregroundColor: Colors.black,
           ),
+          primaryToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, -32),
+            duration: const Duration(seconds: 4),
+          ),
+          destructiveToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, -32),
+            duration: const Duration(seconds: 6),
+          ),
           textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
         ),
         home: const HomeScreen(),
@@ -53,6 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _usernameController = TextEditingController(text: 'Rumble - Mumble Reloaded');
   final _passwordController = TextEditingController();
   bool _isAutoName = true;
+  String? _connectingServerId;
 
   @override
   void dispose() {
@@ -267,38 +278,55 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           if (service.isConnected)
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF64FFDA).withValues(alpha: 0.2)),
-                  ),
-                  child: const Row(
-                    children: [
-                      CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
-                      SizedBox(width: 8),
-                      Text(
-                        'CONNECTED',
-                        style: TextStyle(
-                          color: Color(0xFF64FFDA),
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1,
+            Builder(
+              builder: (context) {
+                final bool hideText = MediaQuery.of(context).size.width < 500;
+                return Row(
+                  children: [
+                    ShadTooltip(
+                      builder: (context) => const Text('Connected to Server'),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: hideText ? 8 : 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF64FFDA).withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
+                            if (!hideText) ...[
+                              const SizedBox(width: 8),
+                              const Text(
+                                'CONNECTED',
+                                style: TextStyle(
+                                  color: Color(0xFF64FFDA),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.white54, size: 20),
-                  onPressed: () => service.disconnect(),
-                  tooltip: 'Disconnect',
-                ),
-              ],
+                    ),
+                    const SizedBox(width: 8),
+                    ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      width: 36,
+                      height: 36,
+                      padding: EdgeInsets.zero,
+                      onPressed: () => service.disconnect(),
+                      child: const Icon(Icons.logout, color: Colors.white54, size: 20),
+                    ),
+                  ],
+                );
+              },
             )
           else
             ShadButton.outline(
@@ -395,20 +423,30 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: ShadButton(
-                                onPressed: () => _connectToServer(service, server),
-                                child: const Text('CONNECT'),
+                                child: ShadButton(
+                                onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Opacity(
+                                      opacity: _connectingServerId == server.id ? 0 : 1,
+                                      child: const Text('CONNECT'),
+                                    ),
+                                    if (_connectingServerId == server.id)
+                                      const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
-                              onPressed: () => _showAddServerDialog(context, server: server),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                              onPressed: () => provider.removeServer(server.id),
-                            ),
+                            _buildServerActions(context, provider, server),
                           ],
                         ),
                       ],
@@ -437,21 +475,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
-                            onPressed: () => _showAddServerDialog(context, server: server),
-                            tooltip: 'Edit Server',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                            onPressed: () => provider.removeServer(server.id),
-                            tooltip: 'Delete Server',
+                          ShadButton(
+                            size: ShadButtonSize.sm,
+                            onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Opacity(
+                                  opacity: _connectingServerId == server.id ? 0 : 1,
+                                  child: const Text('CONNECT'),
+                                ),
+                                if (_connectingServerId == server.id)
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          ShadButton(
-                            onPressed: () => _connectToServer(service, server),
-                            child: const Text('CONNECT'),
-                          ),
+                          _buildServerActions(context, provider, server),
                         ],
                       ),
                     ),
@@ -459,11 +506,64 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         );
-      }
+      },
+    );
+  }
+
+  Widget _buildServerActions(BuildContext context, ServerProvider provider, MumbleServer server) {
+    final controller = ShadPopoverController();
+    return ShadPopover(
+      controller: controller,
+      popover: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShadButton.ghost(
+            width: double.infinity,
+            mainAxisAlignment: MainAxisAlignment.start,
+            onPressed: () {
+              controller.hide();
+              _showAddServerDialog(context, server: server);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.edit_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('Edit Server'),
+              ],
+            ),
+          ),
+          ShadButton.ghost(
+            width: double.infinity,
+            mainAxisAlignment: MainAxisAlignment.start,
+            foregroundColor: Colors.redAccent,
+            onPressed: () {
+              controller.hide();
+              provider.removeServer(server.id);
+            },
+            child: const Row(
+              children: [
+                Icon(Icons.delete_outline, size: 16),
+                SizedBox(width: 8),
+                Text('Delete Server'),
+              ],
+            ),
+          ),
+        ],
+      ),
+      child: ShadButton.ghost(
+        size: ShadButtonSize.sm,
+        width: 36,
+        height: 36,
+        padding: EdgeInsets.zero,
+        onPressed: controller.toggle,
+        child: const Icon(LucideIcons.ellipsis, size: 20, color: Colors.white54),
+      ),
     );
   }
 
   Future<void> _connectToServer(MumbleService service, MumbleServer server) async {
+    setState(() => _connectingServerId = server.id);
     try {
       await service.connect(server);
     } catch (e) {
@@ -493,7 +593,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (mounted) {
-        ShadToaster.of(context).show(
+        ShadSonner.of(context).show(
           ShadToast.destructive(
             title: const Text('Connection Error'),
             description: Text(message),
@@ -502,6 +602,10 @@ class _HomeScreenState extends State<HomeScreen> {
         if (showEdit) {
           _showAddServerDialog(context, server: server);
         }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _connectingServerId = null);
       }
     }
   }
@@ -535,20 +639,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPTTButton(MumbleService service) {
     final bool isTalking = service.isTalking;
+    final bool isSuppressed = service.isSuppressed;
 
     return GestureDetector(
-      onTapDown: (_) => service.startPushToTalk(),
+      onTapDown: (_) => isSuppressed ? null : service.startPushToTalk(),
       onTapUp: (_) => service.stopPushToTalk(),
       onTapCancel: () => service.stopPushToTalk(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)]),
+          gradient: isSuppressed 
+            ? LinearGradient(colors: [
+                const Color(0xFFEF4444).withValues(alpha: 0.1), 
+                const Color(0xFF991B1B).withValues(alpha: 0.2)
+              ])
+            : const LinearGradient(colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)]),
           borderRadius: BorderRadius.circular(16),
+          border: isSuppressed 
+            ? Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4), width: 1)
+            : null,
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF64FFDA).withValues(alpha: isTalking ? 0.4 : 0.2),
+              color: isSuppressed 
+                ? Colors.transparent 
+                : const Color(0xFF64FFDA).withValues(alpha: isTalking ? 0.4 : 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -559,12 +674,18 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(isTalking ? Icons.record_voice_over : Icons.mic, color: Colors.black, size: 20),
+              Icon(
+                isSuppressed 
+                  ? LucideIcons.micOff 
+                  : (isTalking ? Icons.record_voice_over : Icons.mic), 
+                color: isSuppressed ? const Color(0xFFEF4444) : Colors.black, 
+                size: 20
+              ),
               const SizedBox(width: 12),
               Text(
-                isTalking ? 'TALKING...' : 'HOLD TO TALK',
-                style: const TextStyle(
-                  color: Colors.black,
+                isSuppressed ? 'SUPPRESSED' : (isTalking ? 'TALKING...' : 'HOLD TO TALK'),
+                style: TextStyle(
+                  color: isSuppressed ? const Color(0xFFEF4444) : Colors.black,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                   letterSpacing: 1,

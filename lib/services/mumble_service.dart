@@ -47,6 +47,7 @@ class MumbleService extends ChangeNotifier
   bool get isTalking => _isTalking;
   double get currentVolume => _currentVolume;
   Map<int, bool> get talkingUsers => _talkingUsers;
+  bool get isSuppressed => _client?.self.suppress ?? false;
 
   MumbleService() {
     _recorder = AudioRecorder();

@@ -271,10 +271,10 @@ class _ChannelTreeState extends State<ChannelTree> {
               final isTouch = Theme.of(context).platform == TargetPlatform.iOS || 
                              Theme.of(context).platform == TargetPlatform.android;
               if (isTouch) {
-                ShadToaster.of(context).show(
+                ShadSonner.of(context).show(
                   const ShadToast(
                     description: Text('Long press to enter channel'),
-                    duration: Duration(seconds: 1),
+                    duration: Duration(seconds: 4),
                   ),
                 );
               }
@@ -447,6 +447,14 @@ class _ChannelTreeState extends State<ChannelTree> {
                   ),
                 ),
               ),
+              if (u.suppress == true) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  LucideIcons.micOff,
+                  size: 14,
+                  color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                ),
+              ],
             ],
           ),
         ),
