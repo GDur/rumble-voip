@@ -10,10 +10,16 @@ The goal of Rumble is to take the rock-solid reliability of Mumble and wrap it i
 - **Cross-Platform**: A single codebase targeting all your devices.
 - **High Performance**: Low-latency audio streaming using the Mumble protocol.
 
-## Target Platforms
-- 📱 **Primary**: Android & iOS
-- 💻 **Desktop**: macOS & Windows
-- 🌐 **Web**: Experimental support
+## Platform Support Matrix
+
+| Platform | Works | Does not work |
+| :--- | :---: | :---: |
+| 📱 Android | x | |
+| 🍎 iOS | | x |
+| 💻 macOS | x | |
+| 🪟 Windows | | x |
+| 🌐 Web | | x |
+
 
 ## Tech Stack
 - **Framework**: Flutter
