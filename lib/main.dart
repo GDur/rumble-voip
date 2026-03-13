@@ -97,16 +97,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   if (_hostController.text.isNotEmpty) {
                     final username = _usernameController.text.trim();
-                    if (username.contains(' ')) {
-                      ShadToaster.of(context).show(
-                        const ShadToast.destructive(
-                          title: Text('Invalid Username'),
-                          description: Text('Usernames usually cannot contain spaces in Mumble.'),
-                        ),
-                      );
-                      return;
-                    }
-
                     final newServer = MumbleServer(
                       id: server?.id,
                       name: _nameController.text.isEmpty ? _hostController.text : _nameController.text,
@@ -247,15 +237,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Icon(Icons.waves, color: Color(0xFF64FFDA), size: 24),
               ),
               const SizedBox(width: 16),
-              const Text(
-                'Rumble',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
-                  fontFamily: 'Outfit',
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Rumble',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                      fontFamily: 'Outfit',
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    'MUMBLE RELOADED',
+                    style: TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF64FFDA).withValues(alpha: 0.5),
+                      letterSpacing: 1.2,
+                      fontFamily: 'Outfit',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -458,33 +465,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _connectToServer(MumbleService service, MumbleServer server) async {
     try {
-      if (server.username.contains(' ')) {
-         ShadToaster.of(context).show(
-          const ShadToast.destructive(
-            title: Text('Invalid Username'),
-            description: Text('Usernames cannot contain spaces. Please edit the server.'),
-          ),
-        );
-        _showAddServerDialog(context, server: server);
-        return;
-      }
-
       await service.connect(server);
     } catch (e) {
       final errorStr = e.toString().toLowerCase();
       String message = 'Failed to connect to server.';
       bool showEdit = false;
 
+      // Extract specific reason from RejectException or PermissionDeniedException if present
+      if (e.toString().contains(':')) {
+        message = e.toString().split(':').last.trim();
+      }
+
       if (errorStr.contains('password')) {
-        message = 'Incorrect password. Please verify and try again.';
+        message = message.isEmpty ? 'Incorrect password.' : message;
+        showEdit = true;
+      } else if (errorStr.contains('invalidusername') || errorStr.contains('invalid user name')) {
+        message = message.isEmpty ? 'The username is invalid on this server.' : message;
         showEdit = true;
       } else if (errorStr.contains('denied')) {
-        message = 'Connection denied by server (Invalid username or certificate).';
+        message = message.isEmpty ? 'Connection denied.' : message;
         showEdit = true;
       } else if (errorStr.contains('timeout') || errorStr.contains('connection refused')) {
         message = 'Server is unreachable. Check the address and port.';
       } else if (errorStr.contains('hostname') || errorStr.contains('host not found')) {
-        message = 'Invalid server address. Please verify the host.';
+        message = 'Invalid server address.';
         showEdit = true;
       }
 

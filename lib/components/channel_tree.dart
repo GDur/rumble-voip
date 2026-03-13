@@ -101,6 +101,14 @@ class _ChannelTreeState extends State<ChannelTree> {
 
     final rootChannels = widget.channels.where((c) => c.parent == null || c.channelId == 0).toList();
     final uniqueRoots = { for (var c in rootChannels) c.channelId : c }.values.toList();
+    
+    // Sort root channels
+    uniqueRoots.sort((a, b) {
+      if (a.position != b.position) {
+        return (a.position ?? 0).compareTo(b.position ?? 0);
+      }
+      return (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase());
+    });
 
     _visibleItems.clear();
     _buildVisibleItems(uniqueRoots);
@@ -146,12 +154,25 @@ class _ChannelTreeState extends State<ChannelTree> {
              usersInChannel.add(widget.self!);
            }
         }
+        
+        // Sort users by name
+        usersInChannel.sort((a, b) => (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase()));
+        
         for (var user in usersInChannel) {
           _visibleItems.add(user);
         }
         
         // Add subchannels
         final subChannels = widget.channels.where((c) => c.parent?.channelId == channel.channelId).toList();
+        
+        // Sort subchannels
+        subChannels.sort((a, b) {
+          if (a.position != b.position) {
+            return (a.position ?? 0).compareTo(b.position ?? 0);
+          }
+          return (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase());
+        });
+        
         _buildVisibleItems(subChannels);
       }
     }
@@ -218,6 +239,17 @@ class _ChannelTreeState extends State<ChannelTree> {
       }
     }
     
+    // Sort sub-channels by position, then name
+    subChannels.sort((a, b) {
+      if (a.position != b.position) {
+        return (a.position ?? 0).compareTo(b.position ?? 0);
+      }
+      return (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase());
+    });
+    
+    // Sort users by name
+    usersInChannel.sort((a, b) => (a.name ?? '').toLowerCase().compareTo((b.name ?? '').toLowerCase()));
+    
     int userCount = usersInChannel.length;
     final bool isMyChannel = widget.self?.channel.channelId == channel.channelId;
     final bool expanded = _isExpanded(channel.channelId);
@@ -234,8 +266,8 @@ class _ChannelTreeState extends State<ChannelTree> {
           onEnter: (_) => setState(() => _hoveredChannelId = channel.channelId),
           onExit: (_) => setState(() => _hoveredChannelId = null),
           child: GestureDetector(
+            onTapDown: (_) => _selectChannel(channel),
             onTap: () {
-              _selectChannel(channel);
               final isTouch = Theme.of(context).platform == TargetPlatform.iOS || 
                              Theme.of(context).platform == TargetPlatform.android;
               if (isTouch) {
@@ -302,11 +334,11 @@ class _ChannelTreeState extends State<ChannelTree> {
                             child: Text(
                               channel.name ?? 'Channel ${channel.channelId}',
                               style: theme.textTheme.list.copyWith(
-                                fontWeight: (isMyChannel || isSelected) ? FontWeight.bold : FontWeight.w500,
-                                color: (isMyChannel || isSelected) ? Colors.white : Colors.white.withValues(alpha: 0.8),
-                                fontSize: 15,
-                                fontFamily: 'Outfit',
-                              ),
+                              fontWeight: isMyChannel ? FontWeight.bold : FontWeight.w500,
+                              color: (isMyChannel || isSelected) ? Colors.white : Colors.white.withValues(alpha: 0.8),
+                              fontSize: 15,
+                              fontFamily: 'Outfit',
+                            ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -364,7 +396,8 @@ class _ChannelTreeState extends State<ChannelTree> {
       onEnter: (_) => setState(() => _hoveredUserSession = u.session),
       onExit: (_) => setState(() => _hoveredUserSession = null),
       child: GestureDetector(
-        onTap: () => _selectUser(u),
+        onTapDown: (_) => _selectUser(u),
+        onTap: () {}, // Handled by onTapDown for instant feel
         child: Container(
           margin: EdgeInsets.only(left: 48.0 + (depth * 20.0), right: 16, top: 2, bottom: 2),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

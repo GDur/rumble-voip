@@ -64,4 +64,10 @@ final List<MumbleServer> initialServers = [
     port: 64738,
     username: 'Rumble - Mumble Reloaded',
   ),
+  MumbleServer(
+    name: 'TWC Server',
+    host: 'mumble.twcclan.org',
+    port: 64738,
+    username: 'Kregor Test',
+  ),
 ];
