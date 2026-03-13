@@ -394,66 +394,77 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Padding(
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
                 child: isMobile 
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  ? Stack(
+                      clipBehavior: Clip.none,
                       children: [
-                        Row(
+                        Positioned(
+                          top: -8,
+                          right: -8,
+                          child: _buildServerActions(context, provider, server),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.dns, color: Color(0xFF64FFDA), size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                server.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '${server.host}:${server.port}',
-                          style: const TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                        Text(
-                          'User: ${server.username}',
-                          style: const TextStyle(color: Colors.white54, fontSize: 13),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: ShadButton(
-                                onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    Opacity(
-                                      opacity: _connectingServerId == server.id ? 0 : 1,
-                                      child: const Text('CONNECT'),
-                                    ),
-                                    if (_connectingServerId == server.id)
-                                      const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                  ],
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.dns, color: Color(0xFF64FFDA), size: 20),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 24), // Space for the '...' menu
+                                    child: Text(
+                                      server.name,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            _buildServerActions(context, provider, server),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${server.host}:${server.port}',
+                              style: const TextStyle(color: Colors.white54, fontSize: 13),
+                            ),
+                            Text(
+                              'User: ${server.username}',
+                              style: const TextStyle(color: Colors.white54, fontSize: 13),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ShadButton(
+                                    onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children: [
+                                        Opacity(
+                                          opacity: _connectingServerId == server.id ? 0 : 1,
+                                          child: const Text('CONNECT'),
+                                        ),
+                                        if (_connectingServerId == server.id)
+                                          const SizedBox(
+                                            width: 14,
+                                            height: 14,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ],
