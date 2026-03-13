@@ -33,12 +33,12 @@ class MyApp extends StatelessWidget {
           ),
           primaryToastTheme: ShadToastTheme(
             alignment: Alignment.bottomCenter,
-            offset: const Offset(0, -32),
+            offset: const Offset(0, 32),
             duration: const Duration(seconds: 4),
           ),
           destructiveToastTheme: ShadToastTheme(
             alignment: Alignment.bottomCenter,
-            offset: const Offset(0, -32),
+            offset: const Offset(0, 32),
             duration: const Duration(seconds: 6),
           ),
           textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
