@@ -16,6 +16,12 @@ class MumbleServer {
 
 final List<MumbleServer> initialServers = [
   MumbleServer(
+    name: 'chat.revslair.net',
+    host: 'chat.revslair.net',
+    port: 64738,
+    username: 'Rumble - Mumble Reloaded',
+  ),
+  MumbleServer(
     name: 'Rogue Server',
     host: 'mumble.rogueserver.com',
     port: 64738,

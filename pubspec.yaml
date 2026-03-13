@@ -41,6 +41,10 @@ dependencies:
   flutter_macos_permissions: ^2.0.8
   record: ^6.2.0
   dumble: ^0.8.9
+  flutter_pcm_sound: ^3.3.3
+  flutter_opus: 1.0.4
+  ffi: ^2.1.3
+  provider: ^6.1.5+1
 
 dev_dependencies:
   flutter_test:

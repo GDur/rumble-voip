@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+!/Users/gdur/.pub-cache/hosted/pub.dev/dumble-0.8.9
+!/Users/gdur/.pub-cache/hosted/pub.dev/opus_flutter-3.0.3
+!/Users/gdur/.pub-cache/hosted/pub.dev/flutter_opus-1.0.4
+!/Users/gdur/.pub-cache/hosted/pub.dev/opus_dart-3.0.1
