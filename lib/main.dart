@@ -245,7 +245,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.waves, color: Color(0xFF64FFDA), size: 24),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.asset(
+                    'assets/icon.png',
+                    width: 24,
+                    height: 24,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
               const SizedBox(width: 16),
               Column(
