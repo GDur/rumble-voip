@@ -16,9 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => MumbleService()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => MumbleService())],
       child: ShadApp(
         title: 'Rumble',
         debugShowCheckedModeBanner: false,
@@ -29,9 +27,7 @@ class MyApp extends StatelessWidget {
             backgroundColor: const Color(0xFF64FFDA),
             foregroundColor: Colors.black,
           ),
-          textTheme: ShadTextTheme(
-            p: const TextStyle(fontFamily: 'Outfit'),
-          ),
+          textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
         ),
         home: const HomeScreen(),
       ),
@@ -53,9 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF0F172A),
-        ),
+        decoration: const BoxDecoration(color: Color(0xFF0F172A)),
         child: SafeArea(
           child: Column(
             children: [
@@ -64,11 +58,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: mumbleService.isConnected
                     ? ChannelTree(
                         channels: mumbleService.channels,
-                        users: mumbleService.client?.getUsers().values.toList() ?? [],
+                        users:
+                            mumbleService.client?.getUsers().values.toList() ??
+                            [],
                         talkingUsers: mumbleService.talkingUsers,
                         self: mumbleService.client?.self,
                         onChannelTap: (channel) {
-                          mumbleService.client?.self.moveToChannel(channel: channel);
+                          mumbleService.client?.self.moveToChannel(
+                            channel: channel,
+                          );
                         },
                       )
                     : _buildConnectPlaceholder(context, mumbleService),
@@ -135,10 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: const Row(
                 children: [
-                  CircleAvatar(
-                    radius: 4,
-                    backgroundColor: Color(0xFF64FFDA),
-                  ),
+                  CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
                   SizedBox(width: 8),
                   Text(
                     'CONNECTED',
@@ -190,10 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Text(
               'Join the conversation on rogue server.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white60,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.white60),
             ),
             const SizedBox(height: 48),
             SizedBox(
@@ -201,12 +193,14 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 56,
               child: ShadButton(
                 onPressed: () {
-                  service.connect(MumbleServer(
-                    name: 'Server',
-                    host: 'mumble.rogueserver.com',
-                    port: 64738,
-                    username: 'Gdur',
-                  ));
+                  service.connect(
+                    MumbleServer(
+                      name: 'Server',
+                      host: 'mumble.rogueserver.com',
+                      port: 64738,
+                      username: 'Rumble - Mumble Reloaded',
+                    ),
+                  );
                 },
                 backgroundColor: const Color(0xFF64FFDA),
                 child: const Text(
@@ -227,11 +221,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.redAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.2),
+                    ),
                   ),
                   child: Text(
                     service.error!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -274,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPTTButton(MumbleService service) {
     final bool isTalking = service.isTalking;
-    
+
     return GestureDetector(
       onTapDown: (_) => service.startPushToTalk(),
       onTapUp: (_) => service.stopPushToTalk(),
@@ -283,16 +282,15 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isTalking
-                ? [const Color(0xFFFF4B4B), const Color(0xFFD42D2D)]
-                : [const Color(0xFF64FFDA), const Color(0xFF14B8A6)],
+          gradient: const LinearGradient(
+            colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: (isTalking ? const Color(0xFFFF4B4B) : const Color(0xFF64FFDA))
-                  .withValues(alpha: 0.3),
+              color: const Color(
+                0xFF64FFDA,
+              ).withValues(alpha: isTalking ? 0.4 : 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -303,14 +301,14 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               isTalking ? Icons.record_voice_over : Icons.mic,
-              color: isTalking ? Colors.white : Colors.black,
+              color: Colors.black,
               size: 20,
             ),
             const SizedBox(width: 12),
             Text(
               isTalking ? 'TALKING...' : 'HOLD TO TALK',
-              style: TextStyle(
-                color: isTalking ? Colors.white : Colors.black,
+              style: const TextStyle(
+                color: Colors.black,
                 fontWeight: FontWeight.w900,
                 fontSize: 14,
                 letterSpacing: 1,
@@ -325,16 +323,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildMicStatus(MumbleService service) {
     final double volume = service.currentVolume;
     final bool isTalking = service.isTalking;
-    
+
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color(0xFF1E293B),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Center(
         child: Stack(
@@ -347,16 +343,20 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 30 + (volume * 18),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isTalking ? const Color(0xFFFF4B4B) : const Color(0xFF64FFDA))
-                    .withValues(alpha: 0.1 + (volume * 0.2)),
+                color: (isTalking ? const Color(0xFF64FFDA) : Colors.white)
+                    .withValues(
+                      alpha: isTalking
+                          ? (0.1 + (volume * 0.2))
+                          : (0.05 + (volume * 0.1)),
+                    ),
               ),
             ),
             Icon(
               isTalking ? Icons.mic : Icons.mic_none,
               size: 20,
-              color: isTalking 
-                ? const Color(0xFFFF4B4B) 
-                : Colors.white.withValues(alpha: 0.5),
+              color: isTalking
+                  ? const Color(0xFF64FFDA)
+                  : Colors.white.withValues(alpha: 0.3),
             ),
           ],
         ),

@@ -95,15 +95,6 @@ class MumbleService extends ChangeNotifier
     });
   }
 
-  Future<void> stopMonitoring() async {
-    _volumeTimer?.cancel();
-    if (await _recorder.isRecording()) {
-      await _recorder.stop();
-    }
-    _currentVolume = 0;
-    notifyListeners();
-  }
-
   Future<void> connect(MumbleServer server) async {
     _error = null;
     _channels = [];
@@ -131,6 +122,8 @@ class MumbleService extends ChangeNotifier
       _isConnected = true;
       notifyListeners();
       
+      // Start passive mic monitoring immediately on connect
+      _startMicStream();
       _startVolumeMonitoring();
     } catch (e) {
       _error = e.toString();
@@ -140,60 +133,73 @@ class MumbleService extends ChangeNotifier
     }
   }
 
+  Future<void> _startMicStream() async {
+    if (!await _recorder.hasPermission()) {
+      debugPrint('[MumbleService] Microphone permission denied.');
+      return;
+    }
+
+    if (await _recorder.isRecording()) return;
+
+    const sampleRate = 48000;
+    const channels = 1;
+    /// Frame size of 480 (10ms @ 48kHz) is chosen for the best balance of 
+    /// low latency and mobile processing stability. 20ms (960) can be used
+    /// for better bandwidth efficiency but may feel 'choppy' on slower networks.
+    const frameSize = 480; 
+
+    final micStream = await _recorder.startStream(
+      const RecordConfig(
+        encoder: AudioEncoder.pcm16bits,
+        sampleRate: sampleRate,
+        numChannels: channels,
+      ),
+    );
+
+    _pcmBuffer.clear();
+    _micSubscription = micStream.listen((data) {
+      /// CRITICAL: Uint8List.fromList(data) ensures the underlying buffer is 
+      /// ByteData-aligned for 16-bit interpretation. Directly using data.buffer 
+      /// can cause Bus Errors or RangeErrors on some architectures.
+      final int16data = Uint8List.fromList(data).buffer.asInt16List();
+      _pcmBuffer.addAll(int16data);
+
+      while (_pcmBuffer.length >= frameSize) {
+        final frameSamples = Int16List.fromList(_pcmBuffer.sublist(0, frameSize));
+        _pcmBuffer.removeRange(0, frameSize);
+
+        if (_isTalking && _opusEncoder != null && _audioSink != null) {
+          /// Encoder is configured with FEC (Forward Error Correction) 
+          /// and VBR enabled in MumbleOpusEncoder constructor.
+          final encoded = _opusEncoder!.encode(frameSamples, frameSize);
+          if (encoded != null) {
+             _audioSink!.add(AudioFrame.outgoing(frame: encoded));
+          }
+        }
+      }
+    }, onDone: () {
+      debugPrint('[MumbleService] Mic stream closed.');
+    }, onError: (e) {
+      debugPrint('[MumbleService] Mic stream error: $e');
+    });
+  }
+
   Future<void> startPushToTalk() async {
     if (!_isConnected || _isTalking || _client == null) return;
     
     try {
-       if (!await _recorder.hasPermission()) {
-        debugPrint('[MumbleService] Microphone permission denied.');
-        return;
-      }
-
-      await stopMonitoring();
-
       _isTalking = true;
       _talkingUsers[_client!.self.session] = true;
-      notifyListeners();
-
-      const sampleRate = 48000;
-      const channels = 1;
-      const frameSize = 960; 
-
+      
+      // Initialize Opus encoder
       _audioSink = _client!.audio.sendAudio(codec: AudioCodec.opus);
       _opusEncoder = MumbleOpusEncoder(
-        sampleRate: sampleRate,
-        channels: channels,
+        sampleRate: 48000,
+        channels: 1,
         application: opusApplicationVoip,
       );
-
-      final micStream = await _recorder.startStream(
-        const RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: sampleRate,
-          numChannels: channels,
-        ),
-      );
-
-      _pcmBuffer.clear();
-      _startVolumeMonitoring();
-
-      _micSubscription = micStream.listen((data) {
-        // Ensure data is typed list and aligned for 16-bit access
-        final Uint8List bytes = Uint8List.fromList(data);
-        final int16data = bytes.buffer.asInt16List();
-        
-        _pcmBuffer.addAll(int16data);
-
-        while (_pcmBuffer.length >= frameSize) {
-          final frameSamples = Int16List.fromList(_pcmBuffer.sublist(0, frameSize));
-          _pcmBuffer.removeRange(0, frameSize);
-
-          final encoded = _opusEncoder?.encode(frameSamples, frameSize);
-          if (encoded != null && _audioSink != null) {
-            _audioSink!.add(AudioFrame.outgoing(frame: encoded));
-          }
-        }
-      });
+      
+      notifyListeners();
     } catch (e) {
       debugPrint('[MumbleService] Error starting PTT: $e');
       stopPushToTalk();
@@ -207,21 +213,13 @@ class MumbleService extends ChangeNotifier
        _talkingUsers[_client!.self.session] = false;
     }
     
-    _volumeTimer?.cancel();
-    _micSubscription?.cancel();
-    _micSubscription = null;
-    
-    _recorder.stop();
     _audioSink?.close();
     _audioSink = null;
     
     _opusEncoder?.dispose();
     _opusEncoder = null;
     
-    _currentVolume = 0;
     notifyListeners();
-    
-    _startVolumeMonitoring();
   }
 
   void _updateChannelsInternal() {
@@ -239,6 +237,11 @@ class MumbleService extends ChangeNotifier
 
   Future<void> disconnect() async {
     stopPushToTalk();
+    _micSubscription?.cancel();
+    _micSubscription = null;
+    await _recorder.stop();
+    _volumeTimer?.cancel();
+    
     await _client?.close();
     _client = null;
     _isConnected = false;
@@ -264,9 +267,10 @@ class MumbleService extends ChangeNotifier
       final buffer = _userBuffers.putIfAbsent(sessionId, () => []);
 
       voiceData.listen((AudioFrame frame) {
-        if (frame.frame != null) {
+        final frameData = frame.frame;
+        if (frameData != null) {
            // Decode Opus frame to PCM samples (Int16List)
-           final pcm = decoder.decode(frame.frame!, 5760); 
+           final pcm = decoder.decode(frameData, 5760); 
            
            if (pcm.isNotEmpty) {
               buffer.addAll(pcm);
@@ -368,6 +372,7 @@ class MumbleService extends ChangeNotifier
 
   @override
   void dispose() {
+    _micSubscription?.cancel();
     _volumeTimer?.cancel();
     _recorder.dispose();
     for (final d in _decoders.values) {

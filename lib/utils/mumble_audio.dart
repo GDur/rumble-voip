@@ -8,10 +8,13 @@ const int opusOk = 0;
 const int opusApplicationVoip = 2048;
 const int opusApplicationAudio = 2049;
 
-// Encoder CTL requests
 const int opusSetBitrateRequest = 4002;
 const int opusSetComplexityRequest = 4010;
 const int opusSetVbrRequest = 4006;
+const int opusSetInbandFecRequest = 4012;
+const int opusSetPacketLossPercRequest = 4014;
+const int opusSetSignalRequest = 4024;
+const int opusSignalVoice = 3001;
 
 /// -------------------- Native FFI Type Definitions --------------------
 
@@ -139,10 +142,13 @@ class MumbleOpusEncoder {
         throw Exception('Failed to create Opus encoder: ${errorPtr.value}');
       }
       
-      // Default configurations for quality
+      // Default configurations for quality and reliability
       setBitrate(48000);
-      setComplexity(10);
+      setComplexity(5); // Reduced from 10 to 5 for better mobile performance
       setVbr(true);
+      setInbandFec(true);
+      setPacketLossPercentage(10);
+      setSignal(opusSignalVoice);
     } finally {
       malloc.free(errorPtr);
     }
@@ -163,6 +169,24 @@ class MumbleOpusEncoder {
   void setVbr(bool vbr) {
     if (_encoder != null) {
       MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetVbrRequest, vbr ? 1 : 0);
+    }
+  }
+
+  void setInbandFec(bool enabled) {
+    if (_encoder != null) {
+      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetInbandFecRequest, enabled ? 1 : 0);
+    }
+  }
+
+  void setPacketLossPercentage(int percentage) {
+    if (_encoder != null) {
+      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetPacketLossPercRequest, percentage);
+    }
+  }
+
+  void setSignal(int signal) {
+    if (_encoder != null) {
+      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetSignalRequest, signal);
     }
   }
 
