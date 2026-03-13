@@ -96,12 +96,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Text('Save Server'),
                 onPressed: () {
                   if (_hostController.text.isNotEmpty) {
+                    final username = _usernameController.text.trim();
+                    if (username.contains(' ')) {
+                      ShadToaster.of(context).show(
+                        const ShadToast.destructive(
+                          title: Text('Invalid Username'),
+                          description: Text('Usernames usually cannot contain spaces in Mumble.'),
+                        ),
+                      );
+                      return;
+                    }
+
                     final newServer = MumbleServer(
                       id: server?.id,
                       name: _nameController.text.isEmpty ? _hostController.text : _nameController.text,
                       host: _hostController.text,
                       port: int.tryParse(_portController.text) ?? 64738,
-                      username: _usernameController.text,
+                      username: username,
                       password: _passwordController.text,
                     );
                     if (server == null) {
@@ -322,75 +333,173 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: provider.servers.length,
-      itemBuilder: (context, index) {
-        final server = provider.servers[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(20),
-            leading: Container(
-              padding: const EdgeInsets.all(12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isMobile = constraints.maxWidth < 600;
+        
+        return ListView.builder(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          itemCount: provider.servers.length,
+          itemBuilder: (context, index) {
+            final server = provider.servers[index];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFF1E293B).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
               ),
-              child: const Icon(Icons.dns, color: Color(0xFF64FFDA)),
-            ),
-            title: Text(
-              server.name,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${server.host}:${server.port} • ${server.username}',
-                style: const TextStyle(color: Colors.white54),
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 20),
+                child: isMobile 
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.dns, color: Color(0xFF64FFDA), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                server.name,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '${server.host}:${server.port}',
+                          style: const TextStyle(color: Colors.white54, fontSize: 13),
+                        ),
+                        Text(
+                          'User: ${server.username}',
+                          style: const TextStyle(color: Colors.white54, fontSize: 13),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ShadButton(
+                                onPressed: () => _connectToServer(service, server),
+                                child: const Text('CONNECT'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
+                              onPressed: () => _showAddServerDialog(context, server: server),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                              onPressed: () => provider.removeServer(server.id),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.dns, color: Color(0xFF64FFDA)),
+                      ),
+                      title: Text(
+                        server.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${server.host}:${server.port} • ${server.username}',
+                          style: const TextStyle(color: Colors.white54),
+                        ),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
+                            onPressed: () => _showAddServerDialog(context, server: server),
+                            tooltip: 'Edit Server',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                            onPressed: () => provider.removeServer(server.id),
+                            tooltip: 'Delete Server',
+                          ),
+                          const SizedBox(width: 8),
+                          ShadButton(
+                            onPressed: () => _connectToServer(service, server),
+                            child: const Text('CONNECT'),
+                          ),
+                        ],
+                      ),
+                    ),
               ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
-                  onPressed: () => _showAddServerDialog(context, server: server),
-                  tooltip: 'Edit Server',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                  onPressed: () => provider.removeServer(server.id),
-                  tooltip: 'Delete Server',
-                ),
-                const SizedBox(width: 8),
-                ShadButton(
-                  onPressed: () async {
-                    try {
-                      await service.connect(server);
-                    } catch (e) {
-                      // If it's a password error, show the edit dialog
-                      if (e.toString().toLowerCase().contains('password') || 
-                          e.toString().toLowerCase().contains('denied')) {
-                        if (mounted) {
-                           _showAddServerDialog(context, server: server);
-                        }
-                      }
-                    }
-                  },
-                  child: const Text('CONNECT'),
-                ),
-              ],
-            ),
+            );
+          },
+        );
+      }
+    );
+  }
+
+  Future<void> _connectToServer(MumbleService service, MumbleServer server) async {
+    try {
+      if (server.username.contains(' ')) {
+         ShadToaster.of(context).show(
+          const ShadToast.destructive(
+            title: Text('Invalid Username'),
+            description: Text('Usernames cannot contain spaces. Please edit the server.'),
           ),
         );
-      },
-    );
+        _showAddServerDialog(context, server: server);
+        return;
+      }
+
+      await service.connect(server);
+    } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+      String message = 'Failed to connect to server.';
+      bool showEdit = false;
+
+      if (errorStr.contains('password')) {
+        message = 'Incorrect password. Please verify and try again.';
+        showEdit = true;
+      } else if (errorStr.contains('denied')) {
+        message = 'Connection denied by server (Invalid username or certificate).';
+        showEdit = true;
+      } else if (errorStr.contains('timeout') || errorStr.contains('connection refused')) {
+        message = 'Server is unreachable. Check the address and port.';
+      } else if (errorStr.contains('hostname') || errorStr.contains('host not found')) {
+        message = 'Invalid server address. Please verify the host.';
+        showEdit = true;
+      }
+
+      if (mounted) {
+        ShadToaster.of(context).show(
+          ShadToast.destructive(
+            title: const Text('Connection Error'),
+            description: Text(message),
+          ),
+        );
+        if (showEdit) {
+          _showAddServerDialog(context, server: server);
+        }
+      }
+    }
   }
 
   Widget _buildBottomBar(MumbleService service) {
