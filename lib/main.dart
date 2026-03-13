@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
+import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/components/channel_tree.dart';
 import 'package:rumble/models/server.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -16,7 +17,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => MumbleService())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => MumbleService()),
+        ChangeNotifierProvider(create: (_) => ServerProvider()),
+      ],
       child: ShadApp(
         title: 'Rumble',
         debugShowCheckedModeBanner: false,
@@ -43,9 +47,126 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _hostController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _portController = TextEditingController(text: '64738');
+  final _usernameController = TextEditingController(text: 'Rumble - Mumble Reloaded');
+  final _passwordController = TextEditingController();
+  bool _isAutoName = true;
+
+  @override
+  void dispose() {
+    _hostController.dispose();
+    _nameController.dispose();
+    _portController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _showAddServerDialog(BuildContext context) {
+    _hostController.clear();
+    _nameController.clear();
+    _portController.text = '64738';
+    _passwordController.clear();
+    _isAutoName = true;
+
+    showShadDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return ShadDialog(
+            title: const Text('Add New Server'),
+            description: const Text('Enter the server details below.'),
+            actions: [
+              ShadButton.outline(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              ShadButton(
+                child: const Text('Save Server'),
+                onPressed: () {
+                  if (_hostController.text.isNotEmpty) {
+                    final server = MumbleServer(
+                      name: _nameController.text.isEmpty ? _hostController.text : _nameController.text,
+                      host: _hostController.text,
+                      port: int.tryParse(_portController.text) ?? 64738,
+                      username: _usernameController.text,
+                      password: _passwordController.text,
+                    );
+                    Provider.of<ServerProvider>(context, listen: false).addServer(server);
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ],
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShadInput(
+                    top: const Text('Server Address (Host)'),
+                    placeholder: const Text('mumble.example.com'),
+                    controller: _hostController,
+                    onChanged: (val) {
+                      if (_isAutoName) {
+                        setDialogState(() => _nameController.text = val);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ShadInput(
+                    top: const Text('Display Name'),
+                    placeholder: const Text('My Awesome Server'),
+                    controller: _nameController,
+                    onChanged: (val) => setDialogState(() => _isAutoName = false),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: ShadInput(
+                          top: const Text('Port'),
+                          placeholder: const Text('64738'),
+                          controller: _portController,
+                          keyboardType: TextInputType.number,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 3,
+                        child: ShadInput(
+                          top: const Text('Username'),
+                          placeholder: const Text('Your Nickname'),
+                          controller: _usernameController,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ShadInput(
+                    top: const Text('Password (Optional)'),
+                    placeholder: const Text('Secret Password'),
+                    controller: _passwordController,
+                    obscureText: true,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mumbleService = Provider.of<MumbleService>(context);
+    final serverProvider = Provider.of<ServerProvider>(context);
 
     return Scaffold(
       body: Container(
@@ -58,18 +179,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: mumbleService.isConnected
                     ? ChannelTree(
                         channels: mumbleService.channels,
-                        users:
-                            mumbleService.client?.getUsers().values.toList() ??
-                            [],
+                        users: mumbleService.client?.getUsers().values.toList() ?? [],
                         talkingUsers: mumbleService.talkingUsers,
                         self: mumbleService.client?.self,
                         onChannelTap: (channel) {
-                          mumbleService.client?.self.moveToChannel(
-                            channel: channel,
-                          );
+                          mumbleService.client?.self.moveToChannel(channel: channel);
                         },
                       )
-                    : _buildConnectPlaceholder(context, mumbleService),
+                    : _buildServerList(context, serverProvider, mumbleService),
               ),
               if (mumbleService.isConnected) _buildBottomBar(mumbleService),
             ],
@@ -102,11 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.waves,
-                  color: Color(0xFF64FFDA),
-                  size: 24,
-                ),
+                child: const Icon(Icons.waves, color: Color(0xFF64FFDA), size: 24),
               ),
               const SizedBox(width: 16),
               const Text(
@@ -122,28 +235,48 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           if (service.isConnected)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFF64FFDA).withValues(alpha: 0.2),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF64FFDA).withValues(alpha: 0.2)),
+                  ),
+                  child: const Row(
+                    children: [
+                      CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
+                      SizedBox(width: 8),
+                      Text(
+                        'CONNECTED',
+                        style: TextStyle(
+                          color: Color(0xFF64FFDA),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white54, size: 20),
+                  onPressed: () => service.disconnect(),
+                  tooltip: 'Disconnect',
+                ),
+              ],
+            )
+          else
+            ShadButton.outline(
+              size: ShadButtonSize.sm,
+              onPressed: () => _showAddServerDialog(context),
               child: const Row(
                 children: [
-                  CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
+                  Icon(Icons.add, size: 16),
                   SizedBox(width: 8),
-                  Text(
-                    'CONNECTED',
-                    style: TextStyle(
-                      color: Color(0xFF64FFDA),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  Text('ADD SERVER'),
                 ],
               ),
             ),
@@ -152,92 +285,79 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildConnectPlaceholder(BuildContext context, MumbleService service) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40.0),
+  Widget _buildServerList(BuildContext context, ServerProvider provider, MumbleService service) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF64FFDA)));
+    }
+
+    if (provider.servers.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(30),
-              decoration: BoxDecoration(
-                color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.settings_input_component,
-                size: 80,
-                color: const Color(0xFF64FFDA).withValues(alpha: 0.5),
-              ),
+            const Icon(Icons.dns_outlined, size: 64, color: Colors.white10),
+            const SizedBox(height: 16),
+            const Text('No servers yet', style: TextStyle(color: Colors.white54)),
+            const SizedBox(height: 24),
+            ShadButton(
+              onPressed: () => _showAddServerDialog(context),
+              child: const Text('ADD YOUR FIRST SERVER'),
             ),
-            const SizedBox(height: 32),
-            const Text(
-              'Ready to Connect?',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                fontFamily: 'Outfit',
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Join the conversation on rogue server.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, color: Colors.white60),
-            ),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ShadButton(
-                onPressed: () {
-                  service.connect(
-                    MumbleServer(
-                      name: 'Server',
-                      host: 'mumble.rogueserver.com',
-                      port: 64738,
-                      username: 'Rumble - Mumble Reloaded',
-                    ),
-                  );
-                },
-                backgroundColor: const Color(0xFF64FFDA),
-                child: const Text(
-                  'CONNECT TO SERVER',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-            ),
-            if (service.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.redAccent.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Text(
-                    service.error!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 13,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
           ],
         ),
-      ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: provider.servers.length,
+      itemBuilder: (context, index) {
+        final server = provider.servers[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B).withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(20),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.dns, color: Color(0xFF64FFDA)),
+            ),
+            title: Text(
+              server.name,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${server.host}:${server.port} • ${server.username}',
+                style: const TextStyle(color: Colors.white54),
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                  onPressed: () => provider.removeServer(server.id),
+                ),
+                const SizedBox(width: 8),
+                ShadButton(
+                  onPressed: () => service.connect(server),
+                  child: const Text('CONNECT'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -247,10 +367,7 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
         border: Border(
-          top: BorderSide(
-            color: Colors.white.withValues(alpha: 0.08),
-            width: 1,
-          ),
+          top: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -282,15 +399,11 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)],
-          ),
+          gradient: const LinearGradient(colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)]),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(
-                0xFF64FFDA,
-              ).withValues(alpha: isTalking ? 0.4 : 0.2),
+              color: const Color(0xFF64FFDA).withValues(alpha: isTalking ? 0.4 : 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -299,11 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isTalking ? Icons.record_voice_over : Icons.mic,
-              color: Colors.black,
-              size: 20,
-            ),
+            Icon(isTalking ? Icons.record_voice_over : Icons.mic, color: Colors.black, size: 20),
             const SizedBox(width: 12),
             Text(
               isTalking ? 'TALKING...' : 'HOLD TO TALK',
@@ -336,27 +445,21 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Volume wave effect
             AnimatedContainer(
               duration: const Duration(milliseconds: 100),
               width: 30 + (volume * 18),
               height: 30 + (volume * 18),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isTalking ? const Color(0xFF64FFDA) : Colors.white)
-                    .withValues(
-                      alpha: isTalking
-                          ? (0.1 + (volume * 0.2))
-                          : (0.05 + (volume * 0.1)),
-                    ),
+                color: (isTalking ? const Color(0xFF64FFDA) : Colors.white).withValues(
+                  alpha: isTalking ? (0.1 + (volume * 0.2)) : (0.05 + (volume * 0.1)),
+                ),
               ),
             ),
             Icon(
               isTalking ? Icons.mic : Icons.mic_none,
               size: 20,
-              color: isTalking
-                  ? const Color(0xFF64FFDA)
-                  : Colors.white.withValues(alpha: 0.3),
+              color: isTalking ? const Color(0xFF64FFDA) : Colors.white.withValues(alpha: 0.3),
             ),
           ],
         ),
