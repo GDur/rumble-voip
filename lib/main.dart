@@ -64,19 +64,28 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _showAddServerDialog(BuildContext context) {
-    _hostController.clear();
-    _nameController.clear();
-    _portController.text = '64738';
-    _passwordController.clear();
-    _isAutoName = true;
+  void _showAddServerDialog(BuildContext context, {MumbleServer? server}) {
+    if (server != null) {
+      _hostController.text = server.host;
+      _nameController.text = server.name;
+      _portController.text = server.port.toString();
+      _usernameController.text = server.username;
+      _passwordController.text = server.password;
+      _isAutoName = false;
+    } else {
+      _hostController.clear();
+      _nameController.clear();
+      _portController.text = '64738';
+      _passwordController.clear();
+      _isAutoName = true;
+    }
 
     showShadDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
           return ShadDialog(
-            title: const Text('Add New Server'),
+            title: Text(server == null ? 'Add New Server' : 'Edit Server'),
             description: const Text('Enter the server details below.'),
             actions: [
               ShadButton.outline(
@@ -87,14 +96,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Text('Save Server'),
                 onPressed: () {
                   if (_hostController.text.isNotEmpty) {
-                    final server = MumbleServer(
+                    final newServer = MumbleServer(
+                      id: server?.id,
                       name: _nameController.text.isEmpty ? _hostController.text : _nameController.text,
                       host: _hostController.text,
                       port: int.tryParse(_portController.text) ?? 64738,
                       username: _usernameController.text,
                       password: _passwordController.text,
                     );
-                    Provider.of<ServerProvider>(context, listen: false).addServer(server);
+                    if (server == null) {
+                      Provider.of<ServerProvider>(context, listen: false).addServer(newServer);
+                    } else {
+                      Provider.of<ServerProvider>(context, listen: false).updateServer(newServer);
+                    }
                     Navigator.of(context).pop();
                   }
                 },
@@ -345,12 +359,30 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: Colors.white54, size: 20),
+                  onPressed: () => _showAddServerDialog(context, server: server),
+                  tooltip: 'Edit Server',
+                ),
+                IconButton(
                   icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
                   onPressed: () => provider.removeServer(server.id),
+                  tooltip: 'Delete Server',
                 ),
                 const SizedBox(width: 8),
                 ShadButton(
-                  onPressed: () => service.connect(server),
+                  onPressed: () async {
+                    try {
+                      await service.connect(server);
+                    } catch (e) {
+                      // If it's a password error, show the edit dialog
+                      if (e.toString().toLowerCase().contains('password') || 
+                          e.toString().toLowerCase().contains('denied')) {
+                        if (mounted) {
+                           _showAddServerDialog(context, server: server);
+                        }
+                      }
+                    }
+                  },
                   child: const Text('CONNECT'),
                 ),
               ],
@@ -409,21 +441,24 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(isTalking ? Icons.record_voice_over : Icons.mic, color: Colors.black, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              isTalking ? 'TALKING...' : 'HOLD TO TALK',
-              style: const TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-                letterSpacing: 1,
+        child: SizedBox(
+          width: 180,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(isTalking ? Icons.record_voice_over : Icons.mic, color: Colors.black, size: 20),
+              const SizedBox(width: 12),
+              Text(
+                isTalking ? 'TALKING...' : 'HOLD TO TALK',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  letterSpacing: 1,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -447,12 +482,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             AnimatedContainer(
               duration: const Duration(milliseconds: 100),
-              width: 30 + (volume * 18),
-              height: 30 + (volume * 18),
+              width: 24 + (volume * 22), // More exaggerated scaling
+              height: 24 + (volume * 22),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: (isTalking ? const Color(0xFF64FFDA) : Colors.white).withValues(
-                  alpha: isTalking ? (0.1 + (volume * 0.2)) : (0.05 + (volume * 0.1)),
+                  alpha: isTalking ? (0.15 + (volume * 0.25)) : (0.05 + (volume * 0.1)),
                 ),
               ),
             ),
