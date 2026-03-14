@@ -14,6 +14,7 @@ class MumbleService extends ChangeNotifier
   String? _error;
   List<Channel> _channels = [];
   bool _isTalking = false;
+  bool _hasMicPermission = false;
   
   // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
@@ -48,6 +49,7 @@ class MumbleService extends ChangeNotifier
   double get currentVolume => _currentVolume;
   Map<int, bool> get talkingUsers => _talkingUsers;
   bool get isSuppressed => _client?.self.suppress ?? false;
+  bool get hasMicPermission => _hasMicPermission;
 
   MumbleService() {
     _recorder = AudioRecorder();
@@ -136,9 +138,13 @@ class MumbleService extends ChangeNotifier
 
   Future<void> _startMicStream() async {
     if (!await _recorder.hasPermission()) {
+      _hasMicPermission = false;
+      notifyListeners();
       debugPrint('[MumbleService] Microphone permission denied.');
       return;
     }
+    _hasMicPermission = true;
+    notifyListeners();
 
     if (await _recorder.isRecording()) return;
 

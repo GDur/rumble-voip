@@ -5,24 +5,21 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 class AudioInputIndicator extends StatelessWidget {
   final MumbleService mumbleService;
 
-  const AudioInputIndicator({
-    super.key,
-    required this.mumbleService,
-  });
+  const AudioInputIndicator({super.key, required this.mumbleService});
 
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
-    
+
     return ListenableBuilder(
       listenable: mumbleService,
       builder: (context, _) {
         final isTalking = mumbleService.isTalking;
         final volume = mumbleService.currentVolume;
-        
+
         final activeColor = isTalking ? Colors.blue : Colors.greenAccent;
         final baseColor = isTalking ? Colors.blue : Colors.green;
-        
+
         return AnimatedOpacity(
           duration: const Duration(milliseconds: 200),
           opacity: isTalking ? 1.0 : 0.7,
@@ -33,15 +30,17 @@ class AudioInputIndicator extends StatelessWidget {
               color: theme.colorScheme.popover.withAlpha(240),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isTalking ? Colors.blue.withAlpha(200) : Colors.green.withAlpha(150), 
-                width: 2.0
+                color: isTalking
+                    ? Colors.blue.withAlpha(200)
+                    : Colors.green.withAlpha(150),
+                width: 2.0,
               ),
               boxShadow: [
                 BoxShadow(
                   color: (isTalking ? Colors.blue : Colors.green).withAlpha(40),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                )
+                ),
               ],
             ),
             child: Column(
@@ -54,7 +53,7 @@ class AudioInputIndicator extends StatelessWidget {
                     Text(
                       'MIC STATUS',
                       style: theme.textTheme.muted.copyWith(
-                        fontSize: 10, 
+                        fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
                         color: activeColor.withAlpha(220),
@@ -68,10 +67,10 @@ class AudioInputIndicator extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: activeColor.withAlpha(150),
+                            color: activeColor.withAlpha(200),
                             blurRadius: 6,
-                          )
-                        ]
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -98,24 +97,26 @@ class AudioInputIndicator extends StatelessWidget {
                       // Level bar
                       FractionallySizedBox(
                         alignment: Alignment.centerLeft,
-                        widthFactor: volume.clamp(0.01, 1.0), // Always show a tiny bit if connected
+                        widthFactor: volume.clamp(
+                          0.01,
+                          1.0,
+                        ), // Always show a tiny bit if connected
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 40),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [
-                                activeColor.withAlpha(150),
-                                activeColor,
-                              ],
+                              colors: [activeColor.withAlpha(150), activeColor],
                             ),
                             borderRadius: BorderRadius.circular(6),
-                            boxShadow: volume > 0.05 ? [
-                              BoxShadow(
-                                color: activeColor.withAlpha(150),
-                                blurRadius: 4,
-                                spreadRadius: 1,
-                              )
-                            ] : null,
+                            boxShadow: volume > 0.05
+                                ? [
+                                    BoxShadow(
+                                      color: activeColor.withAlpha(150),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : null,
                           ),
                         ),
                       ),
@@ -126,7 +127,7 @@ class AudioInputIndicator extends StatelessWidget {
             ),
           ),
         );
-      }
+      },
     );
   }
 }

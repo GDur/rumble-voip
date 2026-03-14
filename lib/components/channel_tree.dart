@@ -8,6 +8,7 @@ class ChannelTree extends StatefulWidget {
   final List<dumble.User> users;
   final Map<int, bool> talkingUsers;
   final dumble.Self? self;
+  final bool hasMicPermission;
   final Function(dumble.Channel) onChannelTap;
 
   const ChannelTree({
@@ -16,6 +17,7 @@ class ChannelTree extends StatefulWidget {
     required this.users,
     required this.talkingUsers,
     this.self,
+    required this.hasMicPermission,
     required this.onChannelTap,
   });
 
@@ -390,6 +392,13 @@ class _ChannelTreeState extends State<ChannelTree> {
     final bool isMe = widget.self?.session == u.session;
     final bool isSelected = _selectedUserSession == u.session;
     final bool isHovered = _hoveredUserSession == u.session;
+    Color statusColor;
+    if (isTalking) {
+      statusColor = Colors.blueAccent;
+    } else {
+      final bool hasMic = isMe ? widget.hasMicPermission : !(u.suppress ?? false);
+      statusColor = hasMic ? Colors.greenAccent : Colors.grey;
+    }
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -399,21 +408,26 @@ class _ChannelTreeState extends State<ChannelTree> {
         onTapDown: (_) => _selectUser(u),
         onTap: () {}, // Handled by onTapDown for instant feel
         child: Container(
-          margin: EdgeInsets.only(left: 48.0 + (depth * 20.0), right: 16, top: 2, bottom: 2),
+          margin: EdgeInsets.only(
+            left: 48.0 + (depth * 20.0),
+            right: 16,
+            top: 2,
+            bottom: 2,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected 
-              ? theme.colorScheme.primary.withValues(alpha: 0.15)
-              : isHovered
-                ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                : Colors.transparent,
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                : isHovered
+                    ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected 
-                ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                : isHovered
-                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                  : Colors.transparent, // Always have a border to prevent layout shift
+              color: isSelected
+                  ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                  : isHovered
+                      ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                      : Colors.transparent, // Always have a border to prevent layout shift
               width: 1,
             ),
           ),
@@ -424,15 +438,15 @@ class _ChannelTreeState extends State<ChannelTree> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: isTalking ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.5),
+                  color: statusColor,
                   shape: BoxShape.circle,
-                  boxShadow: isTalking ? [
+                  boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    )
-                  ] : null,
+                      color: statusColor.withValues(alpha: 0.4),
+                      blurRadius: isTalking ? 8 : 4,
+                      spreadRadius: isTalking ? 2 : 1,
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 12),

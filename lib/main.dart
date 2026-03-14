@@ -50,14 +50,19 @@ class MyApp extends StatelessWidget {
           themeMode: settings.themeMode,
           theme: ShadThemeData(
             brightness: Brightness.light,
-            colorScheme: const ShadSlateColorScheme.light(),
+            colorScheme: const ShadSlateColorScheme.light(
+              primary: Color(0xFF64FFDA),
+              primaryForeground: Colors.black,
+            ),
             textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
           ),
           darkTheme: ShadThemeData(
             brightness: Brightness.dark,
-            colorScheme: const ShadSlateColorScheme.dark(),
-            primaryButtonTheme: ShadButtonTheme(
-              backgroundColor: const Color(0xFF64FFDA),
+            colorScheme: const ShadSlateColorScheme.dark(
+              primary: Color(0xFF64FFDA),
+              primaryForeground: Colors.black,
+            ),
+            primaryButtonTheme: const ShadButtonTheme(
               foregroundColor: Colors.black,
             ),
             primaryToastTheme: ShadToastTheme(
@@ -118,7 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, setDialogState) {
             return ShadDialog(
               title: const Text('Settings'),
-              description: const Text('Configure global Push-to-Talk hotkeys.'),
               actions: [
                 ShadButton(
                   child: const Text('Close'),
@@ -204,8 +208,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Row(
                                   children: [
                                     const Text(
-                                      'Suppress original function',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                      'Suppress original key function',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     ShadTooltip(
@@ -215,9 +221,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Icon(
                                         LucideIcons.info,
                                         size: 14,
-                                        color: ShadTheme.of(context)
-                                            .colorScheme
-                                            .mutedForeground,
+                                        color: ShadTheme.of(
+                                          context,
+                                        ).colorScheme.mutedForeground,
                                       ),
                                     ),
                                   ],
@@ -331,9 +337,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Icon(
                                   LucideIcons.info,
                                   size: 14,
-                                  color: ShadTheme.of(context)
-                                      .colorScheme
-                                      .mutedForeground,
+                                  color: ShadTheme.of(
+                                    context,
+                                  ).colorScheme.mutedForeground,
                                 ),
                               ),
                             ],
@@ -367,9 +373,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Icon(
                                   LucideIcons.info,
                                   size: 14,
-                                  color: ShadTheme.of(context)
-                                      .colorScheme
-                                      .mutedForeground,
+                                  color: ShadTheme.of(
+                                    context,
+                                  ).colorScheme.mutedForeground,
                                 ),
                               ),
                             ],
@@ -425,9 +431,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Icon(
                                         LucideIcons.info,
                                         size: 14,
-                                        color: ShadTheme.of(context)
-                                            .colorScheme
-                                            .mutedForeground,
+                                        color: ShadTheme.of(
+                                          context,
+                                        ).colorScheme.mutedForeground,
                                       ),
                                     ),
                                   ],
@@ -507,6 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             [],
                         talkingUsers: mumbleService.talkingUsers,
                         self: mumbleService.client?.self,
+                        hasMicPermission: mumbleService.hasMicPermission,
                         onChannelTap: (channel) {
                           mumbleService.client?.self.moveToChannel(
                             channel: channel,
@@ -696,7 +703,9 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     final theme = ShadTheme.of(context);
     final activeServers = provider.servers.where((s) => !s.isArchived).toList();
-    final archivedServers = provider.servers.where((s) => s.isArchived).toList();
+    final archivedServers = provider.servers
+        .where((s) => s.isArchived)
+        .toList();
     if (provider.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF64FFDA)),
@@ -734,28 +743,38 @@ class _HomeScreenState extends State<HomeScreen> {
         return ListView(
           padding: padding,
           children: [
-            ...activeServers.map((server) => _buildServerCard(
-                  context,
-                  provider,
-                  service,
-                  server,
-                  isMobile,
-                )),
+            ...activeServers.map(
+              (server) => _buildServerCard(
+                context,
+                provider,
+                service,
+                server,
+                isMobile,
+              ),
+            ),
             if (archivedServers.isNotEmpty) ...[
               const SizedBox(height: 32),
               Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => setState(() => _archiveExpanded = !_archiveExpanded),
+                  onTap: () =>
+                      setState(() => _archiveExpanded = !_archiveExpanded),
                   borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 4,
+                    ),
                     child: Row(
                       children: [
                         Icon(
-                          _archiveExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+                          _archiveExpanded
+                              ? LucideIcons.chevronDown
+                              : LucideIcons.chevronRight,
                           size: 16,
-                          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                          color: theme.colorScheme.foreground.withValues(
+                            alpha: 0.5,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -764,7 +783,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.2,
-                            color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                            color: theme.colorScheme.foreground.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                       ],
@@ -774,16 +795,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               if (_archiveExpanded)
-                ...archivedServers.map((server) => Opacity(
-                      opacity: 0.6,
-                      child: _buildServerCard(
-                        context,
-                        provider,
-                        service,
-                        server,
-                        isMobile,
-                      ),
-                    )),
+                ...archivedServers.map(
+                  (server) => Opacity(
+                    opacity: 0.6,
+                    child: _buildServerCard(
+                      context,
+                      provider,
+                      service,
+                      server,
+                      isMobile,
+                    ),
+                  ),
+                ),
             ],
           ],
         );
@@ -817,11 +840,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Positioned(
                     top: -8,
                     right: -8,
-                    child: _buildServerActions(
-                      context,
-                      provider,
-                      server,
-                    ),
+                    child: _buildServerActions(context, provider, server),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -831,8 +850,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.1),
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.1,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
@@ -864,16 +884,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         '${server.host}:${server.port}',
                         style: TextStyle(
-                          color: theme.colorScheme.foreground
-                              .withValues(alpha: 0.5),
+                          color: theme.colorScheme.foreground.withValues(
+                            alpha: 0.5,
+                          ),
                           fontSize: 13,
                         ),
                       ),
                       Text(
                         'User: ${server.username}',
                         style: TextStyle(
-                          color: theme.colorScheme.foreground
-                              .withValues(alpha: 0.5),
+                          color: theme.colorScheme.foreground.withValues(
+                            alpha: 0.5,
+                          ),
                           fontSize: 13,
                         ),
                       ),
@@ -883,17 +905,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           Expanded(
                             child: ShadButton(
                               onPressed: _connectingServerId == null
-                                  ? () => _connectToServer(
-                                      service,
-                                      server,
-                                    )
+                                  ? () => _connectToServer(service, server)
                                   : null,
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
                                   Opacity(
-                                    opacity:
-                                        _connectingServerId == server.id
+                                    opacity: _connectingServerId == server.id
                                         ? 0
                                         : 1,
                                     child: const Text('CONNECT'),
@@ -904,9 +922,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       height: 14,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: theme
-                                            .colorScheme
-                                            .primaryForeground,
+                                        color:
+                                            theme.colorScheme.primaryForeground,
                                       ),
                                     ),
                                 ],
@@ -924,9 +941,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(
-                      alpha: 0.1,
-                    ),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -965,9 +980,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         alignment: Alignment.center,
                         children: [
                           Opacity(
-                            opacity: _connectingServerId == server.id
-                                ? 0
-                                : 1,
+                            opacity: _connectingServerId == server.id ? 0 : 1,
                             child: const Text('CONNECT'),
                           ),
                           if (_connectingServerId == server.id)
@@ -976,8 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               height: 12,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color:
-                                    theme.colorScheme.primaryForeground,
+                                color: theme.colorScheme.primaryForeground,
                               ),
                             ),
                         ],
@@ -987,11 +999,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            ),
+      ),
     );
   }
 
-  void _archiveServerWithUndo(BuildContext context, ServerProvider provider, MumbleServer server) {
+  void _archiveServerWithUndo(
+    BuildContext context,
+    ServerProvider provider,
+    MumbleServer server,
+  ) {
     provider.archiveServer(server.id);
     ShadSonner.of(context).show(
       ShadToast(
@@ -1042,7 +1058,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ShadButton.ghost(
                 width: double.infinity,
                 mainAxisAlignment: MainAxisAlignment.start,
-                foregroundColor: server.isArchived ? theme.colorScheme.primary : theme.colorScheme.foreground,
+                foregroundColor: server.isArchived
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.foreground,
                 onPressed: () {
                   controller.hide();
                   if (server.isArchived) {
@@ -1053,9 +1071,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 child: Row(
                   children: [
-                    Icon(server.isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
+                    Icon(
+                      server.isArchived
+                          ? LucideIcons.archiveRestore
+                          : LucideIcons.archive,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
-                    Text(server.isArchived ? 'Restore Server' : 'Archive Server'),
+                    Text(
+                      server.isArchived ? 'Restore Server' : 'Archive Server',
+                    ),
                   ],
                 ),
               ),
@@ -1207,6 +1232,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     theme.colorScheme.destructive.withValues(alpha: 0.2),
                   ],
                 )
+              : isTalking
+              ? const LinearGradient(
+                  colors: [
+                    Colors.blueAccent,
+                    Color(0xFF448AFF), // Lighter blue
+                  ],
+                )
               : LinearGradient(
                   colors: [
                     theme.colorScheme.primary,
@@ -1224,9 +1256,9 @@ class _HomeScreenState extends State<HomeScreen> {
             BoxShadow(
               color: isSuppressed
                   ? Colors.transparent
-                  : theme.colorScheme.primary.withValues(
-                      alpha: isTalking ? 0.4 : 0.2,
-                    ),
+                  : isTalking
+                  ? Colors.blueAccent.withValues(alpha: 0.4)
+                  : theme.colorScheme.primary.withValues(alpha: 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -1243,6 +1275,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     : (isTalking ? LucideIcons.audioLines : LucideIcons.mic),
                 color: isSuppressed
                     ? theme.colorScheme.destructive
+                    : isTalking
+                    ? Colors.white
                     : theme.colorScheme.primaryForeground,
                 size: 20,
               ),
@@ -1252,6 +1286,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   color: isSuppressed
                       ? theme.colorScheme.destructive
+                      : isTalking
+                      ? Colors.white
                       : theme.colorScheme.primaryForeground,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
@@ -1269,6 +1305,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = ShadTheme.of(context);
     final double volume = service.currentVolume;
     final bool isTalking = service.isTalking;
+    Color statusColor;
+    IconData iconData = LucideIcons.mic;
+
+    if (isTalking) {
+      statusColor = Colors.blueAccent;
+    } else if (service.hasMicPermission && !service.isSuppressed) {
+      statusColor = Colors.greenAccent;
+    } else {
+      statusColor = Colors.grey;
+      iconData = LucideIcons.micOff;
+    }
 
     return Container(
       width: 48,
@@ -1290,23 +1337,19 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 24 + (volume * 22),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    (isTalking
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.foreground)
-                        .withValues(
-                          alpha: isTalking
-                              ? (0.15 + (volume * 0.25))
-                              : (0.05 + (volume * 0.1)),
-                        ),
+                color: statusColor.withValues(
+                  alpha: isTalking
+                      ? (0.15 + (volume * 0.25))
+                      : (0.2 + (volume * 0.1)),
+                ),
               ),
             ),
             Icon(
-              isTalking ? LucideIcons.mic : LucideIcons.micOff,
+              iconData,
               size: 20,
               color: isTalking
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.foreground.withValues(alpha: 0.3),
+                  ? statusColor
+                  : statusColor.withValues(alpha: 0.6),
             ),
           ],
         ),
