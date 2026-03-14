@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
@@ -38,10 +39,13 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MumbleService()),
         ChangeNotifierProvider(create: (_) => ServerProvider()),
         ChangeNotifierProvider.value(value: settingsService),
-        ProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+        ChangeNotifierProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+          create: (context) => HotkeyService(
+            Provider.of<MumbleService>(context, listen: false),
+            Provider.of<SettingsService>(context, listen: false),
+          ),
           update: (context, mumble, settings, previous) =>
               previous ?? HotkeyService(mumble, settings),
-          dispose: (context, hotkey) => hotkey.dispose(),
         ),
       ],
       child: const MyApp(),
@@ -225,26 +229,43 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 8),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 320),
-                      child: ShadSelect<PttKey>(
-                        placeholder: const Text('Select a key'),
-                        initialValue: settings.pttKey,
-                        onChanged: (value) {
-                          if (value != null) {
-                            settings.setPttKey(value);
-                            setDialogState(() {});
-                          }
-                        },
-                        options: PttKey.values.map((k) {
-                          String label = k.name.toUpperCase();
-                          if (k == PttKey.none) label = 'DISABLED';
-                          return ShadOption(value: k, child: Text(label));
-                        }).toList(),
-                        selectedOptionBuilder: (context, value) =>
-                            Text(value.name.toUpperCase()),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ShadSelect<PttKey>(
+                              placeholder: const Text('Select a key'),
+                              initialValue: settings.pttKey,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  settings.setPttKey(value);
+                                  setDialogState(() {});
+                                }
+                              },
+                              options: [
+                                ...PttKey.values.map((k) {
+                                  String label = k.name.toUpperCase();
+                                  if (k == PttKey.none) label = 'DISABLED';
+                                  return ShadOption(value: k, child: Text(label));
+                                }),
+                              ],
+                              selectedOptionBuilder: (context, value) {
+                                if (value == PttKey.none && settings.customHotkey != null) {
+                                  return Text('CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}');
+                                }
+                                return Text(value.name.toUpperCase());
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ShadButton.outline(
+                            onPressed: () => _showHotkeyRecorder(context, settings),
+                            child: const Text('Record...'),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (settings.pttKey != PttKey.none) ...[
+                    if (settings.pttKey != PttKey.none || settings.customHotkey != null) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -741,6 +762,68 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  void _showHotkeyRecorder(BuildContext context, SettingsService settings) {
+    showShadDialog(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: ShadDialog(
+          title: const Text('Record Hotkey'),
+          child: Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyUpEvent) return KeyEventResult.ignored;
+              
+              final key = event.logicalKey;
+              if (key == LogicalKeyboardKey.escape) {
+                Navigator.pop(context);
+                return KeyEventResult.handled;
+              }
+
+              // Capture mapping
+              settings.setCustomHotkey({
+                'label': key.keyLabel,
+                'logicalKey': key.debugName,
+                'physicalKey': event.physicalKey.debugName,
+                // Very rough VK Mapping for Windows (example)
+                'vkCode': _mapPhysicalToVk(event.physicalKey), 
+              });
+              
+              Navigator.pop(context);
+              return KeyEventResult.handled;
+            },
+            child: Container(
+              width: 300,
+              height: 150,
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Press any key or combined modifiers'),
+                  SizedBox(height: 12),
+                  Text('Press ESC to cancel', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  int _mapPhysicalToVk(PhysicalKeyboardKey key) {
+    // Basic mapping for common keys to Windows VK codes
+    if (key == PhysicalKeyboardKey.shiftLeft || key == PhysicalKeyboardKey.shiftRight) return 0x10;
+    if (key == PhysicalKeyboardKey.controlLeft || key == PhysicalKeyboardKey.controlRight) return 0x11;
+    if (key == PhysicalKeyboardKey.altLeft || key == PhysicalKeyboardKey.altRight) return 0x12;
+    if (key == PhysicalKeyboardKey.capsLock) return 0x14;
+    if (key == PhysicalKeyboardKey.space) return 0x20;
+    if (key == PhysicalKeyboardKey.f1) return 0x70;
+    if (key == PhysicalKeyboardKey.f2) return 0x71;
+    // ... add more as needed or use a more comprehensive map
+    return 0;
   }
 
   Widget _buildHeader(

@@ -3,6 +3,9 @@
 
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
+#include <flutter/standard_method_codec.h>
+#include <windows.h>
 
 #include <memory>
 
@@ -28,6 +31,15 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Global keyboard hook for PTT
+  static HHOOK keyboard_hook_;
+  static HWND s_window_handle_;
+  static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> permissions_channel_;
+  static int ptt_vk_code_;
+  static bool ptt_suppress_;
+
+  static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

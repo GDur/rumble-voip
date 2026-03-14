@@ -26,12 +26,12 @@ class MainFlutterWindow: NSWindow {
     // Monitor modifier keys (Shift, Ctrl, Alt, Cmd) globally for PTT.
     // Carbon HotKeys don't support standalone modifiers, so we use NSEvent monitors.
     NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { event in
-        channel.invokeMethod("onFlagsChanged", arguments: event.modifierFlags.rawValue)
+        channel.invokeMethod("onModifierFlagsChanged", arguments: event.modifierFlags.rawValue)
     }
     
     // Also monitor locally for when the app is focused.
     NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
-        channel.invokeMethod("onFlagsChanged", arguments: event.modifierFlags.rawValue)
+        channel.invokeMethod("onModifierFlagsChanged", arguments: event.modifierFlags.rawValue)
         return event
     }
 
