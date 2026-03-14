@@ -42,10 +42,12 @@ dependencies:
   record: ^6.2.0
   dumble: ^0.8.9
   flutter_pcm_sound: ^3.3.3
-  flutter_opus: 1.0.4
+  flutter_opus:
+    path: plugins/flutter_opus
   ffi: ^2.1.3
   provider: ^6.1.5+1
   shared_preferences: ^2.5.4
+  hotkey_manager: ^0.2.3
 
 dev_dependencies:
   flutter_test:

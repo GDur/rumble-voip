@@ -6,9 +6,31 @@ import 'package:rumble/components/channel_tree.dart';
 import 'package:rumble/models/server.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/services/hotkey_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  
+  final prefs = await SharedPreferences.getInstance();
+  final settingsService = SettingsService(prefs);
+  
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MumbleService()),
+        ChangeNotifierProvider(create: (_) => ServerProvider()),
+        ChangeNotifierProvider.value(value: settingsService),
+        ProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+          update: (context, mumble, settings, previous) => 
+              previous ?? HotkeyService(mumble, settings),
+          dispose: (context, hotkey) => hotkey.dispose(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -73,6 +95,82 @@ class _HomeScreenState extends State<HomeScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showSettingsDialog(BuildContext context) {
+    final settings = Provider.of<SettingsService>(context, listen: false);
+    showShadDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return ShadDialog(
+            title: const Text('Settings'),
+            description: const Text('Configure global Push-to-Talk hotkeys.'),
+            actions: [
+              ShadButton(
+                child: const Text('Close'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('PTT Hotkey', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ShadSelect<PttKey>(
+                    placeholder: const Text('Select a key'),
+                    initialValue: settings.pttKey,
+                    onChanged: (value) {
+                      if (value != null) {
+                        settings.setPttKey(value);
+                        setDialogState(() {});
+                      }
+                    },
+                    options: PttKey.values.map((k) {
+                       String label = k.name.toUpperCase();
+                       if (k == PttKey.none) label = 'DISABLED';
+                       return ShadOption(value: k, child: Text(label));
+                    }).toList(),
+                    selectedOptionBuilder: (context, value) => Text(value.name.toUpperCase()),
+                  ),
+                  const SizedBox(height: 16),
+                  if (settings.pttKey != PttKey.none) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Suppress original function', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text(
+                                'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle). Note: Global hotkeys are currently always suppressed by the system.',
+                                style: TextStyle(fontSize: 12, color: Colors.white54),
+                              ),
+                            ],
+                          ),
+                        ),
+                        ShadSwitch(
+                          value: settings.pttSuppress,
+                          onChanged: (val) {
+                            settings.setPttSuppress(val);
+                            setDialogState(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _showAddServerDialog(BuildContext context, {MumbleServer? server}) {
@@ -331,21 +429,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () => service.disconnect(),
                       child: const Icon(Icons.logout, color: Colors.white54, size: 20),
                     ),
+                    const SizedBox(width: 8),
+                    ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      width: 36,
+                      height: 36,
+                      onPressed: () => _showSettingsDialog(context),
+                      child: const Icon(Icons.settings, color: Colors.white54, size: 20),
+                    ),
                   ],
                 );
               },
             )
           else
-            ShadButton.outline(
-              size: ShadButtonSize.sm,
-              onPressed: () => _showAddServerDialog(context),
-              child: const Row(
-                children: [
-                  Icon(Icons.add, size: 16),
-                  SizedBox(width: 8),
-                  Text('ADD SERVER'),
-                ],
-              ),
+            Row(
+              children: [
+                ShadButton.ghost(
+                  size: ShadButtonSize.sm,
+                  width: 36,
+                  height: 36,
+                  onPressed: () => _showSettingsDialog(context),
+                  child: const Icon(Icons.settings, color: Colors.white54, size: 20),
+                ),
+                const SizedBox(width: 8),
+                ShadButton.outline(
+                  size: ShadButtonSize.sm,
+                  onPressed: () => _showAddServerDialog(context),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add, size: 16),
+                      SizedBox(width: 8),
+                      Text('ADD SERVER'),
+                    ],
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -657,6 +775,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPTTButton(MumbleService service) {
     final bool isTalking = service.isTalking;
     final bool isSuppressed = service.isSuppressed;
+    final settings = Provider.of<SettingsService>(context);
+    
+    String label = isSuppressed ? 'SUPPRESSED' : (isTalking ? 'TALKING...' : 'HOLD TO TALK');
+    if (!isSuppressed && !isTalking && settings.pttKey != PttKey.none) {
+      label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
+    }
 
     return GestureDetector(
       onTapDown: (_) => isSuppressed ? null : service.startPushToTalk(),
@@ -700,7 +824,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 12),
               Text(
-                isSuppressed ? 'SUPPRESSED' : (isTalking ? 'TALKING...' : 'HOLD TO TALK'),
+                label,
                 style: TextStyle(
                   color: isSuppressed ? const Color(0xFFEF4444) : Colors.black,
                   fontWeight: FontWeight.w900,

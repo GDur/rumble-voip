@@ -1,0 +1,16 @@
+# Build artifacts
+.dart_tool/
+build/
+ios/lib/obj_arm64/
+*.a_sim
+*.a_thin
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock

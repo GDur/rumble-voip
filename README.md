@@ -1,4 +1,4 @@
-# Rumble 🎙️
+# Rumble 
 
 **Rumble** is Mumble reloaded. A modern, high-performance voice chat client built with [Flutter](https://flutter.dev), designed to bring the power of the Mumble protocol to every device with a premium UI/UX.
 
@@ -14,11 +14,11 @@ The goal of Rumble is to take the rock-solid reliability of Mumble and wrap it i
 
 | Platform | Works | Does not work |
 | :--- | :---: | :---: |
-| 📱 Android | x | |
-| 🍎 iOS | | x |
-| 💻 macOS | x | |
-| 🪟 Windows | | x |
-| 🌐 Web | | x |
+| Android | x | |
+| iOS | | x |
+| macOS | x | |
+| Windows | | x |
+| Web | | x |
 
 
 ## Tech Stack

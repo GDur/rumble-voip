@@ -8,6 +8,10 @@ PODS:
   - flutter_pcm_sound (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - HotKey (0.2.1)
+  - hotkey_manager_macos (0.0.1):
+    - FlutterMacOS
+    - HotKey
   - record_macos (1.2.0):
     - FlutterMacOS
   - shared_preferences_foundation (0.0.1):
@@ -20,8 +24,13 @@ DEPENDENCIES:
   - flutter_opus (from `Flutter/ephemeral/.symlinks/plugins/flutter_opus/macos`)
   - flutter_pcm_sound (from `Flutter/ephemeral/.symlinks/plugins/flutter_pcm_sound/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
   - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
+
+SPEC REPOS:
+  trunk:
+    - HotKey
 
 EXTERNAL SOURCES:
   device_info_plus:
@@ -34,6 +43,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_pcm_sound/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  hotkey_manager_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos
   record_macos:
     :path: Flutter/ephemeral/.symlinks/plugins/record_macos/macos
   shared_preferences_foundation:
@@ -45,6 +56,8 @@ SPEC CHECKSUMS:
   flutter_opus: e69853e544bf4a7e54e1cdb1cac518fcab1e03f5
   flutter_pcm_sound: 4d212fcd1b3524b0891da25d77912672b66c97fb
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
+  hotkey_manager_macos: 1e2edb0c7ae4fe67108af44a9d3445de41404160
   record_macos: 4680f37daeebf52162e715efb7ff682f0a5ce4fd
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
 

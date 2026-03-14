@@ -1,0 +1,34 @@
+{
+  "name": "flutter_opus",
+  "version": "0.0.1",
+  "summary": "A new Flutter plugin project.",
+  "description": "A new Flutter plugin project that provides Opus decoding using FFI.",
+  "homepage": "http://example.com",
+  "license": {
+    "file": "../LICENSE"
+  },
+  "authors": {
+    "Your Company": "email@example.com"
+  },
+  "source": {
+    "path": "."
+  },
+  "source_files": "Classes/**/*",
+  "platforms": {
+    "ios": "12.0"
+  },
+  "dependencies": {
+    "Flutter": [
+
+    ]
+  },
+  "vendored_libraries": "lib/libopus.a",
+  "preserve_paths": "include/*/",
+  "pod_target_xcconfig": {
+    "HEADER_SEARCH_PATHS": "$(PODS_TARGET_SRCROOT)/include",
+    "DEFINES_MODULE": "YES",
+    "OTHER_LDFLAGS": "-force_load $(PODS_TARGET_SRCROOT)/lib/libopus.a"
+  },
+  "swift_versions": "5.0",
+  "swift_version": "5.0"
+}

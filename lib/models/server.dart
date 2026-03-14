@@ -56,18 +56,18 @@ final List<MumbleServer> initialServers = [
     name: 'chat.revslair.net',
     host: 'chat.revslair.net',
     port: 64738,
-    username: 'Rumble - Mumble Reloaded',
+    username: 'RumbleUser',
   ),
   MumbleServer(
     name: 'Rogue Server',
     host: 'mumble.rogueserver.com',
     port: 64738,
-    username: 'Rumble - Mumble Reloaded',
+    username: 'RumbleUser',
   ),
   MumbleServer(
     name: 'TWC Server',
     host: 'mumble.twcclan.org',
     port: 64738,
-    username: 'Kregor Test',
+    username: 'RumbleUser',
   ),
 ];

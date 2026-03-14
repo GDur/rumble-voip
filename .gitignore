@@ -26,11 +26,10 @@ migrate_working_dir/
 # Flutter/Dart/Pub related
 **/doc/api/
 **/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
 /build/
+**/build/
+.dart_tool/
+**/.dart_tool/
 /coverage/
 
 # Symbolication related
@@ -46,6 +45,9 @@ app.*.map.json
 
 
 !/Users/gdur/.pub-cache/hosted/pub.dev/dumble-0.8.9
-!/Users/gdur/.pub-cache/hosted/pub.dev/opus_flutter-3.0.3
-!/Users/gdur/.pub-cache/hosted/pub.dev/flutter_opus-1.0.4
-!/Users/gdur/.pub-cache/hosted/pub.dev/opus_dart-3.0.1
+
+# Local plugins build artifacts
+plugins/**/.dart_tool/
+plugins/**/build/
+plugins/**/.flutter-plugins
+plugins/**/.flutter-plugins-dependencies
