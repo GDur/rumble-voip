@@ -263,33 +263,62 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          ShadButton.outline(
-                            onPressed: () {
-                              Provider.of<HotkeyService>(context, listen: false).openAccessibilitySettings();
-                            },
-                            child: const Text('Grant Permission'),
-                          ),
-                          const SizedBox(width: 12),
-                          ShadButton.ghost(
-                            onPressed: () {
-                              Provider.of<HotkeyService>(context, listen: false).checkPermission();
-                            },
-                            child: const Row(
-                              children: [
-                                Icon(LucideIcons.refreshCw, size: 14),
-                                SizedBox(width: 8),
-                                Text('Check Status'),
-                              ],
-                            ),
-                          ),
-                        ],
+                      ValueListenableBuilder<bool>(
+                        valueListenable: Provider.of<HotkeyService>(context, listen: false).hasAccessibilityPermission,
+                        builder: (context, hasPermission, _) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    hasPermission ? LucideIcons.check : LucideIcons.info,
+                                    size: 14,
+                                    color: hasPermission ? Colors.green : Colors.orange,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    hasPermission ? 'Permission Granted' : 'Permission Required',
+                                    style: TextStyle(
+                                      fontSize: 12, 
+                                      color: hasPermission ? Colors.green : Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  ShadButton.outline(
+                                    onPressed: () {
+                                      Provider.of<HotkeyService>(context, listen: false).openAccessibilitySettings();
+                                    },
+                                    child: Text(hasPermission ? 'Manage in System Settings' : 'Grant Permission'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  ShadButton.ghost(
+                                    onPressed: () {
+                                      Provider.of<HotkeyService>(context, listen: false).checkPermission();
+                                    },
+                                    child: const Row(
+                                      children: [
+                                        Icon(LucideIcons.refreshCw, size: 14),
+                                        const SizedBox(width: 8),
+                                        Text('Check Status'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ],
