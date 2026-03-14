@@ -1,4 +1,3 @@
-import 'dart:convert';
 
 class MumbleServer {
   final String id;
@@ -7,6 +6,7 @@ class MumbleServer {
   final int port;
   final String username;
   final String password;
+  final bool isArchived;
 
   MumbleServer({
     String? id,
@@ -15,6 +15,7 @@ class MumbleServer {
     required this.port,
     required this.username,
     this.password = '',
+    this.isArchived = false,
   }) : id = id ?? '${host}_$port';
 
   Map<String, dynamic> toJson() => {
@@ -24,6 +25,7 @@ class MumbleServer {
     'port': port,
     'username': username,
     'password': password,
+    'isArchived': isArchived,
   };
 
   factory MumbleServer.fromJson(Map<String, dynamic> json) => MumbleServer(
@@ -33,6 +35,7 @@ class MumbleServer {
     port: json['port'],
     username: json['username'],
     password: json['password'] ?? '',
+    isArchived: json['isArchived'] ?? false,
   );
 
   MumbleServer copyWith({
@@ -41,6 +44,7 @@ class MumbleServer {
     int? port,
     String? username,
     String? password,
+    bool? isArchived,
   }) => MumbleServer(
     id: id,
     name: name ?? this.name,
@@ -48,6 +52,7 @@ class MumbleServer {
     port: port ?? this.port,
     username: username ?? this.username,
     password: password ?? this.password,
+    isArchived: isArchived ?? this.isArchived,
   );
 }
 

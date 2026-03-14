@@ -53,7 +53,25 @@ class ServerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> removeServer(String id) async {
+  Future<void> archiveServer(String id) async {
+    final index = _servers.indexWhere((s) => s.id == id);
+    if (index != -1) {
+      _servers[index] = _servers[index].copyWith(isArchived: true);
+      await _saveServers();
+      notifyListeners();
+    }
+  }
+
+  Future<void> unarchiveServer(String id) async {
+    final index = _servers.indexWhere((s) => s.id == id);
+    if (index != -1) {
+      _servers[index] = _servers[index].copyWith(isArchived: false);
+      await _saveServers();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteServer(String id) async {
     _servers.removeWhere((s) => s.id == id);
     await _saveServers();
     notifyListeners();

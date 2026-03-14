@@ -96,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _passwordController = TextEditingController();
   bool _isAutoName = true;
   String? _connectingServerId;
+  bool _archiveExpanded = false;
 
   @override
   void dispose() {
@@ -694,6 +695,8 @@ class _HomeScreenState extends State<HomeScreen> {
     MumbleService service,
   ) {
     final theme = ShadTheme.of(context);
+    final activeServers = provider.servers.where((s) => !s.isArchived).toList();
+    final archivedServers = provider.servers.where((s) => s.isArchived).toList();
     if (provider.isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF64FFDA)),
@@ -726,206 +729,281 @@ class _HomeScreenState extends State<HomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 600;
+        final padding = EdgeInsets.all(isMobile ? 16 : 24);
 
-        return ListView.builder(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          itemCount: provider.servers.length,
-          itemBuilder: (context, index) {
-            final server = provider.servers[index];
-            return Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.card.withValues(alpha: 0.8),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.border.withValues(alpha: 0.5),
+        return ListView(
+          padding: padding,
+          children: [
+            ...activeServers.map((server) => _buildServerCard(
+                  context,
+                  provider,
+                  service,
+                  server,
+                  isMobile,
+                )),
+            if (archivedServers.isNotEmpty) ...[
+              const SizedBox(height: 32),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => setState(() => _archiveExpanded = !_archiveExpanded),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _archiveExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
+                          size: 16,
+                          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'ARCHIVE (${archivedServers.length})',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                            color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              child: Padding(
-                padding: EdgeInsets.all(isMobile ? 16 : 20),
-                child: isMobile
-                    ? Stack(
-                        clipBehavior: Clip.none,
+              const SizedBox(height: 8),
+              if (_archiveExpanded)
+                ...archivedServers.map((server) => Opacity(
+                      opacity: 0.6,
+                      child: _buildServerCard(
+                        context,
+                        provider,
+                        service,
+                        server,
+                        isMobile,
+                      ),
+                    )),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildServerCard(
+    BuildContext context,
+    ServerProvider provider,
+    MumbleService service,
+    MumbleServer server,
+    bool isMobile,
+  ) {
+    final theme = ShadTheme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.card.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.border.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isMobile ? 16 : 20),
+        child: isMobile
+            ? Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    top: -8,
+                    right: -8,
+                    child: _buildServerActions(
+                      context,
+                      provider,
+                      server,
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Positioned(
-                            top: -8,
-                            right: -8,
-                            child: _buildServerActions(
-                              context,
-                              provider,
-                              server,
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              LucideIcons.server,
+                              color: theme.colorScheme.primary,
+                              size: 20,
                             ),
                           ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      LucideIcons.server,
-                                      color: theme.colorScheme.primary,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(
-                                        right: 24,
-                                      ), // Space for the '...' menu
-                                      child: Text(
-                                        server.name,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                          color: theme.colorScheme.foreground,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                '${server.host}:${server.port}',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                right: 24,
+                              ), // Space for the '...' menu
+                              child: Text(
+                                server.name,
                                 style: TextStyle(
-                                  color: theme.colorScheme.foreground
-                                      .withValues(alpha: 0.5),
-                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: theme.colorScheme.foreground,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              Text(
-                                'User: ${server.username}',
-                                style: TextStyle(
-                                  color: theme.colorScheme.foreground
-                                      .withValues(alpha: 0.5),
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ShadButton(
-                                      onPressed: _connectingServerId == null
-                                          ? () => _connectToServer(
-                                              service,
-                                              server,
-                                            )
-                                          : null,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          Opacity(
-                                            opacity:
-                                                _connectingServerId == server.id
-                                                ? 0
-                                                : 1,
-                                            child: const Text('CONNECT'),
-                                          ),
-                                          if (_connectingServerId == server.id)
-                                            SizedBox(
-                                              width: 14,
-                                              height: 14,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: theme
-                                                    .colorScheme
-                                                    .primaryForeground,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                            ),
                           ),
                         ],
-                      )
-                    : ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.1,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            LucideIcons.server,
-                            color: theme.colorScheme.primary,
-                          ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '${server.host}:${server.port}',
+                        style: TextStyle(
+                          color: theme.colorScheme.foreground
+                              .withValues(alpha: 0.5),
+                          fontSize: 13,
                         ),
-                        title: Text(
-                          server.name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: theme.colorScheme.foreground,
-                          ),
+                      ),
+                      Text(
+                        'User: ${server.username}',
+                        style: TextStyle(
+                          color: theme.colorScheme.foreground
+                              .withValues(alpha: 0.5),
+                          fontSize: 13,
                         ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '${server.host}:${server.port} • ${server.username}',
-                            style: TextStyle(
-                              color: theme.colorScheme.foreground.withValues(
-                                alpha: 0.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ShadButton(
-                              size: ShadButtonSize.sm,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ShadButton(
                               onPressed: _connectingServerId == null
-                                  ? () => _connectToServer(service, server)
+                                  ? () => _connectToServer(
+                                      service,
+                                      server,
+                                    )
                                   : null,
                               child: Stack(
                                 alignment: Alignment.center,
                                 children: [
                                   Opacity(
-                                    opacity: _connectingServerId == server.id
+                                    opacity:
+                                        _connectingServerId == server.id
                                         ? 0
                                         : 1,
                                     child: const Text('CONNECT'),
                                   ),
                                   if (_connectingServerId == server.id)
                                     SizedBox(
-                                      width: 12,
-                                      height: 12,
+                                      width: 14,
+                                      height: 14,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color:
-                                            theme.colorScheme.primaryForeground,
+                                        color: theme
+                                            .colorScheme
+                                            .primaryForeground,
                                       ),
                                     ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            _buildServerActions(context, provider, server),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+                    ],
+                  ),
+                ],
+              )
+            : ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(
+                      alpha: 0.1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    LucideIcons.server,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                title: Text(
+                  server.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: theme.colorScheme.foreground,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${server.host}:${server.port} • ${server.username}',
+                    style: TextStyle(
+                      color: theme.colorScheme.foreground.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShadButton(
+                      size: ShadButtonSize.sm,
+                      onPressed: _connectingServerId == null
+                          ? () => _connectToServer(service, server)
+                          : null,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Opacity(
+                            opacity: _connectingServerId == server.id
+                                ? 0
+                                : 1,
+                            child: const Text('CONNECT'),
+                          ),
+                          if (_connectingServerId == server.id)
+                            SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color:
+                                    theme.colorScheme.primaryForeground,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    _buildServerActions(context, provider, server),
+                  ],
+                ),
               ),
-            );
+            ),
+    );
+  }
+
+  void _archiveServerWithUndo(BuildContext context, ServerProvider provider, MumbleServer server) {
+    provider.archiveServer(server.id);
+    ShadSonner.of(context).show(
+      ShadToast(
+        title: const Text('Server archived'),
+        action: ShadButton.outline(
+          size: ShadButtonSize.sm,
+          child: const Text('undo'),
+          onPressed: () {
+            provider.unarchiveServer(server.id);
           },
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -964,19 +1042,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ShadButton.ghost(
                 width: double.infinity,
                 mainAxisAlignment: MainAxisAlignment.start,
-                foregroundColor: Colors.redAccent,
+                foregroundColor: server.isArchived ? theme.colorScheme.primary : theme.colorScheme.foreground,
                 onPressed: () {
                   controller.hide();
-                  provider.removeServer(server.id);
+                  if (server.isArchived) {
+                    provider.unarchiveServer(server.id);
+                  } else {
+                    _archiveServerWithUndo(context, provider, server);
+                  }
                 },
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(LucideIcons.trash, size: 16),
-                    SizedBox(width: 8),
-                    Text('Delete Server'),
+                    Icon(server.isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
+                    const SizedBox(width: 8),
+                    Text(server.isArchived ? 'Restore Server' : 'Archive Server'),
                   ],
                 ),
               ),
+              if (server.isArchived)
+                ShadButton.ghost(
+                  width: double.infinity,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  foregroundColor: Colors.redAccent,
+                  onPressed: () {
+                    controller.hide();
+                    provider.deleteServer(server.id);
+                  },
+                  child: const Row(
+                    children: [
+                      Icon(LucideIcons.trash, size: 16),
+                      SizedBox(width: 8),
+                      Text('Permanently Delete'),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
