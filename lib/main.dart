@@ -109,9 +109,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = Provider.of<SettingsService>(context, listen: false);
     showShadDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return ShadDialog(
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return ShadDialog(
             title: const Text('Settings'),
             description: const Text('Configure global Push-to-Talk hotkeys.'),
             actions: [
@@ -203,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-    );
+    ));
   }
 
   void _showAddServerDialog(BuildContext context, {MumbleServer? server}) {
@@ -224,9 +226,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     showShadDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return ShadDialog(
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            return ShadDialog(
             title: Text(server == null ? 'Add New Server' : 'Edit Server'),
             description: const Text('Enter the server details below.'),
             actions: [
@@ -332,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         },
       ),
-    );
+    ));
   }
 
   @override
@@ -340,9 +344,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final mumbleService = Provider.of<MumbleService>(context);
     final serverProvider = Provider.of<ServerProvider>(context);
 
+    final theme = ShadTheme.of(context);
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(color: Color(0xFF0F172A)),
+        decoration: BoxDecoration(color: theme.colorScheme.background),
         child: SafeArea(
           child: Column(
             children: [
@@ -369,13 +374,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(BuildContext context, MumbleService service) {
+    final theme = ShadTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
+        color: theme.colorScheme.card.withValues(alpha: 0.5),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: theme.colorScheme.border.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -388,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ClipRRect(
@@ -406,12 +412,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Rumble',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: theme.colorScheme.foreground,
                       letterSpacing: -0.5,
                       fontFamily: 'Outfit',
                       height: 1.1,
@@ -422,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
-                      color: const Color(0xFF64FFDA).withValues(alpha: 0.5),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.5),
                       letterSpacing: 1.2,
                       fontFamily: 'Outfit',
                     ),
@@ -472,12 +478,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 8),
                     ShadIconButton.ghost(
                       onPressed: () => service.disconnect(),
-                      icon: const Icon(LucideIcons.logOut, color: Colors.white54, size: 20),
+                      icon: Icon(LucideIcons.logOut, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
                     ),
                     const SizedBox(width: 4),
                     ShadIconButton.ghost(
                       onPressed: () => _showSettingsDialog(context),
-                      icon: const Icon(LucideIcons.settings, color: Colors.white54, size: 20),
+                      icon: Icon(LucideIcons.settings, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
                     ),
                   ],
                 );
@@ -488,12 +494,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ShadIconButton.ghost(
                   onPressed: () => _showSettingsDialog(context),
-                  icon: const Icon(LucideIcons.settings, color: Colors.white54, size: 20),
+                  icon: Icon(LucideIcons.settings, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
                 ),
                 const SizedBox(width: 8),
                 ShadButton.outline(
                   size: ShadButtonSize.sm,
-                  foregroundColor: Colors.white,
                   onPressed: () => _showAddServerDialog(context),
                   child: const Row(
                     children: [
@@ -511,6 +516,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServerList(BuildContext context, ServerProvider provider, MumbleService service) {
+    final theme = ShadTheme.of(context);
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF64FFDA)));
     }
@@ -520,9 +526,9 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.dns_outlined, size: 64, color: Colors.white10),
+            const Icon(LucideIcons.server, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text('No servers yet', style: TextStyle(color: Colors.white54)),
+            Text('No servers yet', style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5))),
             const SizedBox(height: 24),
             ShadButton(
               onPressed: () => _showAddServerDialog(context),
@@ -545,9 +551,9 @@ class _HomeScreenState extends State<HomeScreen> {
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B).withValues(alpha: 0.3),
+                color: theme.colorScheme.card.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                border: Border.all(color: theme.colorScheme.border.withValues(alpha: 0.5)),
               ),
               child: Padding(
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
@@ -568,10 +574,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.dns, color: Color(0xFF64FFDA), size: 20),
+                                  child: Icon(LucideIcons.server, color: theme.colorScheme.primary, size: 20),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -579,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     padding: const EdgeInsets.only(right: 24), // Space for the '...' menu
                                     child: Text(
                                       server.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.foreground),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -589,11 +595,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 12),
                             Text(
                               '${server.host}:${server.port}',
-                              style: const TextStyle(color: Colors.white54, fontSize: 13),
+                              style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5), fontSize: 13),
                             ),
                             Text(
                               'User: ${server.username}',
-                              style: const TextStyle(color: Colors.white54, fontSize: 13),
+                              style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5), fontSize: 13),
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -608,13 +614,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                           opacity: _connectingServerId == server.id ? 0 : 1,
                                           child: const Text('CONNECT'),
                                         ),
-                                        if (_connectingServerId == server.id)
-                                          const SizedBox(
+                                          if (_connectingServerId == server.id)
+                                          SizedBox(
                                             width: 14,
                                             height: 14,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              color: Colors.black,
+                                              color: theme.colorScheme.primaryForeground,
                                             ),
                                           ),
                                       ],
@@ -632,20 +638,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF64FFDA).withValues(alpha: 0.05),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.dns, color: Color(0xFF64FFDA)),
+                        child: Icon(LucideIcons.server, color: theme.colorScheme.primary),
                       ),
                       title: Text(
                         server.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.colorScheme.foreground),
                       ),
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
                           '${server.host}:${server.port} • ${server.username}',
-                          style: const TextStyle(color: Colors.white54),
+                          style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5)),
                         ),
                       ),
                       trailing: Row(
@@ -662,12 +668,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: const Text('CONNECT'),
                                 ),
                                 if (_connectingServerId == server.id)
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 12,
                                     height: 12,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Colors.black,
+                                      color: theme.colorScheme.primaryForeground,
                                     ),
                                   ),
                               ],
@@ -687,13 +693,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServerActions(BuildContext context, ServerProvider provider, MumbleServer server) {
+    final theme = ShadTheme.of(context);
     final controller = ShadPopoverController();
     return ShadPopover(
       controller: controller,
       popover: (context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.all(8),
         child: SizedBox(
-          width: 180,
+          width: 200,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -735,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: ShadIconButton.ghost(
         onPressed: controller.toggle,
-        icon: const Icon(LucideIcons.ellipsis, size: 20, color: Colors.white54),
+        icon: Icon(LucideIcons.ellipsis, size: 20, color: theme.colorScheme.foreground.withValues(alpha: 0.5)),
       ),
     );
   }
@@ -789,12 +796,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomBar(MumbleService service) {
+    final theme = ShadTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: theme.colorScheme.background,
         border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 1),
+          top: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5), width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -825,6 +833,8 @@ class _HomeScreenState extends State<HomeScreen> {
       label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
     }
 
+    final theme = ShadTheme.of(context);
+    
     return GestureDetector(
       onTapDown: (_) => isSuppressed ? null : service.startPushToTalk(),
       onTapUp: (_) => service.stopPushToTalk(),
@@ -835,19 +845,19 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           gradient: isSuppressed 
             ? LinearGradient(colors: [
-                const Color(0xFFEF4444).withValues(alpha: 0.1), 
-                const Color(0xFF991B1B).withValues(alpha: 0.2)
+                theme.colorScheme.destructive.withValues(alpha: 0.1), 
+                theme.colorScheme.destructive.withValues(alpha: 0.2)
               ])
-            : const LinearGradient(colors: [Color(0xFF64FFDA), Color(0xFF14B8A6)]),
+            : LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]),
           borderRadius: BorderRadius.circular(16),
           border: isSuppressed 
-            ? Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4), width: 1)
+            ? Border.all(color: theme.colorScheme.destructive.withValues(alpha: 0.4), width: 1)
             : null,
           boxShadow: [
             BoxShadow(
               color: isSuppressed 
                 ? Colors.transparent 
-                : const Color(0xFF64FFDA).withValues(alpha: isTalking ? 0.4 : 0.2),
+                : theme.colorScheme.primary.withValues(alpha: isTalking ? 0.4 : 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -862,14 +872,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 isSuppressed 
                   ? LucideIcons.micOff 
                   : (isTalking ? LucideIcons.audioLines : LucideIcons.mic), 
-                color: isSuppressed ? const Color(0xFFEF4444) : Colors.black, 
+                color: isSuppressed ? theme.colorScheme.destructive : theme.colorScheme.primaryForeground, 
                 size: 20
               ),
               const SizedBox(width: 12),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSuppressed ? const Color(0xFFEF4444) : Colors.black,
+                  color: isSuppressed ? theme.colorScheme.destructive : theme.colorScheme.primaryForeground,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                   letterSpacing: 1,
@@ -883,6 +893,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMicStatus(MumbleService service) {
+    final theme = ShadTheme.of(context);
     final double volume = service.currentVolume;
     final bool isTalking = service.isTalking;
 
@@ -891,8 +902,8 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(0xFF1E293B),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: theme.colorScheme.card,
+        border: Border.all(color: theme.colorScheme.border.withValues(alpha: 0.3)),
       ),
       child: Center(
         child: Stack(
@@ -904,7 +915,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 24 + (volume * 22),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isTalking ? const Color(0xFF64FFDA) : Colors.white).withValues(
+                color: (isTalking ? theme.colorScheme.primary : theme.colorScheme.foreground).withValues(
                   alpha: isTalking ? (0.15 + (volume * 0.25)) : (0.05 + (volume * 0.1)),
                 ),
               ),
@@ -912,7 +923,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               isTalking ? LucideIcons.mic : LucideIcons.micOff,
               size: 20,
-              color: isTalking ? const Color(0xFF64FFDA) : Colors.white.withValues(alpha: 0.3),
+              color: isTalking ? theme.colorScheme.primary : theme.colorScheme.foreground.withValues(alpha: 0.3),
             ),
           ],
         ),

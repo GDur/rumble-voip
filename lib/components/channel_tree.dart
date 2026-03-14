@@ -334,11 +334,11 @@ class _ChannelTreeState extends State<ChannelTree> {
                             child: Text(
                               channel.name ?? 'Channel ${channel.channelId}',
                               style: theme.textTheme.list.copyWith(
-                              fontWeight: isMyChannel ? FontWeight.bold : FontWeight.w500,
-                              color: (isMyChannel || isSelected) ? Colors.white : Colors.white.withValues(alpha: 0.8),
-                              fontSize: 15,
-                              fontFamily: 'Outfit',
-                            ),
+                                fontWeight: isMyChannel ? FontWeight.bold : FontWeight.w500,
+                                color: (isMyChannel || isSelected) ? theme.colorScheme.foreground : theme.colorScheme.foreground.withValues(alpha: 0.8),
+                                fontSize: 15,
+                                fontFamily: 'Outfit',
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -424,11 +424,11 @@ class _ChannelTreeState extends State<ChannelTree> {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: isTalking ? const Color(0xFF00B4D8) : const Color(0xFF64FFDA).withValues(alpha: 0.5),
+                  color: isTalking ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                   boxShadow: isTalking ? [
                     BoxShadow(
-                      color: const Color(0xFF00B4D8).withValues(alpha: 0.4),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
                       blurRadius: 8,
                       spreadRadius: 2,
                     )
@@ -442,7 +442,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 14,
-                    color: (isTalking || isSelected) ? Colors.white : Colors.white60,
+                    color: (isTalking || isSelected) ? theme.colorScheme.foreground : theme.colorScheme.foreground.withValues(alpha: 0.6),
                     fontWeight: (isTalking || isMe || isSelected) ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),
