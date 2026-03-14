@@ -10,6 +10,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
 
+// Brand Colors
+const kBrandGreen = Color(
+  0xFF64FFDA,
+); // Bright brand green (for buttons, icons, dark mode)
+const kBrandGreenText = Color(
+  0xFF065F46,
+); // Deep emerald for readable text on light backgrounds
+const kBrandGreenButton = Color.fromARGB(
+  255,
+  79,
+  196,
+  157,
+); // Solid green for buttons on light backgrounds
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -51,18 +65,24 @@ class MyApp extends StatelessWidget {
           theme: ShadThemeData(
             brightness: Brightness.light,
             colorScheme: const ShadSlateColorScheme.light(
-              primary: Color(0xFF64FFDA),
-              primaryForeground: Colors.black,
+              primary: kBrandGreenText, // Darker for text/accents on light bg
+              primaryForeground: Colors.white,
+            ),
+            primaryButtonTheme: const ShadButtonTheme(
+              backgroundColor:
+                  kBrandGreenButton, // More solid green for buttons
+              foregroundColor: Colors.white,
             ),
             textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
           ),
           darkTheme: ShadThemeData(
             brightness: Brightness.dark,
             colorScheme: const ShadSlateColorScheme.dark(
-              primary: Color(0xFF64FFDA),
+              primary: kBrandGreen, // Bright for pop on dark bg
               primaryForeground: Colors.black,
             ),
             primaryButtonTheme: const ShadButtonTheme(
+              backgroundColor: kBrandGreen,
               foregroundColor: Colors.black,
             ),
             primaryToastTheme: ShadToastTheme(
@@ -609,12 +629,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
+                          color: kBrandGreen.withValues(
+                            alpha: 0.1,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(
-                              0xFF64FFDA,
-                            ).withValues(alpha: 0.2),
+                            color: kBrandGreen.withValues(
+                              alpha: 0.2,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -622,14 +644,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             const CircleAvatar(
                               radius: 4,
-                              backgroundColor: Color(0xFF64FFDA),
+                              backgroundColor: kBrandGreen,
                             ),
                             if (!hideText) ...[
                               const SizedBox(width: 8),
                               const Text(
                                 'CONNECTED',
                                 style: TextStyle(
-                                  color: Color(0xFF64FFDA),
+                                  color: kBrandGreen,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 1,
@@ -1241,8 +1263,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : LinearGradient(
                   colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.primary.withValues(alpha: 0.8),
+                    kBrandGreen,
+                    kBrandGreen.withValues(alpha: 0.8),
                   ],
                 ),
           borderRadius: BorderRadius.circular(16),
@@ -1258,7 +1280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? Colors.transparent
                   : isTalking
                   ? Colors.blueAccent.withValues(alpha: 0.4)
-                  : theme.colorScheme.primary.withValues(alpha: 0.2),
+                  : kBrandGreen.withValues(alpha: 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -1277,7 +1299,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? theme.colorScheme.destructive
                     : isTalking
                     ? Colors.white
-                    : theme.colorScheme.primaryForeground,
+                    : Colors.black, // High contrast on bright green
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -1288,7 +1310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? theme.colorScheme.destructive
                       : isTalking
                       ? Colors.white
-                      : theme.colorScheme.primaryForeground,
+                      : Colors.black, // High contrast on bright green
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                   letterSpacing: 1,
