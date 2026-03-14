@@ -12,10 +12,10 @@ import 'package:rumble/services/hotkey_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   final prefs = await SharedPreferences.getInstance();
   final settingsService = SettingsService(prefs);
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -23,7 +23,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ServerProvider()),
         ChangeNotifierProvider.value(value: settingsService),
         ProxyProvider2<MumbleService, SettingsService, HotkeyService>(
-          update: (context, mumble, settings, previous) => 
+          update: (context, mumble, settings, previous) =>
               previous ?? HotkeyService(mumble, settings),
           dispose: (context, hotkey) => hotkey.dispose(),
         ),
@@ -90,7 +90,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final _hostController = TextEditingController();
   final _nameController = TextEditingController();
   final _portController = TextEditingController(text: '64738');
-  final _usernameController = TextEditingController(text: 'Rumble - Mumble Reloaded');
+  final _usernameController = TextEditingController(
+    text: 'Rumble - Mumble Reloaded',
+  );
   final _passwordController = TextEditingController();
   bool _isAutoName = true;
   String? _connectingServerId;
@@ -114,98 +116,132 @@ class _HomeScreenState extends State<HomeScreen> {
         child: StatefulBuilder(
           builder: (context, setDialogState) {
             return ShadDialog(
-            title: const Text('Settings'),
-            description: const Text('Configure global Push-to-Talk hotkeys.'),
-            actions: [
-              ShadButton(
-                child: const Text('Close'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-            child: Container(
-              width: 440,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Appearance', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: ShadSelect<ThemeMode>(
-                      placeholder: const Text('Select Theme'),
-                      initialValue: settings.themeMode,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settings.setThemeMode(value);
-                          setDialogState(() {});
-                        }
-                      },
-                      options: [
-                        ShadOption(value: ThemeMode.system, child: const Text('System')),
-                        ShadOption(value: ThemeMode.light, child: const Text('Light')),
-                        ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
-                      ],
-                      selectedOptionBuilder: (context, value) => Text(value.name.toUpperCase()),
+              title: const Text('Settings'),
+              description: const Text('Configure global Push-to-Talk hotkeys.'),
+              actions: [
+                ShadButton(
+                  child: const Text('Close'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+              child: Container(
+                width: 440,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Appearance',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('PTT Hotkey', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 320),
-                    child: ShadSelect<PttKey>(
-                      placeholder: const Text('Select a key'),
-                      initialValue: settings.pttKey,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settings.setPttKey(value);
-                          setDialogState(() {});
-                        }
-                      },
-                      options: PttKey.values.map((k) {
-                         String label = k.name.toUpperCase();
-                         if (k == PttKey.none) label = 'DISABLED';
-                         return ShadOption(value: k, child: Text(label));
-                      }).toList(),
-                      selectedOptionBuilder: (context, value) => Text(value.name.toUpperCase()),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (settings.pttKey != PttKey.none) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Suppress original function', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text(
-                                'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
-                                style: TextStyle(fontSize: 12, color: Colors.white54),
-                              ),
-                            ],
-                          ),
-                        ),
-                        ShadSwitch(
-                          value: settings.pttSuppress,
-                          onChanged: (val) {
-                            settings.setPttSuppress(val);
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: ShadSelect<ThemeMode>(
+                        placeholder: const Text('Select Theme'),
+                        initialValue: settings.themeMode,
+                        onChanged: (value) {
+                          if (value != null) {
+                            settings.setThemeMode(value);
                             setDialogState(() {});
-                          },
-                        ),
-                      ],
+                          }
+                        },
+                        options: [
+                          ShadOption(
+                            value: ThemeMode.system,
+                            child: const Text('System'),
+                          ),
+                          ShadOption(
+                            value: ThemeMode.light,
+                            child: const Text('Light'),
+                          ),
+                          ShadOption(
+                            value: ThemeMode.dark,
+                            child: const Text('Dark'),
+                          ),
+                        ],
+                        selectedOptionBuilder: (context, value) =>
+                            Text(value.name.toUpperCase()),
+                      ),
                     ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'PTT Hotkey',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 320),
+                      child: ShadSelect<PttKey>(
+                        placeholder: const Text('Select a key'),
+                        initialValue: settings.pttKey,
+                        onChanged: (value) {
+                          if (value != null) {
+                            settings.setPttKey(value);
+                            setDialogState(() {});
+                          }
+                        },
+                        options: PttKey.values.map((k) {
+                          String label = k.name.toUpperCase();
+                          if (k == PttKey.none) label = 'DISABLED';
+                          return ShadOption(value: k, child: Text(label));
+                        }).toList(),
+                        selectedOptionBuilder: (context, value) =>
+                            Text(value.name.toUpperCase()),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (settings.pttKey != PttKey.none) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Suppress original function',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    ShadTooltip(
+                                      builder: (context) => const Text(
+                                        'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
+                                      ),
+                                      child: Icon(
+                                        LucideIcons.info,
+                                        size: 14,
+                                        color: ShadTheme.of(context)
+                                            .colorScheme
+                                            .mutedForeground,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          ShadSwitch(
+                            value: settings.pttSuppress,
+                            onChanged: (val) {
+                              settings.setPttSuppress(val);
+                              setDialogState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
-    ));
+    );
   }
 
   void _showAddServerDialog(BuildContext context, {MumbleServer? server}) {
@@ -222,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _portController.text = '64738';
       _passwordController.clear();
     }
-    
+
     final formKey = GlobalKey<ShadFormState>();
     bool passwordObscure = true;
 
@@ -233,156 +269,219 @@ class _HomeScreenState extends State<HomeScreen> {
         child: StatefulBuilder(
           builder: (context, setDialogState) {
             return ShadDialog(
-            title: Text(server == null ? 'Add New Server' : 'Edit Server'),
-            description: const Text('Enter the server details below.'),
-            actions: [
-              ShadButton.outline(
-                child: const Text('Cancel'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              ShadButton(
-                child: const Text('Save Server'),
-                onPressed: () {
-                  if (formKey.currentState!.saveAndValidate()) {
-                    final username = _usernameController.text.trim();
-                    final newServer = MumbleServer(
-                      id: server?.id,
-                      name: _nameController.text.isEmpty ? _hostController.text : _nameController.text,
-                      host: _hostController.text,
-                      port: int.tryParse(_portController.text) ?? 64738,
-                      username: username,
-                      password: _passwordController.text,
-                    );
-                    if (server == null) {
-                      Provider.of<ServerProvider>(context, listen: false).addServer(newServer);
-                    } else {
-                      Provider.of<ServerProvider>(context, listen: false).updateServer(newServer);
+              title: Text(server == null ? 'Add New Server' : 'Edit Server'),
+              actions: [
+                ShadButton.outline(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                ShadButton(
+                  child: const Text('Save Server'),
+                  onPressed: () {
+                    if (formKey.currentState!.saveAndValidate()) {
+                      final username = _usernameController.text.trim();
+                      final newServer = MumbleServer(
+                        id: server?.id,
+                        name: _nameController.text.isEmpty
+                            ? _hostController.text
+                            : _nameController.text,
+                        host: _hostController.text,
+                        port: int.tryParse(_portController.text) ?? 64738,
+                        username: username,
+                        password: _passwordController.text,
+                      );
+                      if (server == null) {
+                        Provider.of<ServerProvider>(
+                          context,
+                          listen: false,
+                        ).addServer(newServer);
+                      } else {
+                        Provider.of<ServerProvider>(
+                          context,
+                          listen: false,
+                        ).updateServer(newServer);
+                      }
+                      Navigator.of(context).pop();
                     }
-                    Navigator.of(context).pop();
-                  }
-                },
-              ),
-            ],
-            child: ShadForm(
-              key: formKey,
-              child: Container(
-                width: 440,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: ShadInputFormField(
-                        id: 'host',
-                        label: const Text('Server Address (Host)'),
-                        placeholder: const Text('mumble.example.com'),
-                        controller: _hostController,
-                        description: const Text('The hostname or IP of the Mumble server.'),
-                        onChanged: (val) {
-                          if (_isAutoName) {
-                            setDialogState(() => _nameController.text = val);
-                          }
-                        },
-                        validator: (v) {
-                          if (v.isEmpty) return 'Host address is required';
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: ShadInputFormField(
-                        id: 'name',
-                        label: const Text('Display Name'),
-                        placeholder: const Text('My Awesome Server'),
-                        controller: _nameController,
-                        description: const Text('How this server appears in your list.'),
-                        onChanged: (val) => setDialogState(() => _isAutoName = false),
-                        validator: (v) {
-                          if (v.isEmpty) return 'Display name is required';
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 150),
-                            child: ShadInputFormField(
-                              id: 'port',
-                              label: const Text('Port'),
-                              placeholder: const Text('64738'),
-                              controller: _portController,
-                              keyboardType: TextInputType.number,
-                              validator: (v) {
-                                if (int.tryParse(v) == null) return 'Invalid port';
-                                return null;
-                              },
-                            ),
+                  },
+                ),
+              ],
+              child: ShadForm(
+                key: formKey,
+                child: Container(
+                  width: 440,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: ShadInputFormField(
+                          id: 'host',
+                          label: Row(
+                            children: [
+                              const Text('Server Address (Host)'),
+                              const SizedBox(width: 8),
+                              ShadTooltip(
+                                builder: (context) => const Text(
+                                  'The hostname or IP of the Mumble server.',
+                                ),
+                                child: Icon(
+                                  LucideIcons.info,
+                                  size: 14,
+                                  color: ShadTheme.of(context)
+                                      .colorScheme
+                                      .mutedForeground,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 3,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 250),
-                            child: ShadInputFormField(
-                              id: 'username',
-                              label: const Text('Username'),
-                              placeholder: const Text('Your Nickname'),
-                              controller: _usernameController,
-                              description: const Text('Public display name on server.'),
-                              validator: (v) {
-                                if (v.length < 2) return 'Username too short';
-                                return null;
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: ShadInputFormField(
-                        id: 'password',
-                        label: const Text('Password (Optional)'),
-                        placeholder: const Text('Secret Password'),
-                        controller: _passwordController,
-                        obscureText: passwordObscure,
-                        leading: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Icon(LucideIcons.lock, size: 16),
-                        ),
-                        trailing: ShadIconButton.ghost(
-                          width: 24,
-                          height: 24,
-                          padding: EdgeInsets.zero,
-                          icon: Icon(
-                            passwordObscure ? LucideIcons.eyeOff : LucideIcons.eye,
-                            size: 16,
-                          ),
-                          onPressed: () {
-                            setDialogState(() => passwordObscure = !passwordObscure);
+                          placeholder: const Text('mumble.example.com'),
+                          controller: _hostController,
+                          onChanged: (val) {
+                            if (_isAutoName) {
+                              setDialogState(() => _nameController.text = val);
+                            }
+                          },
+                          validator: (v) {
+                            if (v.isEmpty) return 'Host address is required';
+                            return null;
                           },
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: ShadInputFormField(
+                          id: 'name',
+                          label: Row(
+                            children: [
+                              const Text('Display Name'),
+                              const SizedBox(width: 8),
+                              ShadTooltip(
+                                builder: (context) => const Text(
+                                  'How this server appears in your list.',
+                                ),
+                                child: Icon(
+                                  LucideIcons.info,
+                                  size: 14,
+                                  color: ShadTheme.of(context)
+                                      .colorScheme
+                                      .mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
+                          placeholder: const Text('My Awesome Server'),
+                          controller: _nameController,
+                          onChanged: (val) =>
+                              setDialogState(() => _isAutoName = false),
+                          validator: (v) {
+                            if (v.isEmpty) return 'Display name is required';
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 150),
+                              child: ShadInputFormField(
+                                id: 'port',
+                                label: const Text('Port'),
+                                placeholder: const Text('64738'),
+                                controller: _portController,
+                                keyboardType: TextInputType.number,
+                                validator: (v) {
+                                  if (int.tryParse(v) == null) {
+                                    return 'Invalid port';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 3,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 250),
+                              child: ShadInputFormField(
+                                id: 'username',
+                                label: Row(
+                                  children: [
+                                    const Text('Username'),
+                                    const SizedBox(width: 8),
+                                    ShadTooltip(
+                                      builder: (context) => const Text(
+                                        'Public display name on server.',
+                                      ),
+                                      child: Icon(
+                                        LucideIcons.info,
+                                        size: 14,
+                                        color: ShadTheme.of(context)
+                                            .colorScheme
+                                            .mutedForeground,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                placeholder: const Text('Your Nickname'),
+                                controller: _usernameController,
+                                validator: (v) {
+                                  if (v.length < 2) return 'Username too short';
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: ShadInputFormField(
+                          id: 'password',
+                          label: const Text('Password (Optional)'),
+                          placeholder: const Text('Secret Password'),
+                          controller: _passwordController,
+                          obscureText: passwordObscure,
+                          leading: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(LucideIcons.lock, size: 16),
+                          ),
+                          trailing: ShadIconButton.ghost(
+                            width: 24,
+                            height: 24,
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              passwordObscure
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              setDialogState(
+                                () => passwordObscure = !passwordObscure,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
-    ));
+    );
   }
 
   @override
@@ -402,11 +501,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: mumbleService.isConnected
                     ? ChannelTree(
                         channels: mumbleService.channels,
-                        users: mumbleService.client?.getUsers().values.toList() ?? [],
+                        users:
+                            mumbleService.client?.getUsers().values.toList() ??
+                            [],
                         talkingUsers: mumbleService.talkingUsers,
                         self: mumbleService.client?.self,
                         onChannelTap: (channel) {
-                          mumbleService.client?.self.moveToChannel(channel: channel);
+                          mumbleService.client?.self.moveToChannel(
+                            channel: channel,
+                          );
                         },
                       )
                     : _buildServerList(context, serverProvider, mumbleService),
@@ -490,7 +593,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Row(
                   children: [
                     ShadTooltip(
-                      builder: (context) => const Text('You are connected to the Mumble server.'),
+                      builder: (context) =>
+                          const Text('You are connected to the Mumble server.'),
                       child: Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: hideText ? 10 : 12,
@@ -499,12 +603,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         decoration: BoxDecoration(
                           color: const Color(0xFF64FFDA).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF64FFDA).withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF64FFDA,
+                            ).withValues(alpha: 0.2),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const CircleAvatar(radius: 4, backgroundColor: Color(0xFF64FFDA)),
+                            const CircleAvatar(
+                              radius: 4,
+                              backgroundColor: Color(0xFF64FFDA),
+                            ),
                             if (!hideText) ...[
                               const SizedBox(width: 8),
                               const Text(
@@ -524,12 +635,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 8),
                     ShadIconButton.ghost(
                       onPressed: () => service.disconnect(),
-                      icon: Icon(LucideIcons.logOut, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
+                      icon: Icon(
+                        LucideIcons.logOut,
+                        color: theme.colorScheme.foreground.withValues(
+                          alpha: 0.5,
+                        ),
+                        size: 20,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     ShadIconButton.ghost(
                       onPressed: () => _showSettingsDialog(context),
-                      icon: Icon(LucideIcons.settings, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
+                      icon: Icon(
+                        LucideIcons.settings,
+                        color: theme.colorScheme.foreground.withValues(
+                          alpha: 0.5,
+                        ),
+                        size: 20,
+                      ),
                     ),
                   ],
                 );
@@ -540,7 +663,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 ShadIconButton.ghost(
                   onPressed: () => _showSettingsDialog(context),
-                  icon: Icon(LucideIcons.settings, color: theme.colorScheme.foreground.withValues(alpha: 0.5), size: 20),
+                  icon: Icon(
+                    LucideIcons.settings,
+                    color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ShadButton.outline(
@@ -561,10 +688,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildServerList(BuildContext context, ServerProvider provider, MumbleService service) {
+  Widget _buildServerList(
+    BuildContext context,
+    ServerProvider provider,
+    MumbleService service,
+  ) {
     final theme = ShadTheme.of(context);
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFF64FFDA)));
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF64FFDA)),
+      );
     }
 
     if (provider.servers.isEmpty) {
@@ -574,7 +707,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(LucideIcons.server, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            Text('No servers yet', style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5))),
+            Text(
+              'No servers yet',
+              style: TextStyle(
+                color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+              ),
+            ),
             const SizedBox(height: 24),
             ShadButton(
               onPressed: () => _showAddServerDialog(context),
@@ -588,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 600;
-        
+
         return ListView.builder(
           padding: EdgeInsets.all(isMobile ? 16 : 24),
           itemCount: provider.servers.length,
@@ -599,137 +737,190 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: theme.colorScheme.card.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.colorScheme.border.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: theme.colorScheme.border.withValues(alpha: 0.5),
+                ),
               ),
               child: Padding(
                 padding: EdgeInsets.all(isMobile ? 16 : 20),
-                child: isMobile 
-                  ? Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned(
-                          top: -8,
-                          right: -8,
-                          child: _buildServerActions(context, provider, server),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(LucideIcons.server, color: theme.colorScheme.primary, size: 20),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 24), // Space for the '...' menu
-                                    child: Text(
-                                      server.name,
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.foreground),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '${server.host}:${server.port}',
-                              style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5), fontSize: 13),
-                            ),
-                            Text(
-                              'User: ${server.username}',
-                              style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5), fontSize: 13),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ShadButton(
-                                    onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        Opacity(
-                                          opacity: _connectingServerId == server.id ? 0 : 1,
-                                          child: const Text('CONNECT'),
-                                        ),
-                                          if (_connectingServerId == server.id)
-                                          SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: theme.colorScheme.primaryForeground,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  : ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(LucideIcons.server, color: theme.colorScheme.primary),
-                      ),
-                      title: Text(
-                        server.name,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: theme.colorScheme.foreground),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          '${server.host}:${server.port} • ${server.username}',
-                          style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.5)),
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                child: isMobile
+                    ? Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          ShadButton(
-                            size: ShadButtonSize.sm,
-                            onPressed: _connectingServerId == null ? () => _connectToServer(service, server) : null,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Opacity(
-                                  opacity: _connectingServerId == server.id ? 0 : 1,
-                                  child: const Text('CONNECT'),
-                                ),
-                                if (_connectingServerId == server.id)
-                                  SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: theme.colorScheme.primaryForeground,
-                                    ),
-                                  ),
-                              ],
+                          Positioned(
+                            top: -8,
+                            right: -8,
+                            child: _buildServerActions(
+                              context,
+                              provider,
+                              server,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          _buildServerActions(context, provider, server),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      LucideIcons.server,
+                                      color: theme.colorScheme.primary,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 24,
+                                      ), // Space for the '...' menu
+                                      child: Text(
+                                        server.name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: theme.colorScheme.foreground,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '${server.host}:${server.port}',
+                                style: TextStyle(
+                                  color: theme.colorScheme.foreground
+                                      .withValues(alpha: 0.5),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                'User: ${server.username}',
+                                style: TextStyle(
+                                  color: theme.colorScheme.foreground
+                                      .withValues(alpha: 0.5),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ShadButton(
+                                      onPressed: _connectingServerId == null
+                                          ? () => _connectToServer(
+                                              service,
+                                              server,
+                                            )
+                                          : null,
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Opacity(
+                                            opacity:
+                                                _connectingServerId == server.id
+                                                ? 0
+                                                : 1,
+                                            child: const Text('CONNECT'),
+                                          ),
+                                          if (_connectingServerId == server.id)
+                                            SizedBox(
+                                              width: 14,
+                                              height: 14,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: theme
+                                                    .colorScheme
+                                                    .primaryForeground,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ],
+                      )
+                    : ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            LucideIcons.server,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        title: Text(
+                          server.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: theme.colorScheme.foreground,
+                          ),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${server.host}:${server.port} • ${server.username}',
+                            style: TextStyle(
+                              color: theme.colorScheme.foreground.withValues(
+                                alpha: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ShadButton(
+                              size: ShadButtonSize.sm,
+                              onPressed: _connectingServerId == null
+                                  ? () => _connectToServer(service, server)
+                                  : null,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Opacity(
+                                    opacity: _connectingServerId == server.id
+                                        ? 0
+                                        : 1,
+                                    child: const Text('CONNECT'),
+                                  ),
+                                  if (_connectingServerId == server.id)
+                                    SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color:
+                                            theme.colorScheme.primaryForeground,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildServerActions(context, provider, server),
+                          ],
+                        ),
                       ),
-                    ),
               ),
             );
           },
@@ -738,7 +929,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildServerActions(BuildContext context, ServerProvider provider, MumbleServer server) {
+  Widget _buildServerActions(
+    BuildContext context,
+    ServerProvider provider,
+    MumbleServer server,
+  ) {
     final theme = ShadTheme.of(context);
     final controller = ShadPopoverController();
     return ShadPopover(
@@ -788,12 +983,19 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: ShadIconButton.ghost(
         onPressed: controller.toggle,
-        icon: Icon(LucideIcons.ellipsis, size: 20, color: theme.colorScheme.foreground.withValues(alpha: 0.5)),
+        icon: Icon(
+          LucideIcons.ellipsis,
+          size: 20,
+          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+        ),
       ),
     );
   }
 
-  Future<void> _connectToServer(MumbleService service, MumbleServer server) async {
+  Future<void> _connectToServer(
+    MumbleService service,
+    MumbleServer server,
+  ) async {
     setState(() => _connectingServerId = server.id);
     try {
       await service.connect(server);
@@ -810,15 +1012,20 @@ class _HomeScreenState extends State<HomeScreen> {
       if (errorStr.contains('password')) {
         message = message.isEmpty ? 'Incorrect password.' : message;
         showEdit = true;
-      } else if (errorStr.contains('invalidusername') || errorStr.contains('invalid user name')) {
-        message = message.isEmpty ? 'The username is invalid on this server.' : message;
+      } else if (errorStr.contains('invalidusername') ||
+          errorStr.contains('invalid user name')) {
+        message = message.isEmpty
+            ? 'The username is invalid on this server.'
+            : message;
         showEdit = true;
       } else if (errorStr.contains('denied')) {
         message = message.isEmpty ? 'Connection denied.' : message;
         showEdit = true;
-      } else if (errorStr.contains('timeout') || errorStr.contains('connection refused')) {
+      } else if (errorStr.contains('timeout') ||
+          errorStr.contains('connection refused')) {
         message = 'Server is unreachable. Check the address and port.';
-      } else if (errorStr.contains('hostname') || errorStr.contains('host not found')) {
+      } else if (errorStr.contains('hostname') ||
+          errorStr.contains('host not found')) {
         message = 'Invalid server address.';
         showEdit = true;
       }
@@ -848,7 +1055,10 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.background,
         border: Border(
-          top: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5), width: 1),
+          top: BorderSide(
+            color: theme.colorScheme.border.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
         boxShadow: [
           BoxShadow(
@@ -873,14 +1083,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isTalking = service.isTalking;
     final bool isSuppressed = service.isSuppressed;
     final settings = Provider.of<SettingsService>(context);
-    
-    String label = isSuppressed ? 'SUPPRESSED' : (isTalking ? 'TALKING...' : 'HOLD TO TALK');
+
+    String label = isSuppressed
+        ? 'SUPPRESSED'
+        : (isTalking ? 'TALKING...' : 'HOLD TO TALK');
     if (!isSuppressed && !isTalking && settings.pttKey != PttKey.none) {
       label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
     }
 
     final theme = ShadTheme.of(context);
-    
+
     return GestureDetector(
       onTapDown: (_) => isSuppressed ? null : service.startPushToTalk(),
       onTapUp: (_) => service.stopPushToTalk(),
@@ -889,21 +1101,33 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         decoration: BoxDecoration(
-          gradient: isSuppressed 
-            ? LinearGradient(colors: [
-                theme.colorScheme.destructive.withValues(alpha: 0.1), 
-                theme.colorScheme.destructive.withValues(alpha: 0.2)
-              ])
-            : LinearGradient(colors: [theme.colorScheme.primary, theme.colorScheme.primary.withValues(alpha: 0.8)]),
+          gradient: isSuppressed
+              ? LinearGradient(
+                  colors: [
+                    theme.colorScheme.destructive.withValues(alpha: 0.1),
+                    theme.colorScheme.destructive.withValues(alpha: 0.2),
+                  ],
+                )
+              : LinearGradient(
+                  colors: [
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withValues(alpha: 0.8),
+                  ],
+                ),
           borderRadius: BorderRadius.circular(16),
-          border: isSuppressed 
-            ? Border.all(color: theme.colorScheme.destructive.withValues(alpha: 0.4), width: 1)
-            : null,
+          border: isSuppressed
+              ? Border.all(
+                  color: theme.colorScheme.destructive.withValues(alpha: 0.4),
+                  width: 1,
+                )
+              : null,
           boxShadow: [
             BoxShadow(
-              color: isSuppressed 
-                ? Colors.transparent 
-                : theme.colorScheme.primary.withValues(alpha: isTalking ? 0.4 : 0.2),
+              color: isSuppressed
+                  ? Colors.transparent
+                  : theme.colorScheme.primary.withValues(
+                      alpha: isTalking ? 0.4 : 0.2,
+                    ),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -915,17 +1139,21 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                isSuppressed 
-                  ? LucideIcons.micOff 
-                  : (isTalking ? LucideIcons.audioLines : LucideIcons.mic), 
-                color: isSuppressed ? theme.colorScheme.destructive : theme.colorScheme.primaryForeground, 
-                size: 20
+                isSuppressed
+                    ? LucideIcons.micOff
+                    : (isTalking ? LucideIcons.audioLines : LucideIcons.mic),
+                color: isSuppressed
+                    ? theme.colorScheme.destructive
+                    : theme.colorScheme.primaryForeground,
+                size: 20,
               ),
               const SizedBox(width: 12),
               Text(
                 label,
                 style: TextStyle(
-                  color: isSuppressed ? theme.colorScheme.destructive : theme.colorScheme.primaryForeground,
+                  color: isSuppressed
+                      ? theme.colorScheme.destructive
+                      : theme.colorScheme.primaryForeground,
                   fontWeight: FontWeight.w900,
                   fontSize: 14,
                   letterSpacing: 1,
@@ -949,7 +1177,9 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: theme.colorScheme.card,
-        border: Border.all(color: theme.colorScheme.border.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: theme.colorScheme.border.withValues(alpha: 0.3),
+        ),
       ),
       child: Center(
         child: Stack(
@@ -961,15 +1191,23 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 24 + (volume * 22),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isTalking ? theme.colorScheme.primary : theme.colorScheme.foreground).withValues(
-                  alpha: isTalking ? (0.15 + (volume * 0.25)) : (0.05 + (volume * 0.1)),
-                ),
+                color:
+                    (isTalking
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.foreground)
+                        .withValues(
+                          alpha: isTalking
+                              ? (0.15 + (volume * 0.25))
+                              : (0.05 + (volume * 0.1)),
+                        ),
               ),
             ),
             Icon(
               isTalking ? LucideIcons.mic : LucideIcons.micOff,
               size: 20,
-              color: isTalking ? theme.colorScheme.primary : theme.colorScheme.foreground.withValues(alpha: 0.3),
+              color: isTalking
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.foreground.withValues(alpha: 0.3),
             ),
           ],
         ),
