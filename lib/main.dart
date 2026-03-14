@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
@@ -52,12 +53,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => MumbleService()),
-        ChangeNotifierProvider(create: (_) => ServerProvider()),
-      ],
-      child: Consumer<SettingsService>(
+    return Consumer<SettingsService>(
         builder: (context, settings, _) => ShadApp(
           title: 'Rumble',
           debugShowCheckedModeBanner: false,
@@ -99,8 +95,7 @@ class MyApp extends StatelessWidget {
           ),
           home: const HomeScreen(),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -257,6 +252,42 @@ class _HomeScreenState extends State<HomeScreen> {
                               settings.setPttSuppress(val);
                               setDialogState(() {});
                             },
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+                      const SizedBox(height: 24),
+                      const Text(
+                        'macOS Permissions',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          ShadButton.outline(
+                            onPressed: () {
+                              Provider.of<HotkeyService>(context, listen: false).openAccessibilitySettings();
+                            },
+                            child: const Text('Grant Permission'),
+                          ),
+                          const SizedBox(width: 12),
+                          ShadButton.ghost(
+                            onPressed: () {
+                              Provider.of<HotkeyService>(context, listen: false).checkPermission();
+                            },
+                            child: const Row(
+                              children: [
+                                Icon(LucideIcons.refreshCw, size: 14),
+                                SizedBox(width: 8),
+                                Text('Check Status'),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -540,6 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             children: [
               _buildHeader(context, mumbleService, isMobile),
+              _buildPermissionBanner(context),
               Expanded(
                 child: mumbleService.isConnected
                     ? ChannelTree(
@@ -563,6 +595,58 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPermissionBanner(BuildContext context) {
+    if (defaultTargetPlatform != TargetPlatform.macOS) return const SizedBox.shrink();
+    
+    final hotkeyService = Provider.of<HotkeyService>(context);
+    final settings = Provider.of<SettingsService>(context);
+    
+    if (settings.pttKey == PttKey.none) return const SizedBox.shrink();
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: hotkeyService.hasAccessibilityPermission,
+      builder: (context, hasPermission, _) {
+        if (hasPermission) return const SizedBox.shrink();
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          color: ShadTheme.of(context).colorScheme.destructive.withValues(alpha: 0.1),
+          child: Row(
+            children: [
+              Icon(
+                LucideIcons.info,
+                color: ShadTheme.of(context).colorScheme.destructive,
+                size: 20,
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Global Hotkeys require Accessibility permissions on macOS to work in the background.',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(width: 16),
+              ShadButton.outline(
+                size: ShadButtonSize.sm,
+                onPressed: () => hotkeyService.openAccessibilitySettings(),
+                child: const Text('Open Settings'),
+              ),
+              const SizedBox(width: 8),
+              ShadIconButton.ghost(
+                width: 32,
+                height: 32,
+                padding: EdgeInsets.zero,
+                icon: const Icon(LucideIcons.refreshCw, size: 16),
+                onPressed: () => hotkeyService.checkPermission(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
