@@ -15,10 +15,10 @@ The goal of Rumble is to take the rock-solid reliability of Mumble and wrap it i
 | Platform | Works | Does not work |
 | :--- | :---: | :---: |
 | Android | x | |
-| iOS | | x |
-| macOS | x | |
+| iOS (Tablet and iPhones)| x |  |
+| macOS (Apple Silicon) | x | |
 | Windows | | x |
-| Web | | x |
+| Web (can't work) | | x |
 
 
 ## Tech Stack
