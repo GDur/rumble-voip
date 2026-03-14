@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -117,9 +118,40 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isAutoName = true;
   String? _connectingServerId;
   bool _archiveExpanded = false;
+  bool _showSuccessBanner = false;
+  Timer? _successBannerTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Listen for permission changes to show success banner
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final hotkeyService = Provider.of<HotkeyService>(context, listen: false);
+      bool lastStatus = hotkeyService.hasAccessibilityPermission.value;
+      
+      hotkeyService.hasAccessibilityPermission.addListener(() {
+        final newStatus = hotkeyService.hasAccessibilityPermission.value;
+        if (newStatus && !lastStatus) {
+          // Permission was just granted!
+          if (mounted) {
+            setState(() => _showSuccessBanner = true);
+            _successBannerTimer?.cancel();
+            _successBannerTimer = Timer(const Duration(seconds: 5), () {
+              if (mounted) {
+                setState(() => _showSuccessBanner = false);
+              }
+            });
+          }
+        }
+        lastStatus = newStatus;
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _successBannerTimer?.cancel();
     _hostController.dispose();
     _nameController.dispose();
     _portController.dispose();
@@ -634,6 +666,38 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = Provider.of<SettingsService>(context);
     
     if (settings.pttKey == PttKey.none) return const SizedBox.shrink();
+
+    // Show success banner if recently granted
+    if (_showSuccessBanner) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        color: Colors.green.withValues(alpha: 0.1),
+        child: Row(
+          children: [
+            Icon(
+              LucideIcons.check,
+              color: Colors.green,
+              size: 20,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Access granted successfully! Try using ${settings.pttKey.name.toUpperCase()} now for PTT.',
+                style: const TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ShadIconButton.ghost(
+              width: 32,
+              height: 32,
+              padding: EdgeInsets.zero,
+              icon: const Icon(LucideIcons.x, size: 16),
+              onPressed: () => setState(() => _showSuccessBanner = false),
+            ),
+          ],
+        ),
+      );
+    }
 
     return ValueListenableBuilder<bool>(
       valueListenable: hotkeyService.hasAccessibilityPermission,
