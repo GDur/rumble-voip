@@ -517,13 +517,29 @@ class _HomeScreenState extends State<HomeScreen> {
     final serverProvider = Provider.of<ServerProvider>(context);
 
     final theme = ShadTheme.of(context);
+    final bool isMobile = Theme.of(context).platform == TargetPlatform.iOS ||
+        Theme.of(context).platform == TargetPlatform.android;
+
     return Scaffold(
+      floatingActionButton: (!mumbleService.isConnected && isMobile)
+          ? ShadButton(
+              onPressed: () => _showAddServerDialog(context),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.plus, size: 20),
+                  SizedBox(width: 8),
+                  Text('ADD SERVER'),
+                ],
+              ),
+            )
+          : null,
       body: Container(
         decoration: BoxDecoration(color: theme.colorScheme.background),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, mumbleService),
+              _buildHeader(context, mumbleService, isMobile),
               Expanded(
                 child: mumbleService.isConnected
                     ? ChannelTree(
@@ -550,7 +566,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, MumbleService service) {
+  Widget _buildHeader(
+    BuildContext context,
+    MumbleService service,
+    bool isMobile,
+  ) {
     final theme = ShadTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -700,17 +720,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ShadButton.outline(
-                  size: ShadButtonSize.sm,
-                  onPressed: () => _showAddServerDialog(context),
-                  child: const Row(
-                    children: [
-                      Icon(LucideIcons.plus, size: 16),
-                      SizedBox(width: 8),
-                      Text('ADD SERVER'),
-                    ],
+                if (!isMobile)
+                  ShadButton.outline(
+                    size: ShadButtonSize.sm,
+                    onPressed: () => _showAddServerDialog(context),
+                    child: const Row(
+                      children: [
+                        Icon(LucideIcons.plus, size: 16),
+                        SizedBox(width: 8),
+                        Text('ADD SERVER'),
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
         ],
