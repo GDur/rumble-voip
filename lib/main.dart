@@ -980,13 +980,16 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   Widget _buildPermissionBanner(BuildContext context) {
-    if (defaultTargetPlatform != TargetPlatform.macOS)
+    if (defaultTargetPlatform != TargetPlatform.macOS) {
       return const SizedBox.shrink();
+    }
 
     final hotkeyService = Provider.of<HotkeyService>(context);
     final settings = Provider.of<SettingsService>(context);
 
-    if (settings.pttKey == PttKey.none) return const SizedBox.shrink();
+    if (settings.pttKey == PttKey.none) {
+      return const SizedBox.shrink();
+    }
 
     // Show success banner if recently granted
     if (_showSuccessBanner) {
@@ -1142,7 +1145,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                       key == LogicalKeyboardKey.altRight ||
                       key == LogicalKeyboardKey.meta ||
                       key == LogicalKeyboardKey.metaLeft ||
-                      key == LogicalKeyboardKey.metaRight;
+                      key == LogicalKeyboardKey.metaRight ||
+                      key == LogicalKeyboardKey.capsLock;
 
                   if (event is KeyDownEvent) {
                     if (!isMod) {
@@ -1151,9 +1155,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                       return KeyEventResult.handled;
                     }
                   } else if (event is KeyUpEvent) {
-                    if (isMod &&
-                        !hasRegularKey &&
-                        HardwareKeyboard.instance.logicalKeysPressed.isEmpty) {
+                    // Capture modifier on its release if no regular key was hit
+                    if (isMod && !hasRegularKey) {
                       _saveHotkey(context, settings, key, event.physicalKey);
                       return KeyEventResult.handled;
                     }
@@ -1266,15 +1269,20 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     // Basic mapping for common keys to Windows VK codes
     // Modifiers
     if (key == PhysicalKeyboardKey.shiftLeft ||
-        key == PhysicalKeyboardKey.shiftRight)
+        key == PhysicalKeyboardKey.shiftRight) {
       return 0x10;
+    }
     if (key == PhysicalKeyboardKey.controlLeft ||
-        key == PhysicalKeyboardKey.controlRight)
+        key == PhysicalKeyboardKey.controlRight) {
       return 0x11;
+    }
     if (key == PhysicalKeyboardKey.altLeft ||
-        key == PhysicalKeyboardKey.altRight)
+        key == PhysicalKeyboardKey.altRight) {
       return 0x12;
-    if (key == PhysicalKeyboardKey.capsLock) return 0x14;
+    }
+    if (key == PhysicalKeyboardKey.capsLock) {
+      return 0x14;
+    }
 
     // Common keys
     if (key == PhysicalKeyboardKey.space) return 0x20;

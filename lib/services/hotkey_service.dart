@@ -139,11 +139,18 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
         }
 
         List<HotKeyModifier> modifiers = [];
-        if (modsString.contains('control'))
+        if (modsString.contains('control')) {
           modifiers.add(HotKeyModifier.control);
-        if (modsString.contains('shift')) modifiers.add(HotKeyModifier.shift);
-        if (modsString.contains('alt')) modifiers.add(HotKeyModifier.alt);
-        if (modsString.contains('meta')) modifiers.add(HotKeyModifier.meta);
+        }
+        if (modsString.contains('shift')) {
+          modifiers.add(HotKeyModifier.shift);
+        }
+        if (modsString.contains('alt')) {
+          modifiers.add(HotKeyModifier.alt);
+        }
+        if (modsString.contains('meta')) {
+          modifiers.add(HotKeyModifier.meta);
+        }
 
         _currentHotKey = HotKey(
           key: key,
@@ -281,14 +288,24 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
 
   bool _checkFlags(int flags, PhysicalKeyboardKey key) {
     if (key == PhysicalKeyboardKey.shiftLeft ||
-        key == PhysicalKeyboardKey.shiftRight) return (flags & (1 << 17)) != 0;
+        key == PhysicalKeyboardKey.shiftRight) {
+      return (flags & (1 << 17)) != 0;
+    }
     if (key == PhysicalKeyboardKey.controlLeft ||
-        key == PhysicalKeyboardKey.controlRight) return (flags & (1 << 18)) != 0;
+        key == PhysicalKeyboardKey.controlRight) {
+      return (flags & (1 << 18)) != 0;
+    }
     if (key == PhysicalKeyboardKey.altLeft ||
-        key == PhysicalKeyboardKey.altRight) return (flags & (1 << 19)) != 0;
+        key == PhysicalKeyboardKey.altRight) {
+      return (flags & (1 << 19)) != 0;
+    }
     if (key == PhysicalKeyboardKey.metaLeft ||
-        key == PhysicalKeyboardKey.metaRight) return (flags & (1 << 20)) != 0;
-    if (key == PhysicalKeyboardKey.capsLock) return (flags & (1 << 16)) != 0;
+        key == PhysicalKeyboardKey.metaRight) {
+      return (flags & (1 << 20)) != 0;
+    }
+    if (key == PhysicalKeyboardKey.capsLock) {
+      return (flags & (1 << 16)) != 0;
+    }
     return false;
   }
 
