@@ -12,6 +12,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
+import 'package:window_manager/window_manager.dart';
 
 // Brand Colors
 const kBrandGreen = Color(
@@ -32,6 +33,37 @@ void main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final settingsService = SettingsService(prefs);
+
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS)) {
+    await windowManager.ensureInitialized();
+
+    double? width = settingsService.windowWidth;
+    double? height = settingsService.windowHeight;
+    double? x = settingsService.windowX;
+    double? y = settingsService.windowY;
+
+    WindowOptions windowOptions = WindowOptions(
+      size: width != null && height != null
+          ? Size(width, height)
+          : const Size(1100, 750),
+      center: x == null || y == null,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      title: 'Rumble',
+    );
+
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      if (x != null && y != null) {
+        await windowManager.setPosition(Offset(x, y));
+      }
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   runApp(
     MultiProvider(
@@ -114,7 +146,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WindowListener {
   final _hostController = TextEditingController();
   final _nameController = TextEditingController();
   final _portController = TextEditingController(text: '64738');
@@ -131,6 +163,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      windowManager.addListener(this);
+    }
 
     // Listen for permission changes to show success banner
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -158,6 +196,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      windowManager.removeListener(this);
+    }
     _successBannerTimer?.cancel();
     _hostController.dispose();
     _nameController.dispose();
@@ -165,6 +209,22 @@ class _HomeScreenState extends State<HomeScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void onWindowResized() async {
+    final size = await windowManager.getSize();
+    if (mounted) {
+      Provider.of<SettingsService>(context, listen: false).setWindowSize(size);
+    }
+  }
+
+  @override
+  void onWindowMoved() async {
+    final pos = await windowManager.getPosition();
+    if (mounted) {
+      Provider.of<SettingsService>(context, listen: false).setWindowPosition(pos);
+    }
   }
 
   void _showSettingsDialog(BuildContext context) {
@@ -321,12 +381,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (context) => const Text(
                               'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
                             ),
-                            child: Icon(
-                              LucideIcons.info,
-                              size: 14,
-                              color: ShadTheme.of(
-                                context,
-                              ).colorScheme.mutedForeground,
+                            child: ShadGestureDetector(
+                              child: Icon(
+                                LucideIcons.info,
+                                size: 14,
+                                color: ShadTheme.of(
+                                  context,
+                                ).colorScheme.mutedForeground,
+                              ),
                             ),
                           ),
                         ],
@@ -658,12 +720,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 builder: (context) => const Text(
                                   'The hostname or IP of the Mumble server.',
                                 ),
-                                child: Icon(
-                                  LucideIcons.info,
-                                  size: 14,
-                                  color: ShadTheme.of(
-                                    context,
-                                  ).colorScheme.mutedForeground,
+                                child: ShadGestureDetector(
+                                  child: Icon(
+                                    LucideIcons.info,
+                                    size: 14,
+                                    color: ShadTheme.of(
+                                      context,
+                                    ).colorScheme.mutedForeground,
+                                  ),
                                 ),
                               ),
                             ],
@@ -694,12 +758,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 builder: (context) => const Text(
                                   'How this server appears in your list.',
                                 ),
-                                child: Icon(
-                                  LucideIcons.info,
-                                  size: 14,
-                                  color: ShadTheme.of(
-                                    context,
-                                  ).colorScheme.mutedForeground,
+                                child: ShadGestureDetector(
+                                  child: Icon(
+                                    LucideIcons.info,
+                                    size: 14,
+                                    color: ShadTheme.of(
+                                      context,
+                                    ).colorScheme.mutedForeground,
+                                  ),
                                 ),
                               ),
                             ],
@@ -752,12 +818,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       builder: (context) => const Text(
                                         'Public display name on server.',
                                       ),
-                                      child: Icon(
-                                        LucideIcons.info,
-                                        size: 14,
-                                        color: ShadTheme.of(
-                                          context,
-                                        ).colorScheme.mutedForeground,
+                                      child: ShadGestureDetector(
+                                        child: Icon(
+                                          LucideIcons.info,
+                                          size: 14,
+                                          color: ShadTheme.of(
+                                            context,
+                                          ).colorScheme.mutedForeground,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1148,38 +1216,40 @@ class _HomeScreenState extends State<HomeScreen> {
                     ShadTooltip(
                       builder: (context) =>
                           const Text('You are connected to the Mumble server.'),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: hideText ? 10 : 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: kBrandGreen.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: kBrandGreen.withValues(alpha: 0.2),
+                      child: ShadGestureDetector(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: hideText ? 10 : 12,
+                            vertical: 6,
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircleAvatar(
-                              radius: 4,
-                              backgroundColor: kBrandGreen,
+                          decoration: BoxDecoration(
+                            color: kBrandGreen.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: kBrandGreen.withValues(alpha: 0.2),
                             ),
-                            if (!hideText) ...[
-                              const SizedBox(width: 8),
-                              const Text(
-                                'CONNECTED',
-                                style: TextStyle(
-                                  color: kBrandGreen,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1,
-                                ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircleAvatar(
+                                radius: 4,
+                                backgroundColor: kBrandGreen,
                               ),
+                              if (!hideText) ...[
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'CONNECTED',
+                                  style: TextStyle(
+                                    color: kBrandGreen,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
