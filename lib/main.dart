@@ -185,236 +185,336 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
               child: Container(
                 width: 440,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Appearance',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: ShadTabs<String>(
+                  tabBarConstraints: const BoxConstraints(maxWidth: 440),
+                  contentConstraints: const BoxConstraints(maxWidth: 440),
+                  value: 'general',
+                  tabs: [
+                    ShadTab(
+                      value: 'general',
+                      content: _buildGeneralSettings(
+                        context,
+                        settings,
+                        setDialogState,
+                      ),
+                      child: const Text('General'),
                     ),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 320),
-                      child: ShadSelect<ThemeMode>(
-                        placeholder: const Text('Select Theme'),
-                        initialValue: settings.themeMode,
-                        onChanged: (value) {
-                          if (value != null) {
-                            settings.setThemeMode(value);
-                            setDialogState(() {});
-                          }
-                        },
-                        options: [
-                          ShadOption(
-                            value: ThemeMode.system,
-                            child: const Text('System'),
-                          ),
-                          ShadOption(
-                            value: ThemeMode.light,
-                            child: const Text('Light'),
-                          ),
-                          ShadOption(
-                            value: ThemeMode.dark,
-                            child: const Text('Dark'),
-                          ),
-                        ],
-                        selectedOptionBuilder: (context, value) =>
-                            Text(value.name.toUpperCase()),
-                      ),
+                    ShadTab(
+                      value: 'about',
+                      content: _buildAboutPage(context),
+                      child: const Text('About'),
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'PTT Hotkey',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 320),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ShadSelect<PttKey>(
-                              placeholder: const Text('Select a key'),
-                              initialValue: settings.pttKey,
-                              onChanged: (value) {
-                                if (value != null) {
-                                  settings.setPttKey(value);
-                                  setDialogState(() {});
-                                }
-                              },
-                              options: [
-                                ...PttKey.values.map((k) {
-                                  String label = k.name.toUpperCase();
-                                  if (k == PttKey.none) label = 'DISABLED';
-                                  return ShadOption(
-                                    value: k,
-                                    child: Text(label),
-                                  );
-                                }),
-                              ],
-                              selectedOptionBuilder: (context, value) {
-                                if (value == PttKey.none &&
-                                    settings.customHotkey != null) {
-                                  return Text(
-                                    'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
-                                  );
-                                }
-                                return Text(value.name.toUpperCase());
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ShadButton.outline(
-                            onPressed: () =>
-                                _showHotkeyRecorder(context, settings),
-                            child: const Text('Record...'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (settings.pttKey != PttKey.none ||
-                        settings.customHotkey != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Suppress original key function',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    ShadTooltip(
-                                      builder: (context) => const Text(
-                                        'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
-                                      ),
-                                      child: Icon(
-                                        LucideIcons.info,
-                                        size: 14,
-                                        color: ShadTheme.of(
-                                          context,
-                                        ).colorScheme.mutedForeground,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          ShadSwitch(
-                            value: settings.pttSuppress,
-                            onChanged: (val) {
-                              settings.setPttSuppress(val);
-                              setDialogState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (defaultTargetPlatform == TargetPlatform.macOS) ...[
-                      const SizedBox(height: 24),
-                      const Text(
-                        'macOS Permissions',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: Provider.of<HotkeyService>(
-                          context,
-                          listen: false,
-                        ).hasAccessibilityPermission,
-                        builder: (context, hasPermission, _) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    hasPermission
-                                        ? LucideIcons.check
-                                        : LucideIcons.info,
-                                    size: 14,
-                                    color: hasPermission
-                                        ? Colors.green
-                                        : Colors.orange,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    hasPermission
-                                        ? 'Permission Granted'
-                                        : 'Permission Required',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: hasPermission
-                                          ? Colors.green
-                                          : Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  ShadButton.outline(
-                                    onPressed: () {
-                                      Provider.of<HotkeyService>(
-                                        context,
-                                        listen: false,
-                                      ).openAccessibilitySettings();
-                                    },
-                                    child: Text(
-                                      hasPermission
-                                          ? 'Manage in System Settings'
-                                          : 'Grant Permission',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  ShadButton.ghost(
-                                    onPressed: () {
-                                      Provider.of<HotkeyService>(
-                                        context,
-                                        listen: false,
-                                      ).checkPermission();
-                                    },
-                                    child: const Row(
-                                      children: [
-                                        Icon(LucideIcons.refreshCw, size: 14),
-                                        const SizedBox(width: 8),
-                                        Text('Check Status'),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ],
                   ],
                 ),
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _buildGeneralSettings(
+    BuildContext context,
+    SettingsService settings,
+    StateSetter setDialogState,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Appearance',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: ShadSelect<ThemeMode>(
+              placeholder: const Text('Select Theme'),
+              initialValue: settings.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  settings.setThemeMode(value);
+                  setDialogState(() {});
+                }
+              },
+              options: [
+                ShadOption(value: ThemeMode.system, child: const Text('System')),
+                ShadOption(value: ThemeMode.light, child: const Text('Light')),
+                ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
+              ],
+              selectedOptionBuilder: (context, value) =>
+                  Text(value.name.toUpperCase()),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'PTT Hotkey',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ShadSelect<PttKey>(
+                    placeholder: const Text('Select a key'),
+                    initialValue: settings.pttKey,
+                    onChanged: (value) {
+                      if (value != null) {
+                        settings.setPttKey(value);
+                        setDialogState(() {});
+                      }
+                    },
+                    options: [
+                      ...PttKey.values.map((k) {
+                        String label = k.name.toUpperCase();
+                        if (k == PttKey.none) label = 'DISABLED';
+                        return ShadOption(value: k, child: Text(label));
+                      }),
+                    ],
+                    selectedOptionBuilder: (context, value) {
+                      if (value == PttKey.none &&
+                          settings.customHotkey != null) {
+                        return Text(
+                          'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
+                        );
+                      }
+                      return Text(value.name.toUpperCase());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ShadButton.outline(
+                  onPressed: () => _showHotkeyRecorder(context, settings),
+                  child: const Text('Record...'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (settings.pttKey != PttKey.none ||
+              settings.customHotkey != null) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Suppress original key function',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          ShadTooltip(
+                            builder: (context) => const Text(
+                              'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
+                            ),
+                            child: Icon(
+                              LucideIcons.info,
+                              size: 14,
+                              color: ShadTheme.of(
+                                context,
+                              ).colorScheme.mutedForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                ShadSwitch(
+                  value: settings.pttSuppress,
+                  onChanged: (val) {
+                    settings.setPttSuppress(val);
+                    setDialogState(() {});
+                  },
+                ),
+              ],
+            ),
+          ],
+          if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+            const SizedBox(height: 24),
+            const Text(
+              'macOS Permissions',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<bool>(
+              valueListenable: Provider.of<HotkeyService>(
+                context,
+                listen: false,
+              ).hasAccessibilityPermission,
+              builder: (context, hasPermission, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          hasPermission ? LucideIcons.check : LucideIcons.info,
+                          size: 14,
+                          color: hasPermission ? Colors.green : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          hasPermission
+                              ? 'Permission Granted'
+                              : 'Permission Required',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: hasPermission ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        ShadButton.outline(
+                          onPressed: () {
+                            Provider.of<HotkeyService>(
+                              context,
+                              listen: false,
+                            ).openAccessibilitySettings();
+                          },
+                          child: Text(
+                            hasPermission
+                                ? 'Manage in System Settings'
+                                : 'Grant Permission',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ShadButton.ghost(
+                          onPressed: () {
+                            Provider.of<HotkeyService>(
+                              context,
+                              listen: false,
+                            ).checkPermission();
+                          },
+                          child: const Row(
+                            children: [
+                              Icon(LucideIcons.refreshCw, size: 14),
+                              const SizedBox(width: 8),
+                              const Text('Check Status'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutPage(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/icon.png',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Rumble',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            'Mumble Reloaded',
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'A modern, high-performance Mumble client built with Flutter. Designed for seamless voice chat across all your devices.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 12),
+          _buildAboutInfo(context, 'Version', '1.0.0+1'),
+          _buildAboutInfo(context, 'Created', 'March 2026'),
+          _buildAboutInfo(context, 'License', 'No Warranty (AS IS)'),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Crafted with ',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const Icon(LucideIcons.heart, size: 12, color: Colors.red),
+              const Text(
+                ' and ',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const Icon(LucideIcons.bot, size: 14, color: Colors.blue),
+              const Text(
+                ' assistance',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutInfo(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+          ),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

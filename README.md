@@ -22,9 +22,9 @@ Rumble is currently in active development.
 | :--- | :---: | :---: |
 | Android | x | |
 | iOS (Tablet and iPhones)| x |  |
-| macOS (Apple Silicon) | x | |
+| macOS (Apple Silicon and Intel) | x | |
 | Windows | | x |
-| Linux | x | |
+| Linux | | x |
 | Web (can't work) | | x |
 
 
