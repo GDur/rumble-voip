@@ -3,6 +3,11 @@
 [] mumble can usse certificates to identify users. lets add support for that.
 [] let the user choose the mic and speakers
 [] show the ping and the user count and capacity(eg 3/100) in the server list items for each server
+[] add auto activation (voice activity detection)
+    [] add a slider to control the sensitivity of the auto activation
+[] add always send voice option
+[] add a button to toggle between ptt and always send voice or auto activate
+[] add echo cancellation
 [] add mute + sound level for each user in the channel tree
 [] add the chat on the right side (make it hidable and use the https://mariuti.com/flutter-shadcn-ui/components/resizable/ component to resize it)
     [] add the possibility to chat with specific persons (maybe even pop out to own chat windows) 
