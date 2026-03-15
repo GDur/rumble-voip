@@ -16,14 +16,14 @@ A new Flutter plugin project that provides Opus decoding using FFI.
 
   s.dependency 'Flutter'
 
-  # 简单直接的配置
-  s.vendored_libraries = 'lib/libopus.a'
+  # Use XCFramework to support both physical devices and simulators
+  s.vendored_frameworks = 'lib/libopus.xcframework'
   s.preserve_paths = 'include/*/'
   
   s.pod_target_xcconfig = {
     'HEADER_SEARCH_PATHS' => '$(PODS_TARGET_SRCROOT)/include',
     'DEFINES_MODULE' => 'YES',
-    'OTHER_LDFLAGS' => '-force_load $(PODS_TARGET_SRCROOT)/lib/libopus.a'
+    'OTHER_LDFLAGS' => '-all_load'
   }
 
   s.swift_version = '5.0'
