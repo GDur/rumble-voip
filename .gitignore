@@ -30,6 +30,7 @@ migrate_working_dir/
 **/build/
 .dart_tool/
 **/.dart_tool/
+**/.gradle/
 /coverage/
 
 # Symbolication related
