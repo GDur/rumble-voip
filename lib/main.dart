@@ -39,7 +39,11 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MumbleService()),
         ChangeNotifierProvider(create: (_) => ServerProvider()),
         ChangeNotifierProvider.value(value: settingsService),
-        ChangeNotifierProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+        ChangeNotifierProxyProvider2<
+          MumbleService,
+          SettingsService,
+          HotkeyService
+        >(
           create: (context) => HotkeyService(
             Provider.of<MumbleService>(context, listen: false),
             Provider.of<SettingsService>(context, listen: false),
@@ -59,48 +63,47 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsService>(
-        builder: (context, settings, _) => ShadApp(
-          title: 'Rumble',
-          debugShowCheckedModeBanner: false,
-          themeMode: settings.themeMode,
-          theme: ShadThemeData(
-            brightness: Brightness.light,
-            colorScheme: const ShadSlateColorScheme.light(
-              primary: kBrandGreenText, // Darker for text/accents on light bg
-              primaryForeground: Colors.white,
-            ),
-            primaryButtonTheme: const ShadButtonTheme(
-              backgroundColor:
-                  kBrandGreenButton, // More solid green for buttons
-              foregroundColor: Colors.white,
-            ),
-            textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
+      builder: (context, settings, _) => ShadApp(
+        title: 'Rumble',
+        debugShowCheckedModeBanner: false,
+        themeMode: settings.themeMode,
+        theme: ShadThemeData(
+          brightness: Brightness.light,
+          colorScheme: const ShadSlateColorScheme.light(
+            primary: kBrandGreenText, // Darker for text/accents on light bg
+            primaryForeground: Colors.white,
           ),
-          darkTheme: ShadThemeData(
-            brightness: Brightness.dark,
-            colorScheme: const ShadSlateColorScheme.dark(
-              primary: kBrandGreen, // Bright for pop on dark bg
-              primaryForeground: Colors.black,
-            ),
-            primaryButtonTheme: const ShadButtonTheme(
-              backgroundColor: kBrandGreen,
-              foregroundColor: Colors.black,
-            ),
-            primaryToastTheme: ShadToastTheme(
-              alignment: Alignment.bottomCenter,
-              offset: const Offset(0, 32),
-              duration: const Duration(seconds: 4),
-            ),
-            destructiveToastTheme: ShadToastTheme(
-              alignment: Alignment.bottomCenter,
-              offset: const Offset(0, 32),
-              duration: const Duration(seconds: 6),
-            ),
-            textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
+          primaryButtonTheme: const ShadButtonTheme(
+            backgroundColor: kBrandGreenButton, // More solid green for buttons
+            foregroundColor: Colors.white,
           ),
-          home: const HomeScreen(),
+          textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
         ),
-      );
+        darkTheme: ShadThemeData(
+          brightness: Brightness.dark,
+          colorScheme: const ShadSlateColorScheme.dark(
+            primary: kBrandGreen, // Bright for pop on dark bg
+            primaryForeground: Colors.black,
+          ),
+          primaryButtonTheme: const ShadButtonTheme(
+            backgroundColor: kBrandGreen,
+            foregroundColor: Colors.black,
+          ),
+          primaryToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, 32),
+            duration: const Duration(seconds: 4),
+          ),
+          destructiveToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, 32),
+            duration: const Duration(seconds: 6),
+          ),
+          textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
+        ),
+        home: const HomeScreen(),
+      ),
+    );
   }
 }
 
@@ -128,12 +131,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Listen for permission changes to show success banner
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final hotkeyService = Provider.of<HotkeyService>(context, listen: false);
       bool lastStatus = hotkeyService.hasAccessibilityPermission.value;
-      
+
       hotkeyService.hasAccessibilityPermission.addListener(() {
         final newStatus = hotkeyService.hasAccessibilityPermission.value;
         if (newStatus && !lastStatus) {
@@ -245,12 +248,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ...PttKey.values.map((k) {
                                   String label = k.name.toUpperCase();
                                   if (k == PttKey.none) label = 'DISABLED';
-                                  return ShadOption(value: k, child: Text(label));
+                                  return ShadOption(
+                                    value: k,
+                                    child: Text(label),
+                                  );
                                 }),
                               ],
                               selectedOptionBuilder: (context, value) {
-                                if (value == PttKey.none && settings.customHotkey != null) {
-                                  return Text('CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}');
+                                if (value == PttKey.none &&
+                                    settings.customHotkey != null) {
+                                  return Text(
+                                    'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
+                                  );
                                 }
                                 return Text(value.name.toUpperCase());
                               },
@@ -258,14 +267,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(width: 8),
                           ShadButton.outline(
-                            onPressed: () => _showHotkeyRecorder(context, settings),
+                            onPressed: () =>
+                                _showHotkeyRecorder(context, settings),
                             child: const Text('Record...'),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (settings.pttKey != PttKey.none || settings.customHotkey != null) ...[
+                    if (settings.pttKey != PttKey.none ||
+                        settings.customHotkey != null) ...[
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -317,7 +328,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 8),
                       ValueListenableBuilder<bool>(
-                        valueListenable: Provider.of<HotkeyService>(context, listen: false).hasAccessibilityPermission,
+                        valueListenable: Provider.of<HotkeyService>(
+                          context,
+                          listen: false,
+                        ).hasAccessibilityPermission,
                         builder: (context, hasPermission, _) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,16 +339,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               Row(
                                 children: [
                                   Icon(
-                                    hasPermission ? LucideIcons.check : LucideIcons.info,
+                                    hasPermission
+                                        ? LucideIcons.check
+                                        : LucideIcons.info,
                                     size: 14,
-                                    color: hasPermission ? Colors.green : Colors.orange,
+                                    color: hasPermission
+                                        ? Colors.green
+                                        : Colors.orange,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    hasPermission ? 'Permission Granted' : 'Permission Required',
+                                    hasPermission
+                                        ? 'Permission Granted'
+                                        : 'Permission Required',
                                     style: TextStyle(
-                                      fontSize: 12, 
-                                      color: hasPermission ? Colors.green : Colors.orange,
+                                      fontSize: 12,
+                                      color: hasPermission
+                                          ? Colors.green
+                                          : Colors.orange,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -343,21 +365,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               const SizedBox(height: 8),
                               const Text(
                                 'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               Row(
                                 children: [
                                   ShadButton.outline(
                                     onPressed: () {
-                                      Provider.of<HotkeyService>(context, listen: false).openAccessibilitySettings();
+                                      Provider.of<HotkeyService>(
+                                        context,
+                                        listen: false,
+                                      ).openAccessibilitySettings();
                                     },
-                                    child: Text(hasPermission ? 'Manage in System Settings' : 'Grant Permission'),
+                                    child: Text(
+                                      hasPermission
+                                          ? 'Manage in System Settings'
+                                          : 'Grant Permission',
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   ShadButton.ghost(
                                     onPressed: () {
-                                      Provider.of<HotkeyService>(context, listen: false).checkPermission();
+                                      Provider.of<HotkeyService>(
+                                        context,
+                                        listen: false,
+                                      ).checkPermission();
                                     },
                                     child: const Row(
                                       children: [
@@ -630,7 +665,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final serverProvider = Provider.of<ServerProvider>(context);
 
     final theme = ShadTheme.of(context);
-    final bool isMobile = Theme.of(context).platform == TargetPlatform.iOS ||
+    final bool isMobile =
+        Theme.of(context).platform == TargetPlatform.iOS ||
         Theme.of(context).platform == TargetPlatform.android;
 
     return Scaffold(
@@ -681,11 +717,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPermissionBanner(BuildContext context) {
-    if (defaultTargetPlatform != TargetPlatform.macOS) return const SizedBox.shrink();
-    
+    if (defaultTargetPlatform != TargetPlatform.macOS)
+      return const SizedBox.shrink();
+
     final hotkeyService = Provider.of<HotkeyService>(context);
     final settings = Provider.of<SettingsService>(context);
-    
+
     if (settings.pttKey == PttKey.none) return const SizedBox.shrink();
 
     // Show success banner if recently granted
@@ -696,16 +733,16 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.green.withValues(alpha: 0.1),
         child: Row(
           children: [
-            Icon(
-              LucideIcons.check,
-              color: Colors.green,
-              size: 20,
-            ),
+            Icon(LucideIcons.check, color: Colors.green, size: 20),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 'Access granted successfully! Try using ${settings.pttKey.name.toUpperCase()} now for PTT.',
-                style: const TextStyle(fontSize: 13, color: Colors.green, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Colors.green,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             ShadIconButton.ghost(
@@ -728,7 +765,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          color: ShadTheme.of(context).colorScheme.destructive.withValues(alpha: 0.1),
+          color: ShadTheme.of(
+            context,
+          ).colorScheme.destructive.withValues(alpha: 0.1),
           child: Row(
             children: [
               Icon(
@@ -775,7 +814,7 @@ class _HomeScreenState extends State<HomeScreen> {
             autofocus: true,
             onKeyEvent: (node, event) {
               if (event is KeyUpEvent) return KeyEventResult.ignored;
-              
+
               final key = event.logicalKey;
               if (key == LogicalKeyboardKey.escape) {
                 Navigator.pop(context);
@@ -788,9 +827,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 'logicalKey': key.debugName,
                 'physicalKey': event.physicalKey.debugName,
                 // Very rough VK Mapping for Windows (example)
-                'vkCode': _mapPhysicalToVk(event.physicalKey), 
+                'vkCode': _mapPhysicalToVk(event.physicalKey),
               });
-              
+
               Navigator.pop(context);
               return KeyEventResult.handled;
             },
@@ -803,7 +842,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text('Press any key or combined modifiers'),
                   SizedBox(height: 12),
-                  Text('Press ESC to cancel', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(
+                    'Press ESC to cancel',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
@@ -815,9 +857,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _mapPhysicalToVk(PhysicalKeyboardKey key) {
     // Basic mapping for common keys to Windows VK codes
-    if (key == PhysicalKeyboardKey.shiftLeft || key == PhysicalKeyboardKey.shiftRight) return 0x10;
-    if (key == PhysicalKeyboardKey.controlLeft || key == PhysicalKeyboardKey.controlRight) return 0x11;
-    if (key == PhysicalKeyboardKey.altLeft || key == PhysicalKeyboardKey.altRight) return 0x12;
+    if (key == PhysicalKeyboardKey.shiftLeft ||
+        key == PhysicalKeyboardKey.shiftRight)
+      return 0x10;
+    if (key == PhysicalKeyboardKey.controlLeft ||
+        key == PhysicalKeyboardKey.controlRight)
+      return 0x11;
+    if (key == PhysicalKeyboardKey.altLeft ||
+        key == PhysicalKeyboardKey.altRight)
+      return 0x12;
     if (key == PhysicalKeyboardKey.capsLock) return 0x14;
     if (key == PhysicalKeyboardKey.space) return 0x20;
     if (key == PhysicalKeyboardKey.f1) return 0x70;
@@ -849,7 +897,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(0),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -858,8 +906,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(4),
                   child: Image.asset(
                     'assets/icon.png',
-                    width: 24,
-                    height: 24,
+                    width: 48,
+                    height: 48,
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -909,14 +957,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: kBrandGreen.withValues(
-                            alpha: 0.1,
-                          ),
+                          color: kBrandGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: kBrandGreen.withValues(
-                              alpha: 0.2,
-                            ),
+                            color: kBrandGreen.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
@@ -1543,10 +1587,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 )
               : LinearGradient(
-                  colors: [
-                    kBrandGreen,
-                    kBrandGreen.withValues(alpha: 0.8),
-                  ],
+                  colors: [kBrandGreen, kBrandGreen.withValues(alpha: 0.8)],
                 ),
           borderRadius: BorderRadius.circular(16),
           border: isSuppressed

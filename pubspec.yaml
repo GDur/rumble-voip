@@ -1,5 +1,5 @@
 name: rumble
-description: "A new Flutter project."
+description: "Rumble: A modern, cross-platform Mumble voice chat client built with Flutter."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -65,7 +65,14 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   macos:
+    generate: true
+    image_path: "assets/icon.png"
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
+  web:
     generate: true
     image_path: "assets/icon.png"
   image_path: "assets/icon.png"
