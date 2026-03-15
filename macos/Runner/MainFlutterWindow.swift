@@ -13,11 +13,14 @@ class MainFlutterWindow: NSWindow {
     let channel = FlutterMethodChannel(name: "com.rumble.app/permissions", binaryMessenger: flutterViewController.engine.binaryMessenger)
     channel.setMethodCallHandler { (call, result) in
       if call.method == "checkAccessibility" {
-        result(AXIsProcessTrusted())
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
+        result(AXIsProcessTrustedWithOptions(options))
       } else if call.method == "openAccessibility" {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         NSWorkspace.shared.open(url)
         result(nil)
+      } else if call.method == "getAppPath" {
+        result(Bundle.main.bundlePath)
       } else {
         result(FlutterMethodNotImplemented)
       }

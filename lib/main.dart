@@ -385,6 +385,45 @@ class _HomeScreenState extends State<HomeScreen> {
                       'To use Push-to-Talk while Rumble is in the background, you must allow "Accessibility" in System Settings.',
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
+                    const SizedBox(height: 8),
+                    ValueListenableBuilder<String?>(
+                      valueListenable: Provider.of<HotkeyService>(
+                        context,
+                        listen: false,
+                      ).appPath,
+                      builder: (context, path, _) {
+                        if (path == null) return const SizedBox.shrink();
+                        return Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'App Path (Drag this to the list):',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              SelectableText(
+                                path,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontFamily: 'monospace',
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -403,11 +442,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 12),
                         ShadButton.ghost(
-                          onPressed: () {
-                            Provider.of<HotkeyService>(
+                          onPressed: () async {
+                            final service = Provider.of<HotkeyService>(
                               context,
                               listen: false,
-                            ).checkPermission();
+                            );
+                            await service.checkPermission();
+                            if (context.mounted) {
+                              ShadToaster.of(context).show(
+                                ShadToast(
+                                  title: Text(
+                                    service.hasAccessibilityPermission.value
+                                        ? 'Permission Granted'
+                                        : 'Status: Permission Required',
+                                  ),
+                                  description: Text(
+                                    service.hasAccessibilityPermission.value
+                                        ? 'Rumble now has full control over hotkeys.'
+                                        : 'If you already granted it in System Settings, try restarting Rumble.',
+                                  ),
+                                ),
+                              );
+                            }
                           },
                           child: const Row(
                             children: [
@@ -876,10 +932,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 20,
               ),
               const SizedBox(width: 16),
-              const Expanded(
-                child: Text(
-                  'Global Hotkeys require Accessibility permissions on macOS to work in the background.',
-                  style: TextStyle(fontSize: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Global Hotkeys require Accessibility permissions on macOS to work in the background.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    ValueListenableBuilder<String?>(
+                      valueListenable: hotkeyService.appPath,
+                      builder: (context, path, _) {
+                        if (path == null) return const SizedBox.shrink();
+                        return SelectableText(
+                          'App Path: $path',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: ShadTheme.of(
+                              context,
+                            ).colorScheme.mutedForeground,
+                            fontFamily: 'monospace',
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -894,7 +973,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 32,
                 padding: EdgeInsets.zero,
                 icon: const Icon(LucideIcons.refreshCw, size: 16),
-                onPressed: () => hotkeyService.checkPermission(),
+                onPressed: () async {
+                  await hotkeyService.checkPermission();
+                  if (context.mounted) {
+                    ShadToaster.of(context).show(
+                      ShadToast(
+                        title: Text(
+                          hotkeyService.hasAccessibilityPermission.value
+                              ? 'Permission Granted'
+                              : 'Status: Permission Required',
+                        ),
+                        description: Text(
+                          hotkeyService.hasAccessibilityPermission.value
+                              ? 'Rumble now has full control over hotkeys.'
+                              : 'Check if Rumble is enabled in System Settings.',
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),

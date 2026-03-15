@@ -11,6 +11,7 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   final _permissionsChannel = const MethodChannel('com.rumble.app/permissions');
   
   final ValueNotifier<bool> hasAccessibilityPermission = ValueNotifier<bool>(true);
+  final ValueNotifier<String?> appPath = ValueNotifier<String?>(null);
   HotKey? _currentHotKey;
 
   HotkeyService(this._mumbleService, this._settingsService) {
@@ -30,6 +31,7 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
 
     if (defaultTargetPlatform == TargetPlatform.macOS) {
       await checkPermission();
+      await _fetchAppPath();
     }
     
     if (defaultTargetPlatform == TargetPlatform.windows) {
@@ -161,8 +163,19 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> checkPermission() async {
     if (defaultTargetPlatform != TargetPlatform.macOS) return;
     try {
-      final bool granted = await _permissionsChannel.invokeMethod('checkAccessibility');
+      // Small delay to let the OS catch up if we just returned from settings
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      bool granted = await _permissionsChannel.invokeMethod('checkAccessibility');
+      
+      // If not granted, try once more after a slightly longer delay
+      if (!granted) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        granted = await _permissionsChannel.invokeMethod('checkAccessibility');
+      }
+      
       hasAccessibilityPermission.value = granted;
+      debugPrint('HotkeyService: Accessibility check result: $granted');
     } catch (e) {
       debugPrint('HotkeyService: Error checking accessibility: $e');
     }
@@ -174,6 +187,16 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
       await _permissionsChannel.invokeMethod('openAccessibility');
     } catch (e) {
       debugPrint('HotkeyService: Error opening accessibility settings: $e');
+    }
+  }
+
+  Future<void> _fetchAppPath() async {
+    if (defaultTargetPlatform != TargetPlatform.macOS) return;
+    try {
+      final String? path = await _permissionsChannel.invokeMethod('getAppPath');
+      appPath.value = path;
+    } catch (e) {
+      debugPrint('HotkeyService: Error fetching app path: $e');
     }
   }
 
