@@ -15,6 +15,10 @@ class SettingsService extends ChangeNotifier {
   static const String _kPttSuppress = 'ptt_suppress';
   static const String _kThemeMode = 'theme_mode';
   static const String _kCustomHotkey = 'custom_hotkey';
+  static const String _kWindowWidth = 'window_width';
+  static const String _kWindowHeight = 'window_height';
+  static const String _kWindowX = 'window_x';
+  static const String _kWindowY = 'window_y';
 
   final SharedPreferences _prefs;
 
@@ -39,6 +43,11 @@ class SettingsService extends ChangeNotifier {
   bool get pttSuppress => _pttSuppress;
   ThemeMode get themeMode => _themeMode;
   Map<String, dynamic>? get customHotkey => _customHotkey;
+
+  double? get windowWidth => _prefs.getDouble(_kWindowWidth);
+  double? get windowHeight => _prefs.getDouble(_kWindowHeight);
+  double? get windowX => _prefs.getDouble(_kWindowX);
+  double? get windowY => _prefs.getDouble(_kWindowY);
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
@@ -72,5 +81,15 @@ class SettingsService extends ChangeNotifier {
       await _prefs.remove(_kCustomHotkey);
     }
     notifyListeners();
+  }
+
+  Future<void> setWindowSize(Size size) async {
+    await _prefs.setDouble(_kWindowWidth, size.width);
+    await _prefs.setDouble(_kWindowHeight, size.height);
+  }
+
+  Future<void> setWindowPosition(Offset position) async {
+    await _prefs.setDouble(_kWindowX, position.dx);
+    await _prefs.setDouble(_kWindowY, position.dy);
   }
 }
