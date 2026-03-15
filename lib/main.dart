@@ -1664,10 +1664,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final theme = ShadTheme.of(context);
 
-    return GestureDetector(
-      onTapDown: (_) => isSuppressed ? null : service.startPushToTalk(),
-      onTapUp: (_) => service.stopPushToTalk(),
-      onTapCancel: () => service.stopPushToTalk(),
+    return Listener(
+      onPointerDown: (_) => isSuppressed ? null : service.startPushToTalk(),
+      onPointerUp: (_) => service.stopPushToTalk(),
+      onPointerCancel: (_) => service.stopPushToTalk(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
