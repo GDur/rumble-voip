@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:hotkey_manager/hotkey_manager.dart';
 
 // Brand Colors
 const kBrandGreen = Color(
@@ -39,6 +41,8 @@ void main() async {
           defaultTargetPlatform == TargetPlatform.linux ||
           defaultTargetPlatform == TargetPlatform.macOS)) {
     await windowManager.ensureInitialized();
+    // hotkey_manager needs to be initialized on some platforms or at least cleared
+    await hotKeyManager.unregisterAll();
 
     double? width = settingsService.windowWidth;
     double? height = settingsService.windowHeight;
@@ -192,6 +196,22 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         lastStatus = newStatus;
       });
     });
+
+    // Reconnect to last server if enabled
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = Provider.of<SettingsService>(context, listen: false);
+      if (settings.reconnectToLastServer && settings.lastServerJson != null) {
+        try {
+          final serverMap = jsonDecode(settings.lastServerJson!);
+          final server = MumbleServer.fromJson(serverMap);
+          final mumbleService =
+              Provider.of<MumbleService>(context, listen: false);
+          _connectToServer(mumbleService, server);
+        } catch (e) {
+          debugPrint('Error reconnecting to last server: $e');
+        }
+      }
+    });
   }
 
   @override
@@ -313,6 +333,25 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
               selectedOptionBuilder: (context, value) =>
                   Text(value.name.toUpperCase()),
             ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Connection',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Reconnect to last server on startup'),
+              ShadSwitch(
+                value: settings.reconnectToLastServer,
+                onChanged: (val) {
+                  settings.setReconnectToLastServer(val);
+                  setDialogState(() {});
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           const Text(
@@ -1069,59 +1108,163 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   }
 
   void _showHotkeyRecorder(BuildContext context, SettingsService settings) {
+    bool hasRegularKey = false;
+
     showShadDialog(
       context: context,
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24),
-        child: ShadDialog(
-          title: const Text('Record Hotkey'),
-          child: Focus(
-            autofocus: true,
-            onKeyEvent: (node, event) {
-              if (event is KeyUpEvent) return KeyEventResult.ignored;
+        child: StatefulBuilder(
+          builder: (context, setRecorderState) {
+            return ShadDialog(
+              title: const Text('Record Hotkey'),
+              child: Focus(
+                autofocus: true,
+                onKeyEvent: (node, event) {
+                  if (event is KeyRepeatEvent) return KeyEventResult.handled;
 
-              final key = event.logicalKey;
-              if (key == LogicalKeyboardKey.escape) {
-                Navigator.pop(context);
-                return KeyEventResult.handled;
-              }
+                  final key = event.logicalKey;
+                  if (key == LogicalKeyboardKey.escape) {
+                    Navigator.pop(context);
+                    return KeyEventResult.handled;
+                  }
 
-              // Capture mapping
-              settings.setCustomHotkey({
-                'label': key.keyLabel,
-                'logicalKey': key.debugName,
-                'physicalKey': event.physicalKey.debugName,
-                // Very rough VK Mapping for Windows (example)
-                'vkCode': _mapPhysicalToVk(event.physicalKey),
-              });
+                  // Modifiers
+                  bool isMod =
+                      key == LogicalKeyboardKey.control ||
+                      key == LogicalKeyboardKey.controlLeft ||
+                      key == LogicalKeyboardKey.controlRight ||
+                      key == LogicalKeyboardKey.shift ||
+                      key == LogicalKeyboardKey.shiftLeft ||
+                      key == LogicalKeyboardKey.shiftRight ||
+                      key == LogicalKeyboardKey.alt ||
+                      key == LogicalKeyboardKey.altLeft ||
+                      key == LogicalKeyboardKey.altRight ||
+                      key == LogicalKeyboardKey.meta ||
+                      key == LogicalKeyboardKey.metaLeft ||
+                      key == LogicalKeyboardKey.metaRight;
 
-              Navigator.pop(context);
-              return KeyEventResult.handled;
-            },
-            child: Container(
-              width: 300,
-              height: 150,
-              alignment: Alignment.center,
-              child: const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Press any key or combined modifiers'),
-                  SizedBox(height: 12),
-                  Text(
-                    'Press ESC to cancel',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  if (event is KeyDownEvent) {
+                    if (!isMod) {
+                      hasRegularKey = true;
+                      _saveHotkey(context, settings, key, event.physicalKey);
+                      return KeyEventResult.handled;
+                    }
+                  } else if (event is KeyUpEvent) {
+                    if (isMod &&
+                        !hasRegularKey &&
+                        HardwareKeyboard.instance.logicalKeysPressed.isEmpty) {
+                      _saveHotkey(context, settings, key, event.physicalKey);
+                      return KeyEventResult.handled;
+                    }
+                  }
+
+                  setRecorderState(() {});
+                  return KeyEventResult.handled;
+                },
+                child: Container(
+                  width: 300,
+                  height: 150,
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCurrentHotkeyPrompt(),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Press any key or combination',
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Single modifiers (Shift, Ctrl) are supported.',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Press ESC to cancel',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
+  Widget _buildCurrentHotkeyPrompt() {
+    List<String> held = [];
+    if (HardwareKeyboard.instance.isControlPressed) held.add('CTRL');
+    if (HardwareKeyboard.instance.isShiftPressed) held.add('SHIFT');
+    if (HardwareKeyboard.instance.isAltPressed) held.add('ALT');
+    if (HardwareKeyboard.instance.isMetaPressed) held.add('CMD');
+
+    if (held.isEmpty) {
+      return const Icon(LucideIcons.keyboard, size: 32, color: Colors.grey);
+    }
+
+    return Text(
+      '${held.join(' + ')} + ...',
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+    );
+  }
+
+  void _saveHotkey(
+    BuildContext context,
+    SettingsService settings,
+    LogicalKeyboardKey key,
+    PhysicalKeyboardKey physicalKey,
+  ) {
+    List<String> modifiers = [];
+    if (HardwareKeyboard.instance.isControlPressed) modifiers.add('control');
+    if (HardwareKeyboard.instance.isShiftPressed) modifiers.add('shift');
+    if (HardwareKeyboard.instance.isAltPressed) modifiers.add('alt');
+    if (HardwareKeyboard.instance.isMetaPressed) modifiers.add('meta');
+
+    // If 'key' itself is a modifier, remove it from the 'modifiers' list
+    // to avoid hotkey_manager conflicts (it prefers it to be the key OR a modifier, not both).
+    if (key == LogicalKeyboardKey.control ||
+        key == LogicalKeyboardKey.controlLeft ||
+        key == LogicalKeyboardKey.controlRight) {
+      modifiers.remove('control');
+    } else if (key == LogicalKeyboardKey.shift ||
+        key == LogicalKeyboardKey.shiftLeft ||
+        key == LogicalKeyboardKey.shiftRight) {
+      modifiers.remove('shift');
+    } else if (key == LogicalKeyboardKey.alt ||
+        key == LogicalKeyboardKey.altLeft ||
+        key == LogicalKeyboardKey.altRight) {
+      modifiers.remove('alt');
+    } else if (key == LogicalKeyboardKey.meta ||
+        key == LogicalKeyboardKey.metaLeft ||
+        key == LogicalKeyboardKey.metaRight) {
+      modifiers.remove('meta');
+    }
+
+    String label = '';
+    if (modifiers.isNotEmpty) {
+      label = modifiers.map((e) => e.toUpperCase()).join(' + ') + ' + ';
+    }
+    label += key.keyLabel.toUpperCase();
+
+    settings.setCustomHotkey({
+      'label': label,
+      'key': key.debugName,
+      'usbHidUsage': physicalKey.usbHidUsage,
+      'modifiers': modifiers.join(','),
+      'vkCode': _mapPhysicalToVk(physicalKey),
+    });
+
+    Navigator.pop(context);
+  }
+
   int _mapPhysicalToVk(PhysicalKeyboardKey key) {
     // Basic mapping for common keys to Windows VK codes
+    // Modifiers
     if (key == PhysicalKeyboardKey.shiftLeft ||
         key == PhysicalKeyboardKey.shiftRight)
       return 0x10;
@@ -1132,10 +1275,35 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         key == PhysicalKeyboardKey.altRight)
       return 0x12;
     if (key == PhysicalKeyboardKey.capsLock) return 0x14;
+
+    // Common keys
     if (key == PhysicalKeyboardKey.space) return 0x20;
+    if (key == PhysicalKeyboardKey.enter) return 0x0D;
+    if (key == PhysicalKeyboardKey.tab) return 0x09;
+
+    // Letters (A-Z)
+    final debugName = key.debugName ?? '';
+    if (debugName.startsWith('Key ')) {
+      String letter = debugName.substring(4).toUpperCase();
+      if (letter.length == 1) {
+        return letter.codeUnitAt(0);
+      }
+    }
+
+    // Function keys
     if (key == PhysicalKeyboardKey.f1) return 0x70;
     if (key == PhysicalKeyboardKey.f2) return 0x71;
-    // ... add more as needed or use a more comprehensive map
+    if (key == PhysicalKeyboardKey.f3) return 0x72;
+    if (key == PhysicalKeyboardKey.f4) return 0x73;
+    if (key == PhysicalKeyboardKey.f5) return 0x74;
+    if (key == PhysicalKeyboardKey.f6) return 0x75;
+    if (key == PhysicalKeyboardKey.f7) return 0x76;
+    if (key == PhysicalKeyboardKey.f8) return 0x77;
+    if (key == PhysicalKeyboardKey.f9) return 0x78;
+    if (key == PhysicalKeyboardKey.f10) return 0x79;
+    if (key == PhysicalKeyboardKey.f11) return 0x7A;
+    if (key == PhysicalKeyboardKey.f12) return 0x7B;
+
     return 0;
   }
 
@@ -1737,6 +1905,11 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     setState(() => _connectingServerId = server.id);
     try {
       await service.connect(server);
+      // Save last server on success
+      if (mounted) {
+        final settings = Provider.of<SettingsService>(context, listen: false);
+        settings.setLastServerJson(jsonEncode(server.toJson()));
+      }
     } catch (e) {
       final errorStr = e.toString().toLowerCase();
       String message = 'Failed to connect to server.';

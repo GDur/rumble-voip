@@ -19,6 +19,8 @@ class SettingsService extends ChangeNotifier {
   static const String _kWindowHeight = 'window_height';
   static const String _kWindowX = 'window_x';
   static const String _kWindowY = 'window_y';
+  static const String _kReconnectToLastServer = 'reconnect_last_server';
+  static const String _kLastServerJson = 'last_server_json';
 
   final SharedPreferences _prefs;
 
@@ -26,11 +28,15 @@ class SettingsService extends ChangeNotifier {
   bool _pttSuppress;
   ThemeMode _themeMode;
   Map<String, dynamic>? _customHotkey;
+  bool _reconnectToLastServer;
+  String? _lastServerJson;
 
   SettingsService(this._prefs)
       : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
         _pttSuppress = _prefs.getBool(_kPttSuppress) ?? true,
-        _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2] {
+        _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2],
+        _reconnectToLastServer = _prefs.getBool(_kReconnectToLastServer) ?? false,
+        _lastServerJson = _prefs.getString(_kLastServerJson) {
     final String? customJson = _prefs.getString(_kCustomHotkey);
     if (customJson != null) {
       try {
@@ -43,6 +49,8 @@ class SettingsService extends ChangeNotifier {
   bool get pttSuppress => _pttSuppress;
   ThemeMode get themeMode => _themeMode;
   Map<String, dynamic>? get customHotkey => _customHotkey;
+  bool get reconnectToLastServer => _reconnectToLastServer;
+  String? get lastServerJson => _lastServerJson;
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
   double? get windowHeight => _prefs.getDouble(_kWindowHeight);
@@ -91,5 +99,21 @@ class SettingsService extends ChangeNotifier {
   Future<void> setWindowPosition(Offset position) async {
     await _prefs.setDouble(_kWindowX, position.dx);
     await _prefs.setDouble(_kWindowY, position.dy);
+  }
+
+  Future<void> setReconnectToLastServer(bool value) async {
+    _reconnectToLastServer = value;
+    await _prefs.setBool(_kReconnectToLastServer, value);
+    notifyListeners();
+  }
+
+  Future<void> setLastServerJson(String? json) async {
+    _lastServerJson = json;
+    if (json != null) {
+      await _prefs.setString(_kLastServerJson, json);
+    } else {
+      await _prefs.remove(_kLastServerJson);
+    }
+    notifyListeners();
   }
 }
