@@ -243,7 +243,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               options: [
-                ShadOption(value: ThemeMode.system, child: const Text('System')),
+                ShadOption(
+                  value: ThemeMode.system,
+                  child: const Text('System'),
+                ),
                 ShadOption(value: ThemeMode.light, child: const Text('Light')),
                 ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
               ],
@@ -434,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            // padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
@@ -443,8 +446,8 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(8),
               child: Image.asset(
                 'assets/icon.png',
-                width: 80,
-                height: 80,
+                width: 80 + 16 + 16,
+                height: 80 + 16 + 16,
                 fit: BoxFit.cover,
               ),
             ),
@@ -510,10 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label,
             style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
           ),
-          Text(
-            value,
-            style: const TextStyle(color: Colors.grey, fontSize: 13),
-          ),
+          Text(value, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         ],
       ),
     );

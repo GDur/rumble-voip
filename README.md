@@ -23,9 +23,11 @@ Rumble is currently in active development.
 | Android | x | |
 | iOS (Tablet and iPhones)| x |  |
 | macOS (Apple Silicon and Intel) | x | |
-| Windows | | x |
-| Linux | | x |
+| Windows | (x)* | |
+| Linux | (x)* | |
 | Web (can't work) | | x |
+
+\* *Requires native `libopus` libraries in the application directory.*
 
 
 ### Currently Supported

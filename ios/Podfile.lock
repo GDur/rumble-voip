@@ -8,6 +8,8 @@ PODS:
     - Flutter
   - flutter_pcm_sound (0.0.1):
     - Flutter
+  - flutter_soloud (0.0.1):
+    - Flutter
   - permission_handler_apple (9.3.0):
     - Flutter
   - record_ios (1.2.0):
@@ -22,6 +24,7 @@ DEPENDENCIES:
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_opus (from `.symlinks/plugins/flutter_opus/ios`)
   - flutter_pcm_sound (from `.symlinks/plugins/flutter_pcm_sound/ios`)
+  - flutter_soloud (from `.symlinks/plugins/flutter_soloud/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - record_ios (from `.symlinks/plugins/record_ios/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -37,6 +40,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_opus/ios"
   flutter_pcm_sound:
     :path: ".symlinks/plugins/flutter_pcm_sound/ios"
+  flutter_soloud:
+    :path: ".symlinks/plugins/flutter_soloud/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   record_ios:
@@ -50,6 +55,7 @@ SPEC CHECKSUMS:
   flutter_native_splash: df59bb2e1421aa0282cb2e95618af4dcb0c56c29
   flutter_opus: 484a4e9725f33c4c598f02cc124682cb86b5cdb0
   flutter_pcm_sound: de0572ca4f99091cc2abfcc31601b8a4ddd33c0e
+  flutter_soloud: 78b2184802f2183a6799c6c6fcbc8e99edf4cf9a
   permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
   record_ios: 26294aaa39e4bb7665b0fef78bdc23d723b432f2
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6

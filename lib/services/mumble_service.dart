@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:dumble/dumble.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
-import 'package:flutter_pcm_sound/flutter_pcm_sound.dart' as pcm_sound;
 import 'package:rumble/models/server.dart';
+import 'package:rumble/services/audio_playback_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
 
 class MumbleService extends ChangeNotifier 
@@ -58,17 +58,15 @@ class MumbleService extends ChangeNotifier
 
   Future<void> _initAudioPlayer() async {
     try {
-      debugPrint('[MumbleService] Initializing audio player (48kHz Mono, PlayAndRecord)...');
-      await pcm_sound.FlutterPcmSound.setup(
-        sampleRate: 48000, 
-        channelCount: 1,
-        iosAudioCategory: pcm_sound.IosAudioCategory.playAndRecord,
+      debugPrint('[MumbleService] Initializing audio service...');
+      await AudioPlaybackService().initialize(
+        sampleRate: 48000,
+        channels: 1,
       );
-      await pcm_sound.FlutterPcmSound.setFeedThreshold(1024 * 4);
       _audioPlayerInitialized = true;
-      debugPrint('[MumbleService] Audio player initialized.');
+      debugPrint('[MumbleService] Audio service initialized.');
     } catch (e) {
-      debugPrint('[MumbleService] Error initializing audio player: $e');
+      debugPrint('[MumbleService] Error initializing audio service: $e');
     }
   }
 
@@ -179,9 +177,7 @@ class MumbleService extends ChangeNotifier
           /// Encoder is configured with FEC (Forward Error Correction) 
           /// and VBR enabled in MumbleOpusEncoder constructor.
           final encoded = _opusEncoder!.encode(frameSamples, frameSize);
-          if (encoded != null) {
-             _audioSink!.add(AudioFrame.outgoing(frame: encoded));
-          }
+          _audioSink!.add(AudioFrame.outgoing(frame: encoded));
         }
       }
     }, onDone: () {
@@ -275,32 +271,30 @@ class MumbleService extends ChangeNotifier
 
       voiceData.listen((AudioFrame frame) {
         final frameData = frame.frame;
-        if (frameData != null) {
-           // Decode Opus frame to PCM samples (Int16List)
-           final pcm = decoder.decode(frameData, 5760); 
-           
-           if (pcm.isNotEmpty) {
-              buffer.addAll(pcm);
-              
-              if (!_userPlaying.containsKey(sessionId) || _userPlaying[sessionId] == false) {
-                if (buffer.length >= _bufferThreshold) {
-                  _userPlaying[sessionId] = true;
-                  if (_audioPlayerInitialized) {
-                    pcm_sound.FlutterPcmSound.start();
-                  }
+        // Decode Opus frame to PCM samples (Int16List)
+        final pcm = decoder.decode(frameData, 5760); 
+        
+        if (pcm.isNotEmpty) {
+          buffer.addAll(pcm);
+          
+          if (!_userPlaying.containsKey(sessionId) || _userPlaying[sessionId] == false) {
+            if (buffer.length >= _bufferThreshold) {
+              _userPlaying[sessionId] = true;
+              if (_audioPlayerInitialized) {
+                AudioPlaybackService().start();
+              }
+            }
+          }
+          
+          if (_userPlaying[sessionId] == true || buffer.length > 5000) {
+             while (buffer.length >= 960) {
+                final chunk = buffer.sublist(0, 960);
+                buffer.removeRange(0, 960);
+                if (_audioPlayerInitialized) {
+                   AudioPlaybackService().feed(Int16List.fromList(chunk));
                 }
-              }
-              
-              if (_userPlaying[sessionId] == true || buffer.length > 5000) {
-                 while (buffer.length >= 960) {
-                    final chunk = buffer.sublist(0, 960);
-                    buffer.removeRange(0, 960);
-                    if (_audioPlayerInitialized) {
-                       pcm_sound.FlutterPcmSound.feed(pcm_sound.PcmArrayInt16.fromList(chunk));
-                    }
-                 }
-              }
-           }
+             }
+          }
         }
       }, onDone: () {
         _talkingUsers[sessionId] = false;
@@ -386,7 +380,7 @@ class MumbleService extends ChangeNotifier
       d.dispose();
     }
     _audioPlayerInitialized = false;
-    pcm_sound.FlutterPcmSound.release();
+    AudioPlaybackService().dispose();
     super.dispose();
   }
 }

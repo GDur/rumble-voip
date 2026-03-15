@@ -163,10 +163,12 @@ class OpusDecoder {
   static DynamicLibrary _loadOpusLibrary() {
     if (Platform.isAndroid) {
       return DynamicLibrary.open('libopus.so');
-    } else if (Platform.isIOS) {
+    } else if (Platform.isIOS || Platform.isMacOS) {
       return DynamicLibrary.process();
-    } else if (Platform.isMacOS) {
-      return DynamicLibrary.process();
+    } else if (Platform.isWindows) {
+      return DynamicLibrary.open('libopus.dll');
+    } else if (Platform.isLinux) {
+      return DynamicLibrary.open('libopus.so');
     } else {
       throw UnsupportedError('Unsupported platform');
     }

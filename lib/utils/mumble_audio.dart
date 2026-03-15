@@ -57,6 +57,10 @@ class MumbleAudioCodec {
        _lib = DynamicLibrary.open('libopus.so');
     } else if (Platform.isIOS || Platform.isMacOS) {
        _lib = DynamicLibrary.process();
+    } else if (Platform.isWindows) {
+       _lib = DynamicLibrary.open('libopus.dll');
+    } else if (Platform.isLinux) {
+       _lib = DynamicLibrary.open('libopus.so');
     } else {
        throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
     }

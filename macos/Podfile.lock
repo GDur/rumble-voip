@@ -7,6 +7,8 @@ PODS:
     - FlutterMacOS
   - flutter_pcm_sound (0.0.1):
     - FlutterMacOS
+  - flutter_soloud (0.0.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - HotKey (0.2.1)
   - hotkey_manager_macos (0.0.1):
@@ -23,6 +25,7 @@ DEPENDENCIES:
   - flutter_macos_permissions (from `Flutter/ephemeral/.symlinks/plugins/flutter_macos_permissions/macos`)
   - flutter_opus (from `Flutter/ephemeral/.symlinks/plugins/flutter_opus/macos`)
   - flutter_pcm_sound (from `Flutter/ephemeral/.symlinks/plugins/flutter_pcm_sound/macos`)
+  - flutter_soloud (from `Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
   - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
@@ -41,6 +44,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_opus/macos
   flutter_pcm_sound:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_pcm_sound/macos
+  flutter_soloud:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   hotkey_manager_macos:
@@ -55,6 +60,7 @@ SPEC CHECKSUMS:
   flutter_macos_permissions: ec12b9e8b22da91abcbd572582b59e4278f97d4b
   flutter_opus: e69853e544bf4a7e54e1cdb1cac518fcab1e03f5
   flutter_pcm_sound: 4d212fcd1b3524b0891da25d77912672b66c97fb
+  flutter_soloud: 1b9bde781de22ebd2ae8b2c213ec84ab3b531f16
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
   hotkey_manager_macos: 1e2edb0c7ae4fe67108af44a9d3445de41404160

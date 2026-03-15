@@ -42,6 +42,7 @@ dependencies:
   record: ^6.2.0
   dumble: ^0.8.9
   flutter_pcm_sound: ^3.3.3
+  flutter_soloud: ^3.0.0
   flutter_opus:
     path: plugins/flutter_opus
   ffi: ^2.1.3

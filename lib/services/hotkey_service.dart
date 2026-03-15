@@ -87,6 +87,11 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     final settings = _settingsService;
     final mumbleService = _mumbleService;
 
+    // hotkey_manager doesn't support Android/iOS. Skip to avoid MissingPluginException.
+    if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      return;
+    }
+
     await hotKeyManager.unregisterAll();
 
     if (settings.pttKey != PttKey.none) {
