@@ -1,6 +1,8 @@
 PODS:
   - device_info_plus (0.0.1):
     - FlutterMacOS
+  - file_picker (0.0.1):
+    - FlutterMacOS
   - flutter_macos_permissions (0.0.1):
     - FlutterMacOS
   - flutter_opus (0.0.1):
@@ -26,6 +28,7 @@ PODS:
 
 DEPENDENCIES:
   - device_info_plus (from `Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos`)
+  - file_picker (from `Flutter/ephemeral/.symlinks/plugins/file_picker/macos`)
   - flutter_macos_permissions (from `Flutter/ephemeral/.symlinks/plugins/flutter_macos_permissions/macos`)
   - flutter_opus (from `Flutter/ephemeral/.symlinks/plugins/flutter_opus/macos`)
   - flutter_pcm_sound (from `Flutter/ephemeral/.symlinks/plugins/flutter_pcm_sound/macos`)
@@ -44,6 +47,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   device_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/device_info_plus/macos
+  file_picker:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_picker/macos
   flutter_macos_permissions:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_macos_permissions/macos
   flutter_opus:
@@ -67,6 +72,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   device_info_plus: 1b14eed9bf95428983aed283a8d51cce3d8c4215
+  file_picker: e716a70a9fe5fd9e09ebc922d7541464289443af
   flutter_macos_permissions: ec12b9e8b22da91abcbd572582b59e4278f97d4b
   flutter_opus: e69853e544bf4a7e54e1cdb1cac518fcab1e03f5
   flutter_pcm_sound: 4d212fcd1b3524b0891da25d77912672b66c97fb

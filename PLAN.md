@@ -1,6 +1,6 @@
 # Ideas and Plans to tackle next
 
-[] mumble can usse certificates to identify users. lets add support for that.
+[x] mumble can usse certificates to identify users. lets add support for that.
 [] let the user choose the mic and speakers
 [] show the ping and the user count and capacity(eg 3/100) in the server list items for each server
 [] add auto activation (voice activity detection)
