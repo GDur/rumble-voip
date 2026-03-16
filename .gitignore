@@ -46,7 +46,7 @@ app.*.map.json
 
 
 !/Users/gdur/.pub-cache/hosted/pub.dev/dumble-0.8.9
-
+!/.pub-cache/hosted/pub.dev/dumble-0.8.9
 # Local plugins build artifacts
 plugins/**/.dart_tool/
 plugins/**/build/

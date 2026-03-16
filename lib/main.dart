@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -12,9 +13,12 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/services/certificate_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:rumble/models/certificate.dart';
 
 // Brand Colors
 const kBrandGreen = Color(
@@ -75,6 +79,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => MumbleService()),
         ChangeNotifierProvider(create: (_) => ServerProvider()),
         ChangeNotifierProvider.value(value: settingsService),
+        ChangeNotifierProvider(create: (_) => CertificateService()..loadCertificates()),
         ChangeNotifierProxyProvider2<
           MumbleService,
           SettingsService,
@@ -249,6 +254,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
   void _showSettingsDialog(BuildContext context) {
     final settings = Provider.of<SettingsService>(context, listen: false);
+    String currentTab = 'general';
     showShadDialog(
       context: context,
       builder: (context) => Padding(
@@ -259,17 +265,20 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
               title: const Text('Settings'),
               actions: [
                 ShadButton(
-                  child: const Text('Close'),
                   onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
                 ),
               ],
-              child: Container(
+              child: SizedBox(
                 width: 440,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: ShadTabs<String>(
-                  tabBarConstraints: const BoxConstraints(maxWidth: 440),
-                  contentConstraints: const BoxConstraints(maxWidth: 440),
-                  value: 'general',
+                height: 600,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: ShadTabs<String>(
+                    tabBarConstraints: const BoxConstraints(maxWidth: 440),
+                    contentConstraints: const BoxConstraints(maxWidth: 440),
+                    value: currentTab,
+                    onChanged: (v) => setDialogState(() => currentTab = v),
                   tabs: [
                     ShadTab(
                       value: 'general',
@@ -281,6 +290,11 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                       child: const Text('General'),
                     ),
                     ShadTab(
+                      value: 'certificates',
+                      content: _buildCertificateSettings(context, setDialogState),
+                      child: const Text('Certificates'),
+                    ),
+                    ShadTab(
                       value: 'about',
                       content: _buildAboutPage(context),
                       child: const Text('About'),
@@ -288,8 +302,9 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                   ],
                 ),
               ),
-            );
-          },
+            ),
+          );
+        },
         ),
       ),
     );
@@ -581,6 +596,236 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
               },
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCertificateSettings(
+    BuildContext context,
+    StateSetter setDialogState,
+  ) {
+    final certService = Provider.of<CertificateService>(context);
+    final theme = ShadTheme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Identity Certificates',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Row(
+                children: [
+                  ShadButton.outline(
+                    size: ShadButtonSize.sm,
+                    onPressed: () async {
+                      final result = await FilePicker.platform.pickFiles(
+                        type: FileType.custom,
+                        allowedExtensions: ['p12', 'pfx'],
+                      );
+                      if (result != null && result.files.single.path != null) {
+                        final data = await File(result.files.single.path!).readAsBytes();
+
+                        // Simple name from filename
+                        final name = result.files.single.name;
+
+                        // Show dialog for password
+                        if (!context.mounted) return;
+                        String? password;
+                        await showShadDialog(
+                          context: context,
+                          builder: (context) => ShadDialog(
+                            title: const Text('Certificate Password'),
+                            description: const Text(
+                              'Enter the password for the PKCS#12 file (leave empty if none).',
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ShadInput(
+                                  placeholder: const Text('Password'),
+                                  obscureText: true,
+                                  onChanged: (v) => password = v,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              ShadButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Import'),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        await certService.importFromP12(data, password, name);
+                        setDialogState(() {});
+                      }
+                    },
+                    child: const Text('Import P12'),
+                  ),
+                  const SizedBox(width: 8),
+                  ShadButton(
+                    size: ShadButtonSize.sm,
+                    onPressed: () async {
+                      await certService.generateCertificate('My Mumble Cert');
+                      setDialogState(() {});
+                    },
+                    child: const Text('Generate'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (certService.certificates.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('No certificates generated yet.'),
+              ),
+            )
+          else
+            SizedBox(
+              height: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: certService.certificates.map((cert) {
+                    final isDefault = cert.id == certService.defaultCertificateId;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.colorScheme.border),
+                        borderRadius: BorderRadius.circular(8),
+                        color: isDefault
+                            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                            : null,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cert.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  'Created: ${cert.createdAt.toString().split('.')[0]}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              ShadTooltip(
+                                builder: (context) => const Text('Set as default'),
+                                child: ShadButton.ghost(
+                                  size: ShadButtonSize.sm,
+                                  onPressed: () {
+                                    certService.setDefaultCertificate(cert.id);
+                                    setDialogState(() {});
+                                  },
+                                  child: Icon(
+                                    isDefault
+                                        ? LucideIcons.circleCheck
+                                        : LucideIcons.circle,
+                                    size: 16,
+                                    color: isDefault ? kBrandGreen : null,
+                                  ),
+                                ),
+                              ),
+                              ShadTooltip(
+                                builder: (context) => const Text('Export P12'),
+                                child: ShadButton.ghost(
+                                  size: ShadButtonSize.sm,
+                                  onPressed: () async {
+                                    final path = await FilePicker.platform.saveFile(
+                                      fileName: '${cert.name}.p12',
+                                      type: FileType.custom,
+                                      allowedExtensions: ['p12'],
+                                    );
+                                    if (path != null) {
+                                      // Export without password for now or prompt
+                                      final p12Data = certService.exportToP12(
+                                        cert,
+                                        null,
+                                      );
+                                      await File(path).writeAsBytes(p12Data);
+                                    }
+                                  },
+                                  child: const Icon(LucideIcons.download, size: 16),
+                                ),
+                              ),
+                              ShadTooltip(
+                                builder: (context) => const Text('Delete'),
+                                child: ShadButton.ghost(
+                                  size: ShadButtonSize.sm,
+                                  onPressed: () {
+                                    final certId = cert.id;
+                                    final certName = cert.name;
+
+                                    // Hide it first
+                                    certService.hideCertificate(certId);
+                                    setDialogState(() {});
+
+                                    bool undone = false;
+                                    ShadToaster.of(context).show(
+                                      ShadToast(
+                                        title: Text('Deleted $certName'),
+                                        description: const Text(
+                                          'The certificate has been removed.',
+                                        ),
+                                        action: ShadButton.outline(
+                                          size: ShadButtonSize.sm,
+                                          onPressed: () {
+                                            undone = true;
+                                            certService.unhideCertificate(certId);
+                                            setDialogState(() {});
+                                            ShadToaster.of(context).hide();
+                                          },
+                                          child: const Text('Undo'),
+                                        ),
+                                      ),
+                                    );
+
+                                    // Actually delete after a delay if not undone
+                                    Future.delayed(const Duration(seconds: 5), () {
+                                      if (!undone) {
+                                        certService.deleteCertificate(certId);
+                                      }
+                                    });
+                                  },
+                                  child: Icon(
+                                    LucideIcons.trash2,
+                                    size: 16,
+                                    color: theme.colorScheme.destructive,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1912,7 +2157,13 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   ) async {
     setState(() => _connectingServerId = server.id);
     try {
-      await service.connect(server);
+      final certService = Provider.of<CertificateService>(context, listen: false);
+      final defaultCertId = certService.defaultCertificateId;
+      MumbleCertificate? certificate;
+      if (defaultCertId != null) {
+        certificate = certService.getCertificateById(defaultCertId);
+      }
+      await service.connect(server, certificate: certificate);
       // Save last server on success
       if (mounted) {
         final settings = Provider.of<SettingsService>(context, listen: false);

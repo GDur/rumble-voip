@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:dumble/dumble.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
+import 'package:rumble/models/certificate.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/audio_playback_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
@@ -96,7 +99,8 @@ class MumbleService extends ChangeNotifier
     });
   }
 
-  Future<void> connect(MumbleServer server) async {
+  Future<void> connect(MumbleServer server, {MumbleCertificate? certificate}) async {
+    _isConnected = false;
     _error = null;
     _channels = [];
     _talkingUsers.clear();
@@ -104,12 +108,23 @@ class MumbleService extends ChangeNotifier
 
     try {
       debugPrint('[MumbleService] Connecting to ${server.host}:${server.port}...');
+
+      SecurityContext? context;
+      if (certificate != null) {
+        context = SecurityContext();
+        final certBytes = utf8.encode(certificate.certificatePem);
+        final keyBytes = utf8.encode(certificate.privateKeyPem);
+        context.useCertificateChainBytes(certBytes);
+        context.usePrivateKeyBytes(keyBytes);
+      }
+
       _client = await MumbleClient.connect(
         options: ConnectionOptions(
           host: server.host,
           port: server.port,
           name: server.username,
           password: server.password.isEmpty ? null : server.password,
+          context: context,
         ),
         onBadCertificate: (cert) => true,
       );

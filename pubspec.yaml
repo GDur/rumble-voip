@@ -50,6 +50,8 @@ dependencies:
   shared_preferences: ^2.5.4
   hotkey_manager: ^0.2.3
   window_manager: ^0.5.1
+  basic_utils: ^5.7.0
+  file_picker: ^10.3.10
 
 dev_dependencies:
   flutter_test:
