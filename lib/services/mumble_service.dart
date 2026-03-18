@@ -58,6 +58,42 @@ class MumbleService extends ChangeNotifier
   MumbleService() {
     _recorder = AudioRecorder();
     _initAudioPlayer();
+    _initGlobalAudioResources();
+  }
+
+  Future<void> _initGlobalAudioResources() async {
+    // 1. Configure Audio Session for the entire app lifetime
+    try {
+      debugPrint('[MumbleService] Configuring Global Audio Session...');
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+        avAudioSessionCategoryOptions:
+            AVAudioSessionCategoryOptions.allowBluetooth |
+            AVAudioSessionCategoryOptions.defaultToSpeaker,
+        avAudioSessionMode: AVAudioSessionMode.voiceChat,
+        avAudioSessionRouteSharingPolicy:
+            AVAudioSessionRouteSharingPolicy.defaultPolicy,
+        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+      ));
+      await session.setActive(true);
+      debugPrint('[MumbleService] Global Audio Session configured.');
+    } catch (e) {
+      debugPrint('[MumbleService] Error configuring Global Audio Session: $e');
+    }
+
+    // 2. Pre-initialize the Opus Encoder
+    _opusEncoder = MumbleOpusEncoder(
+      sampleRate: 48000,
+      channels: 1,
+      application: opusApplicationVoip,
+    );
+
+    // 3. Start passive mic monitoring/streaming immediately (WARM UP)
+    _startMicStream();
+    _startVolumeMonitoring();
+    
+    debugPrint('[MumbleService] Global audio layer is WARM.');
   }
 
   Future<void> _initAudioPlayer() async {
@@ -75,7 +111,9 @@ class MumbleService extends ChangeNotifier
   }
 
   void _startVolumeMonitoring() {
-    _volumeTimer?.cancel();
+    if (_volumeTimer?.isActive ?? false) return;
+    
+    debugPrint('[MumbleService] Starting volume monitoring...');
     _volumeTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) async {
       try {
         if (await _recorder.isRecording()) {
@@ -139,32 +177,10 @@ class MumbleService extends ChangeNotifier
       _isConnected = true;
       notifyListeners();
 
-      // Configure Audio Session for iOS/VOIP
-      try {
-        debugPrint('[MumbleService] Configuring Audio Session...');
-        final session = await AudioSession.instance;
-        await session.configure(AudioSessionConfiguration(
-          avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-          avAudioSessionCategoryOptions:
-              AVAudioSessionCategoryOptions.allowBluetooth |
-              AVAudioSessionCategoryOptions.defaultToSpeaker,
-          avAudioSessionMode: AVAudioSessionMode.voiceChat,
-          avAudioSessionRouteSharingPolicy:
-              AVAudioSessionRouteSharingPolicy.defaultPolicy,
-          avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-        ));
-        await session.setActive(true);
-        debugPrint('[MumbleService] Audio Session configured and active.');
-      } catch (e) {
-        debugPrint('[MumbleService] Error configuring Audio Session: $e');
-      }
-
-      // Initialize persistent audio resources once per connection
-      _setupAudioResources();
-
-      // Start passive mic monitoring immediately on connect
-      _startMicStream();
+      // Ensure hardware audio resources are active and warm on connect
+      await _startMicStream();
       _startVolumeMonitoring();
+      _setupServerAudioSink();
     } catch (e) {
       _error = e.toString();
       _isConnected = false;
@@ -174,6 +190,7 @@ class MumbleService extends ChangeNotifier
   }
 
   Future<void> _startMicStream() async {
+    debugPrint('[MumbleService] Ensuring mic stream is active...');
     if (!await _recorder.hasPermission()) {
       _hasMicPermission = false;
       notifyListeners();
@@ -183,7 +200,17 @@ class MumbleService extends ChangeNotifier
     _hasMicPermission = true;
     notifyListeners();
 
-    if (await _recorder.isRecording()) return;
+    // If already recording and subscription is active, don't restart
+    if (_micSubscription != null && await _recorder.isRecording()) {
+      debugPrint('[MumbleService] Mic stream already active.');
+      return;
+    }
+
+    // Clean up old state if any
+    await _micSubscription?.cancel();
+    if (await _recorder.isRecording()) {
+      await _recorder.stop();
+    }
 
     const sampleRate = 48000;
     const channels = 1;
@@ -224,25 +251,21 @@ class MumbleService extends ChangeNotifier
     });
   }
 
-  void _setupAudioResources() {
+  void _setupServerAudioSink() {
     if (_client == null || !_isConnected) return;
     
-    debugPrint('[MumbleService] Initializing persistent audio resources...');
+    debugPrint('[MumbleService] Initializing server-specific audio sink...');
     
-    // Reset sequence number at the start of the connection
+    // Reset sequence number so a new server doesn't get a huge number
     AudioClient.resetSequenceNumber();
     
-    // Create the sink once
+    // CRITICAL: Clear any leftover audio from the previous server/session
+    _pcmBuffer.clear();
+    
+    // Create the sink for THIS server
     _audioSink = _client!.audio.sendAudio(codec: AudioCodec.opus);
     
-    // Create the encoder once
-    _opusEncoder = MumbleOpusEncoder(
-      sampleRate: 48000,
-      channels: 1,
-      application: opusApplicationVoip,
-    );
-    
-    debugPrint('[MumbleService] Persistent audio resources initialized.');
+    debugPrint('[MumbleService] Server sink ready.');
   }
 
   void _processPcmBuffer() {
@@ -282,9 +305,9 @@ class MumbleService extends ChangeNotifier
       _isTalking = true;
       _talkingUsers[_client!.self.session] = true;
       
-      // Ensure resources exist (they should have been created in connect)
-      if (_audioSink == null || _opusEncoder == null) {
-        _setupAudioResources();
+      // If sink was somehow dropped, recreate it
+      if (_audioSink == null) {
+        _setupServerAudioSink();
       }
       
       notifyListeners();
