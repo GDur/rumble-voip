@@ -73,22 +73,27 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   macos:
     generate: true
-    image_path: "assets/icon.png"
+    image_path: "assets/splash_foreground.png"
   windows:
     generate: true
-    image_path: "assets/icon.png"
+    image_path: "assets/splash_foreground.png"
   web:
     generate: true
-    image_path: "assets/icon.png"
-  image_path: "assets/icon.png"
+    image_path: "assets/splash_foreground.png"
+  image_path: "assets/splash_foreground.png"
+  adaptive_icon_background: "#0F172A"
+  adaptive_icon_foreground: "assets/splash_foreground.png"
   min_sdk_android: 21
 
 flutter_native_splash:
   color: "#0F172A"
-  image: assets/icon.png
+  image: assets/splash_foreground.png
   android: true
   ios: true
   fullscreen: true
+  android_12:
+    image: assets/splash_foreground.png
+    color: "#0F172A"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -98,3 +103,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/icon.png
+    - assets/splash_foreground.png
