@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:audio_session/audio_session.dart';
 import 'package:dumble/dumble.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
@@ -43,6 +45,10 @@ class MumbleService extends ChangeNotifier
   
   // Buffer for raw PCM data (Outgoing)
   final List<int> _pcmBuffer = [];
+
+  // Diagnostic counters (debug mode only)
+  int _diagFramesSent = 0;
+  int _diagSinkAddErrors = 0;
   
   MumbleClient? get client => _client;
   bool get isConnected => _isConnected;
@@ -138,9 +144,34 @@ class MumbleService extends ChangeNotifier
       _isConnected = true;
       notifyListeners();
       
+      // Configure Audio Session for iOS/VOIP
+      try {
+        debugPrint('[MumbleService] Configuring Audio Session...');
+        final session = await AudioSession.instance;
+        await session.configure(AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.allowBluetooth |
+              AVAudioSessionCategoryOptions.defaultToSpeaker,
+          avAudioSessionMode: AVAudioSessionMode.voiceChat,
+          avAudioSessionRouteSharingPolicy:
+              AVAudioSessionRouteSharingPolicy.defaultPolicy,
+          avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        ));
+        await session.setActive(true);
+        debugPrint('[MumbleService] Audio Session configured and active.');
+      } catch (e) {
+        debugPrint('[MumbleService] Error configuring Audio Session: $e');
+      }
+
       // Start passive mic monitoring immediately on connect
       _startMicStream();
       _startVolumeMonitoring();
+
+      // Auto-run diagnostic in debug mode
+      if (kDebugMode) {
+        Future.delayed(const Duration(seconds: 2), _runDiagnostic);
+      }
     } catch (e) {
       _error = e.toString();
       _isConnected = false;
@@ -207,12 +238,107 @@ class MumbleService extends ChangeNotifier
       _pcmBuffer.removeRange(0, frameSize);
 
       if (_isTalking && _opusEncoder != null && _audioSink != null) {
-        /// Encoder is configured with FEC (Forward Error Correction) 
-        /// and VBR enabled in MumbleOpusEncoder constructor.
-        final encoded = _opusEncoder!.encode(frameSamples, frameSize);
-        _audioSink!.add(AudioFrame.outgoing(frame: encoded));
+        try {
+          /// Encoder is configured with FEC (Forward Error Correction) 
+          /// and VBR enabled in MumbleOpusEncoder constructor.
+          final encoded = _opusEncoder!.encode(frameSamples, frameSize);
+          _audioSink!.add(AudioFrame.outgoing(frame: encoded));
+          _diagFramesSent++;
+        } catch (e) {
+          _diagSinkAddErrors++;
+          debugPrint('[MumbleService] _processPcmBuffer error: $e');
+        }
       }
     }
+  }
+
+  // Generates a 440Hz sine wave of the given duration in milliseconds.
+  Int16List _generateTone(int durationMs) {
+    const sampleRate = 48000;
+    final numSamples = sampleRate * durationMs ~/ 1000;
+    final samples = Int16List(numSamples);
+    for (int i = 0; i < numSamples; i++) {
+      final t = i / sampleRate;
+      final fade = i < 500 ? i / 500.0 : (i > numSamples - 500 ? (numSamples - i) / 500.0 : 1.0);
+      samples[i] = (math.sin(2 * math.pi * 440.0 * t) * 15000 * fade).toInt();
+    }
+    return samples;
+  }
+
+  void _logDiagState(String label) {
+    debugPrint('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    debugPrint('[DIAG] $label');
+    debugPrint('[DIAG]   _isTalking        = $_isTalking');
+    debugPrint('[DIAG]   _audioSink        = ${_audioSink != null ? "EXISTS (done=${_audioSink!.done})" : "NULL"}');
+    debugPrint('[DIAG]   _opusEncoder      = ${_opusEncoder != null ? "EXISTS" : "NULL"}');
+    debugPrint('[DIAG]   sequenceNumber    = ${AudioClient.sequenceNumber}');
+    debugPrint('[DIAG]   _pcmBuffer.length = ${_pcmBuffer.length}');
+    debugPrint('[DIAG]   framesSent        = $_diagFramesSent');
+    debugPrint('[DIAG]   sinkAddErrors     = $_diagSinkAddErrors');
+    debugPrint('[DIAG]   isConnected       = $_isConnected');
+    debugPrint('[DIAG]   isSuppressed      = $isSuppressed');
+    debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  }
+
+  Future<void> _runDiagnostic() async {
+    if (!_isConnected) return;
+    debugPrint('[DIAG] ============ DIAGNOSTIC START ============');
+
+    // --- Round 1 ---
+    debugPrint('[DIAG] Round 1: Starting PTT and injecting tone...');
+    _diagFramesSent = 0;
+    _diagSinkAddErrors = 0;
+    await startPushToTalk();
+    _logDiagState('After startPushToTalk() - Round 1');
+
+    // Add an onError hook to the sink
+    _audioSink?.onError = (e, [st]) {
+      debugPrint('[DIAG] _audioSink.onError: $e');
+    };
+
+    // Inject 500ms of tone
+    sendAudioSamples(_generateTone(500));
+    _logDiagState('After sendAudioSamples() - Round 1 (immediate)');
+
+    // Log state while transmitting
+    await Future.delayed(const Duration(milliseconds: 250));
+    _logDiagState('During transmission - Round 1 (250ms)');
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    _logDiagState('After tone complete - Round 1 (550ms total)');
+
+    stopPushToTalk();
+    _logDiagState('After stopPushToTalk() - Round 1');
+
+    // --- 500ms pause ---
+    debugPrint('[DIAG] Pausing for 500ms...');
+    await Future.delayed(const Duration(milliseconds: 500));
+    _logDiagState('After pause (before Round 2)');
+
+    // --- Round 2 ---
+    debugPrint('[DIAG] Round 2: Starting PTT and injecting tone...');
+    _diagFramesSent = 0;
+    _diagSinkAddErrors = 0;
+    await startPushToTalk();
+    _logDiagState('After startPushToTalk() - Round 2');
+
+    _audioSink?.onError = (e, [st]) {
+      debugPrint('[DIAG] _audioSink.onError (Round 2): $e');
+    };
+
+    sendAudioSamples(_generateTone(500));
+    _logDiagState('After sendAudioSamples() - Round 2 (immediate)');
+
+    await Future.delayed(const Duration(milliseconds: 250));
+    _logDiagState('During transmission - Round 2 (250ms)');
+
+    await Future.delayed(const Duration(milliseconds: 300));
+    _logDiagState('After tone complete - Round 2 (550ms total)');
+
+    stopPushToTalk();
+    _logDiagState('After stopPushToTalk() - Round 2');
+
+    debugPrint('[DIAG] ============ DIAGNOSTIC COMPLETE ============');
   }
 
   Future<void> sendAudioSamples(Int16List samples) async {
@@ -231,16 +357,26 @@ class MumbleService extends ChangeNotifier
     if (!_isConnected || _isTalking || _client == null) return;
     
     try {
+      debugPrint('[MumbleService] Starting PTT...');
       _isTalking = true;
       _talkingUsers[_client!.self.session] = true;
       
-      // Initialize Opus encoder
+      // Reset the static sequence counter before each new audio stream.
+      // dumble's AudioClient._sequenceNumber is static and keeps growing forever.
+      // Calling this ensures the new stream starts from 0, preventing the Mumble
+      // server from discarding packets on a 2nd/3rd PTT press.
+      AudioClient.resetSequenceNumber();
+
+      // Initialize outgoing audio stream
       _audioSink = _client!.audio.sendAudio(codec: AudioCodec.opus);
+      debugPrint('[MumbleService] _audioSink created: ${_audioSink != null}');
+      
       _opusEncoder = MumbleOpusEncoder(
         sampleRate: 48000,
         channels: 1,
         application: opusApplicationVoip,
       );
+      debugPrint('[MumbleService] _opusEncoder created: ${_opusEncoder != null}');
       
       notifyListeners();
     } catch (e) {
@@ -251,6 +387,7 @@ class MumbleService extends ChangeNotifier
 
   void stopPushToTalk() {
     if (!_isTalking) return;
+    debugPrint('[MumbleService] Stopping PTT...');
     _isTalking = false;
     if (_client != null) {
        _talkingUsers[_client!.self.session] = false;
@@ -261,6 +398,7 @@ class MumbleService extends ChangeNotifier
     
     _opusEncoder?.dispose();
     _opusEncoder = null;
+    debugPrint('[MumbleService] PTT stopped and resources cleared.');
     
     notifyListeners();
   }

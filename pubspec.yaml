@@ -52,6 +52,7 @@ dependencies:
   window_manager: ^0.5.1
   basic_utils: ^5.7.0
   file_picker: ^10.3.10
+  audio_session: ^0.1.21
 
 dev_dependencies:
   flutter_test:
