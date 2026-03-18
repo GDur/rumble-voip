@@ -34,10 +34,14 @@ Rumble is currently in active development.
 - **Mobile/Tablets**: Full voice functionality with hotkey/PTT support.
 - **Desktop (macOS, Linux, Windows)**: Global hotkey activation (Push-to-Talk) is functional across all three desktop platforms.
 
+### Audio Architecture (The "Rumble" Standard)
+To ensure reliable audio on mobile (especially iOS), Rumble uses a custom high-performance audio pipeline:
+- **Persistent Voice Stream**: Unlike other clients that restart the audio session on every PTT press, Rumble keeps a single persistent stream for the entire connection. This prevents server-side packet loss and reduces PTT latency.
+- **Warm Mic Layer**: The hardware microphone and Opus encoder are pre-warmed at app startup and stay alive. This eliminates the "first-syllable-cut-off" common in VoIP apps.
+- **iOS VoIP Integration**: Fully utilizes `AVAudioSession` with `playAndRecord` and `voiceChat` modes, ensuring your voice is heard even when the app is in the background or bluetooth devices are connected.
+- **Self-Healing Hardware**: On every server reconnect or switch, Rumble re-verifies the hardware microphone status to recover from system-level audio interruptions.
+
 ### Planned for the Future
-- **Auto-Updates**: Seamless versioning so you're always on the latest build.
-- **Advanced Audio Controls**: More granular control over your voice experience.
-- **Premium Themes**: Further polish on the already modern design.
 
 ## Tech Stack
 - **Framework**: Flutter
