@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/components/channel_tree.dart';
+import 'package:rumble/components/debug_audio_test.dart';
 import 'package:rumble/models/server.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
@@ -1194,29 +1195,38 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
       body: Container(
         decoration: BoxDecoration(color: theme.colorScheme.background),
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              _buildHeader(context, mumbleService, isMobile),
-              _buildPermissionBanner(context),
-              Expanded(
-                child: mumbleService.isConnected
-                    ? ChannelTree(
-                        channels: mumbleService.channels,
-                        users:
-                            mumbleService.client?.getUsers().values.toList() ??
-                            [],
-                        talkingUsers: mumbleService.talkingUsers,
-                        self: mumbleService.client?.self,
-                        hasMicPermission: mumbleService.hasMicPermission,
-                        onChannelTap: (channel) {
-                          mumbleService.client?.self.moveToChannel(
-                            channel: channel,
-                          );
-                        },
-                      )
-                    : _buildServerList(context, serverProvider, mumbleService),
+              Column(
+                children: [
+                  _buildHeader(context, mumbleService, isMobile),
+                  _buildPermissionBanner(context),
+                  Expanded(
+                    child: mumbleService.isConnected
+                        ? ChannelTree(
+                            channels: mumbleService.channels,
+                            users:
+                                mumbleService.client?.getUsers().values.toList() ??
+                                [],
+                            talkingUsers: mumbleService.talkingUsers,
+                            self: mumbleService.client?.self,
+                            hasMicPermission: mumbleService.hasMicPermission,
+                            onChannelTap: (channel) {
+                              mumbleService.client?.self.moveToChannel(
+                                channel: channel,
+                              );
+                            },
+                          )
+                        : _buildServerList(context, serverProvider, mumbleService),
+                  ),
+                  if (mumbleService.isConnected) _buildBottomBar(mumbleService),
+                ],
               ),
-              if (mumbleService.isConnected) _buildBottomBar(mumbleService),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: DebugAudioTest(),
+              ),
             ],
           ),
         ),

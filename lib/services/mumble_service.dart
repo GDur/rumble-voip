@@ -166,7 +166,6 @@ class MumbleService extends ChangeNotifier
     /// Frame size of 480 (10ms @ 48kHz) is chosen for the best balance of 
     /// low latency and mobile processing stability. 20ms (960) can be used
     /// for better bandwidth efficiency but may feel 'choppy' on slower networks.
-    const frameSize = 480; 
 
     final micStream = await _recorder.startStream(
       const RecordConfig(
@@ -183,23 +182,49 @@ class MumbleService extends ChangeNotifier
       /// can cause Bus Errors or RangeErrors on some architectures.
       final int16data = Uint8List.fromList(data).buffer.asInt16List();
       _pcmBuffer.addAll(int16data);
-
-      while (_pcmBuffer.length >= frameSize) {
-        final frameSamples = Int16List.fromList(_pcmBuffer.sublist(0, frameSize));
-        _pcmBuffer.removeRange(0, frameSize);
-
-        if (_isTalking && _opusEncoder != null && _audioSink != null) {
-          /// Encoder is configured with FEC (Forward Error Correction) 
-          /// and VBR enabled in MumbleOpusEncoder constructor.
-          final encoded = _opusEncoder!.encode(frameSamples, frameSize);
-          _audioSink!.add(AudioFrame.outgoing(frame: encoded));
-        }
-      }
+      _processPcmBuffer();
     }, onDone: () {
       debugPrint('[MumbleService] Mic stream closed.');
     }, onError: (e) {
       debugPrint('[MumbleService] Mic stream error: $e');
     });
+
+    // Also start a periodic timer to process the buffer in case the mic stream is inactive
+    // but samples are being injected manually (e.g. for debug tests)
+    Timer.periodic(const Duration(milliseconds: 20), (timer) {
+      if (!_isConnected || _client == null) {
+        timer.cancel();
+        return;
+      }
+      _processPcmBuffer();
+    });
+  }
+
+  void _processPcmBuffer() {
+    const frameSize = 480;
+    while (_pcmBuffer.length >= frameSize) {
+      final frameSamples = Int16List.fromList(_pcmBuffer.sublist(0, frameSize));
+      _pcmBuffer.removeRange(0, frameSize);
+
+      if (_isTalking && _opusEncoder != null && _audioSink != null) {
+        /// Encoder is configured with FEC (Forward Error Correction) 
+        /// and VBR enabled in MumbleOpusEncoder constructor.
+        final encoded = _opusEncoder!.encode(frameSamples, frameSize);
+        _audioSink!.add(AudioFrame.outgoing(frame: encoded));
+      }
+    }
+  }
+
+  Future<void> sendAudioSamples(Int16List samples) async {
+    if (!_isConnected || _client == null) return;
+    
+    // Ensure we are in talking mode to send audio
+    if (!_isTalking) {
+      await startPushToTalk();
+    }
+    
+    _pcmBuffer.addAll(samples);
+    _processPcmBuffer();
   }
 
   Future<void> startPushToTalk() async {
