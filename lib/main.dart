@@ -271,14 +271,19 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   void _showSettingsDialog(BuildContext context) {
     final settings = Provider.of<SettingsService>(context, listen: false);
     final mumbleService = Provider.of<MumbleService>(context, listen: false);
-    mumbleService.getInputDevices(); // Warm up device list
-    mumbleService.getOutputDevices(); // Warm up output list
+    // Warm up device lists to ensure they're ready when the user opens the audio tab
+    mumbleService.getInputDevices();
+    mumbleService.getOutputDevices();
     String currentTab = 'general';
     
     showShadDialog(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
+      builder: (context) => ShadDialog(
+        padding: EdgeInsets.zero,
+        title: const Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('Settings'),
+        ),
         child: StatefulBuilder(
           builder: (context, setDialogState) {
             final sideBarItems = [
@@ -288,90 +293,84 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
               (id: 'about', label: 'About', icon: LucideIcons.info),
             ];
 
-            return ShadDialog(
-              padding: EdgeInsets.zero,
-              title: Padding(
-                padding: const EdgeInsets.all(20),
-                child: const Text('Settings'),
-              ),
-              child: Container(
-                width: 700,
-                height: 550,
-                child: Row(
-                  children: [
-                    // Sidebar
-                    Container(
-                      width: 180,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: ShadTheme.of(context).colorScheme.border,
-                          ),
+            return SizedBox(
+              width: 700,
+              height: 550,
+              child: Row(
+                children: [
+                  // Sidebar
+                  Container(
+                    width: 180,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: ShadTheme.of(context).colorScheme.border,
                         ),
                       ),
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        children: sideBarItems.map((item) {
-                          final isSelected = currentTab == item.id;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: SizedBox(
-                              width: double.infinity,
-                              child: ShadButton.ghost(
-                                onPressed: () => setDialogState(() => currentTab = item.id),
-                                backgroundColor: isSelected 
-                                  ? ShadTheme.of(context).colorScheme.accent 
-                                  : Colors.transparent,
-                                pressedBackgroundColor: ShadTheme.of(context).colorScheme.accent,
-                                child: Row(
-                                  children: [
-                                    Icon(item.icon, size: 16),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        item.label,
-                                        style: TextStyle(
-                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: sideBarItems.map((item) {
+                        final isSelected = currentTab == item.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: ShadButton.ghost(
+                            onPressed: () => setDialogState(() => currentTab = item.id),
+                            width: double.infinity,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            backgroundColor: isSelected 
+                              ? ShadTheme.of(context).colorScheme.accent 
+                              : Colors.transparent,
+                            pressedBackgroundColor: ShadTheme.of(context).colorScheme.accent,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(item.icon, size: 16),
+                                const SizedBox(width: 12),
+                                Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
+                              ],
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildTabContent(
+                              currentTab,
+                              context,
+                              settings,
+                              mumbleService,
+                              setDialogState,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: ShadButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Done'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    // Content
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: _buildTabContent(
-                                currentTab,
-                                context,
-                                settings,
-                                setDialogState,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Align(
-                              alignment: Alignment.bottomRight,
-                              child: ShadButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Done'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -384,11 +383,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     String tab,
     BuildContext context,
     SettingsService settings,
+    MumbleService mumbleService,
     StateSetter setDialogState,
   ) {
     switch (tab) {
       case 'audio':
-        return _buildAudioSettings(context, settings, setDialogState);
+        return _buildAudioSettings(context, settings, mumbleService, setDialogState);
       case 'general':
         return _buildGeneralSettings(context, settings, setDialogState);
       case 'certificates':
@@ -403,9 +403,9 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
   Widget _buildAudioSettings(
     BuildContext context,
     SettingsService settings,
+    MumbleService mumbleService,
     StateSetter setDialogState,
   ) {
-    final mumbleService = Provider.of<MumbleService>(context, listen: false);
     final theme = ShadTheme.of(context);
 
     return SingleChildScrollView(
@@ -421,40 +421,41 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.inputDevices;
-              final hasCurrent = settings.inputDeviceId == null || 
-                               devices.any((d) => d.id == settings.inputDeviceId);
+              final inputDeviceId = settings.inputDeviceId;
+              final hasCurrent = inputDeviceId == null || 
+                               devices.any((d) => d.id.toString() == inputDeviceId);
               
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
-                initialValue: settings.inputDeviceId,
+                initialValue: inputDeviceId,
                 onChanged: (value) async {
                   settings.setInputDeviceId(value);
                   await mumbleService.updateAudioSettings(inputDeviceId: value);
                 },
                 options: [
-                  ShadOption<String?>(
+                  const ShadOption<String?>(
                     value: null,
-                    child: const Text('Default Input'),
+                    child: Text('Default Input'),
                   ),
-                  if (!hasCurrent && settings.inputDeviceId != null)
+                  if (!hasCurrent)
                     ShadOption<String?>(
-                      value: settings.inputDeviceId,
+                      value: inputDeviceId,
                       child: const Text('Unknown Device'),
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: (d.id as String?) ?? '',
-                      child: Text((d.label as String?) ?? 'Unknown'),
+                      value: d.id.toString(),
+                      child: Text(d.label.toString()),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Input');
                   final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.id == value,
+                    (d) => d.id.toString() == value,
                     orElse: () => null,
                   );
-                  return Text(dev?.label ?? 'Current Device');
+                  return Text(dev?.label?.toString() ?? 'Current Device');
                 },
               );
             },
@@ -469,13 +470,14 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.outputDevices;
+              final outputDeviceId = settings.outputDeviceId;
               final hasCurrent =
-                  settings.outputDeviceId == null ||
-                  devices.any((d) => d.id.toString() == settings.outputDeviceId);
+                  outputDeviceId == null ||
+                  devices.any((d) => d.id.toString() == outputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Output'),
-                initialValue: settings.outputDeviceId,
+                initialValue: outputDeviceId,
                 onChanged: (value) async {
                   settings.setOutputDeviceId(value);
                   await mumbleService.updateAudioSettings(
@@ -484,13 +486,13 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                   if (context.mounted) setDialogState(() {});
                 },
                 options: [
-                  ShadOption<String?>(
+                  const ShadOption<String?>(
                     value: null,
-                    child: const Text('Default Output'),
+                    child: Text('Default Output'),
                   ),
-                  if (!hasCurrent && settings.outputDeviceId != null)
+                  if (!hasCurrent)
                     ShadOption<String?>(
-                      value: settings.outputDeviceId,
+                      value: outputDeviceId,
                       child: const Text('Current Device'),
                     ),
                   ...devices.map(
@@ -506,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                     (d) => d.id.toString() == value,
                     orElse: () => null,
                   );
-                  return Text(dev?.name ?? 'Current Device');
+                  return Text(dev?.name?.toString() ?? 'Current Device');
                 },
               );
             },
@@ -816,6 +818,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                               description: const Text(
                                 'Enter the password for the PKCS#12 file (leave empty if none).',
                               ),
+                              actions: [
+                                ShadButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Import'),
+                                ),
+                              ],
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -826,12 +834,6 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                                   ),
                                 ],
                               ),
-                              actions: [
-                                ShadButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('Import'),
-                                ),
-                              ],
                             ),
                           );
 
@@ -1099,49 +1101,47 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
     showShadDialog(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: StatefulBuilder(
-          builder: (context, setDialogState) {
-            return ShadDialog(
-              title: Text(server == null ? 'Add New Server' : 'Edit Server'),
-              actions: [
-                ShadButton.outline(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-                ShadButton(
-                  child: const Text('Save Server'),
-                  onPressed: () {
-                    if (formKey.currentState!.saveAndValidate()) {
-                      final username = _usernameController.text.trim();
-                      final newServer = MumbleServer(
-                        id: server?.id,
-                        name: _nameController.text.isEmpty
-                            ? _hostController.text
-                            : _nameController.text,
-                        host: _hostController.text,
-                        port: int.tryParse(_portController.text) ?? 64738,
-                        username: username,
-                        password: _passwordController.text,
-                      );
-                      if (server == null) {
-                        Provider.of<ServerProvider>(
-                          context,
-                          listen: false,
-                        ).addServer(newServer);
-                      } else {
-                        Provider.of<ServerProvider>(
-                          context,
-                          listen: false,
-                        ).updateServer(newServer);
-                      }
-                      Navigator.of(context).pop();
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return ShadDialog(
+            title: Text(server == null ? 'Add New Server' : 'Edit Server'),
+            actions: [
+              ShadButton.outline(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              ShadButton(
+                child: const Text('Save Server'),
+                onPressed: () {
+                  if (formKey.currentState!.saveAndValidate()) {
+                    final username = _usernameController.text.trim();
+                    final newServer = MumbleServer(
+                      id: server?.id,
+                      name: _nameController.text.isEmpty
+                          ? _hostController.text
+                          : _nameController.text,
+                      host: _hostController.text,
+                      port: int.tryParse(_portController.text) ?? 64738,
+                      username: username,
+                      password: _passwordController.text,
+                    );
+                    if (server == null) {
+                      Provider.of<ServerProvider>(
+                        context,
+                        listen: false,
+                      ).addServer(newServer);
+                    } else {
+                      Provider.of<ServerProvider>(
+                        context,
+                        listen: false,
+                      ).updateServer(newServer);
                     }
-                  },
-                ),
-              ],
-              child: ShadForm(
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ],
+            child: ShadForm(
                 key: formKey,
                 child: Container(
                   width: 440,
@@ -1321,9 +1321,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
             );
           },
         ),
-      ),
-    );
-  }
+      );
+    }
 
   @override
   Widget build(BuildContext context) {
@@ -1530,12 +1529,10 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
     showShadDialog(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: StatefulBuilder(
-          builder: (context, setRecorderState) {
-            return ShadDialog(
-              title: const Text('Record Hotkey'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setRecorderState) {
+          return ShadDialog(
+            title: const Text('Record Hotkey'),
               child: Focus(
                 autofocus: true,
                 onKeyEvent: (node, event) {
@@ -1610,9 +1607,8 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
             );
           },
         ),
-      ),
-    );
-  }
+      );
+    }
 
   Widget _buildCurrentHotkeyPrompt() {
     List<String> held = [];
@@ -1665,7 +1661,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
 
     String label = '';
     if (modifiers.isNotEmpty) {
-      label = modifiers.map((e) => e.toUpperCase()).join(' + ') + ' + ';
+      label = '${modifiers.map((e) => e.toUpperCase()).join(' + ')} + ';
     }
     label += key.keyLabel.toUpperCase();
 
