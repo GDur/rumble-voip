@@ -2041,7 +2041,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                   Positioned(
                     top: -8,
                     right: -8,
-                    child: _buildServerActions(context, provider, server),
+                    child: _ServerActions(
+                      provider: provider,
+                      server: server,
+                      onShowAddServerDialog: _showAddServerDialog,
+                      onArchiveServerWithUndo: _archiveServerWithUndo,
+                    ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2299,7 +2304,12 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                         ],
                       ),
                     ),
-                    _buildServerActions(context, provider, server),
+                    _ServerActions(
+                      provider: provider,
+                      server: server,
+                      onShowAddServerDialog: _showAddServerDialog,
+                      onArchiveServerWithUndo: _archiveServerWithUndo,
+                    ),
                   ],
                 ),
               ),
@@ -2327,98 +2337,6 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     );
   }
 
-  Widget _buildServerActions(
-    BuildContext context,
-    ServerProvider provider,
-    MumbleServer server,
-  ) {
-    final theme = ShadTheme.of(context);
-    final controller = ShadPopoverController();
-    return ShadPopover(
-      controller: controller,
-      popover: (context) => Padding(
-        padding: const EdgeInsets.all(8),
-        child: SizedBox(
-          width: 200,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ShadButton.ghost(
-                width: double.infinity,
-                mainAxisAlignment: MainAxisAlignment.start,
-                onPressed: () {
-                  controller.hide();
-                  _showAddServerDialog(context, server: server);
-                },
-                child: const Row(
-                  children: [
-                    Icon(LucideIcons.pencil, size: 16),
-                    SizedBox(width: 8),
-                    Text('Edit Server'),
-                  ],
-                ),
-              ),
-              ShadButton.ghost(
-                width: double.infinity,
-                mainAxisAlignment: MainAxisAlignment.start,
-                foregroundColor: server.isArchived
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.foreground,
-                onPressed: () {
-                  controller.hide();
-                  if (server.isArchived) {
-                    provider.unarchiveServer(server.id);
-                  } else {
-                    _archiveServerWithUndo(context, provider, server);
-                  }
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      server.isArchived
-                          ? LucideIcons.archiveRestore
-                          : LucideIcons.archive,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      server.isArchived ? 'Restore Server' : 'Archive Server',
-                    ),
-                  ],
-                ),
-              ),
-              if (server.isArchived)
-                ShadButton.ghost(
-                  width: double.infinity,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  foregroundColor: Colors.redAccent,
-                  onPressed: () {
-                    controller.hide();
-                    provider.deleteServer(server.id);
-                  },
-                  child: const Row(
-                    children: [
-                      Icon(LucideIcons.trash, size: 16),
-                      SizedBox(width: 8),
-                      Text('Permanently Delete'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-      child: ShadIconButton.ghost(
-        onPressed: controller.toggle,
-        icon: Icon(
-          LucideIcons.ellipsis,
-          size: 20,
-          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
-        ),
-      ),
-    );
-  }
 
   Future<void> _connectToServer(
     MumbleService service,
@@ -2676,5 +2594,130 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     if (ping < 50) return Colors.greenAccent;
     if (ping < 150) return Colors.orangeAccent;
     return Colors.redAccent;
+  }
+}
+
+class _ServerActions extends StatefulWidget {
+  final ServerProvider provider;
+  final MumbleServer server;
+  final Function(BuildContext, {MumbleServer? server}) onShowAddServerDialog;
+  final Function(BuildContext, ServerProvider, MumbleServer)
+  onArchiveServerWithUndo;
+
+  const _ServerActions({
+    required this.provider,
+    required this.server,
+    required this.onShowAddServerDialog,
+    required this.onArchiveServerWithUndo,
+  });
+
+  @override
+  State<_ServerActions> createState() => _ServerActionsState();
+}
+
+class _ServerActionsState extends State<_ServerActions> {
+  final controller = ShadPopoverController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    return ShadPopover(
+      controller: controller,
+      closeOnTapOutside: true,
+      popover: (context) => Padding(
+        padding: const EdgeInsets.all(8),
+        child: SizedBox(
+          width: 205,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShadButton.ghost(
+                width: double.infinity,
+                mainAxisAlignment: MainAxisAlignment.start,
+                onPressed: () {
+                  controller.hide();
+                  widget.onShowAddServerDialog(context, server: widget.server);
+                },
+                child: const Row(
+                  children: [
+                    Icon(LucideIcons.pencil, size: 16),
+                    SizedBox(width: 12),
+                    Text('Edit Server'),
+                  ],
+                ),
+              ),
+              ShadButton.ghost(
+                width: double.infinity,
+                mainAxisAlignment: MainAxisAlignment.start,
+                foregroundColor:
+                    widget.server.isArchived
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.foreground,
+                onPressed: () {
+                  controller.hide();
+                  if (widget.server.isArchived) {
+                    widget.provider.unarchiveServer(widget.server.id);
+                  } else {
+                    widget.onArchiveServerWithUndo(
+                      context,
+                      widget.provider,
+                      widget.server,
+                    );
+                  }
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.server.isArchived
+                          ? LucideIcons.archiveRestore
+                          : LucideIcons.archive,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      widget.server.isArchived
+                          ? 'Restore Server'
+                          : 'Archive Server',
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.server.isArchived)
+                ShadButton.ghost(
+                  width: double.infinity,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  foregroundColor: Colors.redAccent,
+                  onPressed: () {
+                    controller.hide();
+                    widget.provider.deleteServer(widget.server.id);
+                  },
+                  child: const Row(
+                    children: [
+                      Icon(LucideIcons.trash, size: 16),
+                      SizedBox(width: 12),
+                      Text('Permanently Delete'),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      child: ShadIconButton.ghost(
+        onPressed: controller.toggle,
+        icon: Icon(
+          LucideIcons.ellipsis,
+          size: 20,
+          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+        ),
+      ),
+    );
   }
 }
