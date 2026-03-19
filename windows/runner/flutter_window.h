@@ -36,7 +36,7 @@ class FlutterWindow : public Win32Window {
   static HHOOK keyboard_hook_;
   static HWND s_window_handle_;
   static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> permissions_channel_;
-  static int ptt_vk_code_;
+  static unsigned int ptt_vk_code_;
   static bool ptt_suppress_;
 
   static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);

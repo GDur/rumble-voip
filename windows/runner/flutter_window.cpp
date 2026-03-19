@@ -9,7 +9,7 @@
 HHOOK FlutterWindow::keyboard_hook_ = nullptr;
 HWND FlutterWindow::s_window_handle_ = nullptr;
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> FlutterWindow::permissions_channel_ = nullptr;
-int FlutterWindow::ptt_vk_code_ = 0;
+unsigned int FlutterWindow::ptt_vk_code_ = 0;
 bool FlutterWindow::ptt_suppress_ = false;
 
 LRESULT CALLBACK FlutterWindow::KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -73,7 +73,7 @@ bool FlutterWindow::OnCreate() {
           if (arguments) {
             auto it = arguments->find(flutter::EncodableValue("vkCode"));
             if (it != arguments->end()) {
-              FlutterWindow::ptt_vk_code_ = std::get<int>(it->second);
+              FlutterWindow::ptt_vk_code_ = static_cast<unsigned int>(std::get<int>(it->second));
             }
             auto it_suppress = arguments->find(flutter::EncodableValue("suppress"));
             if (it_suppress != arguments->end()) {
