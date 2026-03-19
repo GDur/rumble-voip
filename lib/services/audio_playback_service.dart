@@ -42,7 +42,7 @@ class AudioPlaybackService {
       }
     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       try {
-        final devices = await SoLoud.instance.listPlaybackDevices();
+        final devices = SoLoud.instance.listPlaybackDevices();
         dynamic targetDevice;
         if (deviceId != null) {
           for (final dev in devices) {
@@ -138,9 +138,10 @@ class AudioPlaybackService {
   Future<List<dynamic>> getOutputDevices() async {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       try {
-        // listPlaybackDevices is static or instance method? 
-        // Based on search it is part of SoLoud instance or static. 
-        // In 3.x it is on the instance.
+        if (!SoLoud.instance.isInitialized) {
+          debugPrint('[AudioPlaybackService] SoLoud not initialized, cannot list devices');
+          return [];
+        }
         return SoLoud.instance.listPlaybackDevices();
       } catch (e) {
         debugPrint('[AudioPlaybackService] Error listing output devices: $e');
