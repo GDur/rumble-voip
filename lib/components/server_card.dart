@@ -42,7 +42,7 @@ class ServerCard extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.dns_outlined,
+                LucideIcons.server,
                 color: isSelected ? theme.colorScheme.primary : theme.colorScheme.foreground,
               ),
             ),
@@ -57,21 +57,63 @@ class ServerCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
-                    '${server.host}:${server.port}',
-                    style: theme.textTheme.muted.copyWith(fontSize: 12),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${server.host}:${server.port}',
+                          style: theme.textTheme.muted.copyWith(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (server.ping != null || server.userCount != null) ...[
+                        if (server.ping != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            LucideIcons.wifi,
+                            size: 14,
+                            color: _getPingColor(server.ping!),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${server.ping}ms',
+                            style: theme.textTheme.muted.copyWith(fontSize: 12),
+                          ),
+                        ],
+                        if (server.userCount != null) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            LucideIcons.users,
+                            size: 14,
+                            color: theme.colorScheme.mutedForeground.withValues(alpha: 0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${server.userCount}/${server.maxUsers ?? "?"}',
+                            style: theme.textTheme.muted.copyWith(fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             if (isSelected)
               Icon(
-                Icons.check_circle,
+                LucideIcons.circleCheck,
                 color: theme.colorScheme.primary,
               ),
           ],
         ),
       ),
     );
+  }
+
+  Color _getPingColor(int ping) {
+    if (ping < 50) return Colors.greenAccent;
+    if (ping < 150) return Colors.orangeAccent;
+    return Colors.redAccent;
   }
 }

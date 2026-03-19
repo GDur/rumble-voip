@@ -2082,23 +2082,79 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        '${server.host}:${server.port}',
-                        style: TextStyle(
-                          color: theme.colorScheme.foreground.withValues(
-                            alpha: 0.5,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${server.host}:${server.port}',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.foreground.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  'User: ${server.username}',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.foreground.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          fontSize: 13,
-                        ),
-                      ),
-                      Text(
-                        'User: ${server.username}',
-                        style: TextStyle(
-                          color: theme.colorScheme.foreground.withValues(
-                            alpha: 0.5,
-                          ),
-                          fontSize: 13,
-                        ),
+                          if (server.ping != null || server.userCount != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (server.ping != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        LucideIcons.wifi,
+                                        color: _getPingColor(server.ping!),
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${server.ping}ms',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                if (server.userCount != null)
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        LucideIcons.users,
+                                        color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${server.userCount}/${server.maxUsers ?? "?"}',
+                                        style: TextStyle(
+                                          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Row(
@@ -2160,13 +2216,60 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    '${server.host}:${server.port} • ${server.username}',
-                    style: TextStyle(
-                      color: theme.colorScheme.foreground.withValues(
-                        alpha: 0.5,
+                  child: Row(
+                    children: [
+                      Text(
+                        '${server.host}:${server.port} • ${server.username}',
+                        style: TextStyle(
+                          color: theme.colorScheme.foreground.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (server.ping != null || server.userCount != null) ...[
+                        const SizedBox(width: 12),
+                        Container(
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.colorScheme.foreground.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        if (server.ping != null) ...[
+                          Icon(
+                            LucideIcons.wifi,
+                            color: _getPingColor(server.ping!),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${server.ping}ms',
+                            style: TextStyle(
+                              color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (server.userCount != null) const SizedBox(width: 12),
+                        ],
+                        if (server.userCount != null) ...[
+                          Icon(
+                            LucideIcons.users,
+                            color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${server.userCount}/${server.maxUsers ?? "?"}',
+                            style: TextStyle(
+                              color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
                   ),
                 ),
                 trailing: Row(
@@ -2567,5 +2670,11 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         ),
       ),
     );
+  }
+
+  Color _getPingColor(int ping) {
+    if (ping < 50) return Colors.greenAccent;
+    if (ping < 150) return Colors.orangeAccent;
+    return Colors.redAccent;
   }
 }
