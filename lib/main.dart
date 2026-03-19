@@ -274,64 +274,103 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     mumbleService.getInputDevices(); // Warm up device list
     mumbleService.getOutputDevices(); // Warm up output list
     String currentTab = 'general';
+    
     showShadDialog(
       context: context,
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24),
         child: StatefulBuilder(
           builder: (context, setDialogState) {
+            final sideBarItems = [
+              (id: 'audio', label: 'Audio', icon: LucideIcons.volume2),
+              (id: 'general', label: 'General', icon: LucideIcons.settings),
+              (id: 'certificates', label: 'Certificates', icon: LucideIcons.shieldCheck),
+              (id: 'about', label: 'About', icon: LucideIcons.info),
+            ];
+
             return ShadDialog(
-              title: const Text('Settings'),
-              actions: [
-                ShadButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-              child: SizedBox(
-                width: 440,
-                height: 600,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: ShadTabs<String>(
-                    tabBarConstraints: const BoxConstraints(maxWidth: 440),
-                    contentConstraints: const BoxConstraints(maxWidth: 440),
-                    value: currentTab,
-                    onChanged: (v) => setDialogState(() => currentTab = v),
-                    tabs: [
-                      ShadTab(
-                        value: 'audio',
-                        content: _buildAudioSettings(
-                          context,
-                          settings,
-                          setDialogState,
+              padding: EdgeInsets.zero,
+              title: Padding(
+                padding: const EdgeInsets.all(20),
+                child: const Text('Settings'),
+              ),
+              child: Container(
+                width: 700,
+                height: 550,
+                child: Row(
+                  children: [
+                    // Sidebar
+                    Container(
+                      width: 180,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(
+                            color: ShadTheme.of(context).colorScheme.border,
+                          ),
                         ),
-                        child: const Text('Audio'),
                       ),
-                      ShadTab(
-                        value: 'general',
-                        content: _buildGeneralSettings(
-                          context,
-                          settings,
-                          setDialogState,
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: sideBarItems.map((item) {
+                          final isSelected = currentTab == item.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ShadButton.ghost(
+                                onPressed: () => setDialogState(() => currentTab = item.id),
+                                backgroundColor: isSelected 
+                                  ? ShadTheme.of(context).colorScheme.accent 
+                                  : Colors.transparent,
+                                pressedBackgroundColor: ShadTheme.of(context).colorScheme.accent,
+                                child: Row(
+                                  children: [
+                                    Icon(item.icon, size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        item.label,
+                                        style: TextStyle(
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    // Content
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildTabContent(
+                                currentTab,
+                                context,
+                                settings,
+                                setDialogState,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Align(
+                              alignment: Alignment.bottomRight,
+                              child: ShadButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Done'),
+                              ),
+                            ),
+                          ],
                         ),
-                        child: const Text('General'),
                       ),
-                      ShadTab(
-                        value: 'certificates',
-                        content: _buildCertificateSettings(
-                          context,
-                          setDialogState,
-                        ),
-                        child: const Text('Certificates'),
-                      ),
-                      ShadTab(
-                        value: 'about',
-                        content: _buildAboutPage(context),
-                        child: const Text('About'),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -339,6 +378,26 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
         ),
       ),
     );
+  }
+
+  Widget _buildTabContent(
+    String tab,
+    BuildContext context,
+    SettingsService settings,
+    StateSetter setDialogState,
+  ) {
+    switch (tab) {
+      case 'audio':
+        return _buildAudioSettings(context, settings, setDialogState);
+      case 'general':
+        return _buildGeneralSettings(context, settings, setDialogState);
+      case 'certificates':
+        return _buildCertificateSettings(context, setDialogState);
+      case 'about':
+        return _buildAboutPage(context);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildAudioSettings(
@@ -350,210 +409,204 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     final theme = ShadTheme.of(context);
 
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 20, right: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Input Device',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ListenableBuilder(
-              listenable: mumbleService,
-              builder: (context, _) {
-                final devices = mumbleService.inputDevices;
-                
-                // Ensure current selection is always part of options to prevent ShadSelect crash
-                final hasCurrent = settings.inputDeviceId == null || 
-                                 devices.any((d) => d.id == settings.inputDeviceId);
-                
-                return ShadSelect<String?>(
-                  placeholder: const Text('Default Device'),
-                  initialValue: settings.inputDeviceId,
-                  onChanged: (value) async {
-                    settings.setInputDeviceId(value);
-                    await mumbleService.updateAudioSettings(inputDeviceId: value);
-                    // notifyListeners in settings and mumbleService will trigger rebuilds via Consumer/ListenableBuilder
-                  },
-                  options: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Input Device',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: mumbleService,
+            builder: (context, _) {
+              final devices = mumbleService.inputDevices;
+              final hasCurrent = settings.inputDeviceId == null || 
+                               devices.any((d) => d.id == settings.inputDeviceId);
+              
+              return ShadSelect<String?>(
+                placeholder: const Text('Default Device'),
+                initialValue: settings.inputDeviceId,
+                onChanged: (value) async {
+                  settings.setInputDeviceId(value);
+                  await mumbleService.updateAudioSettings(inputDeviceId: value);
+                },
+                options: [
+                  ShadOption<String?>(
+                    value: null,
+                    child: const Text('Default Input'),
+                  ),
+                  if (!hasCurrent && settings.inputDeviceId != null)
                     ShadOption<String?>(
-                      value: null,
-                      child: const Text('Default Input'),
+                      value: settings.inputDeviceId,
+                      child: const Text('Unknown Device'),
                     ),
-                    if (!hasCurrent && settings.inputDeviceId != null)
-                      ShadOption<String?>(
-                        value: settings.inputDeviceId,
-                        child: const Text('Unknown Device'),
-                      ),
-                    ...devices.map(
-                      (d) => ShadOption<String?>(
-                        value: (d.id as String?) ?? '',
-                        child: Text((d.label as String?) ?? 'Unknown'),
-                      ),
+                  ...devices.map(
+                    (d) => ShadOption<String?>(
+                      value: (d.id as String?) ?? '',
+                      child: Text((d.label as String?) ?? 'Unknown'),
                     ),
-                  ],
-                  selectedOptionBuilder: (context, value) {
-                    if (value == null) return const Text('Default Input');
-                    final dev = devices.cast<dynamic>().firstWhere(
-                      (d) => d.id == value,
-                      orElse: () => null,
-                    );
-                    return Text(dev?.label ?? 'Current Device');
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Output Device',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ListenableBuilder(
-              listenable: mumbleService,
-              builder: (context, _) {
-                final devices = mumbleService.outputDevices;
-                final hasCurrent =
-                    settings.outputDeviceId == null ||
-                    devices.any((d) => d.id.toString() == settings.outputDeviceId);
+                  ),
+                ],
+                selectedOptionBuilder: (context, value) {
+                  if (value == null) return const Text('Default Input');
+                  final dev = devices.cast<dynamic>().firstWhere(
+                    (d) => d.id == value,
+                    orElse: () => null,
+                  );
+                  return Text(dev?.label ?? 'Current Device');
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Output Device',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: mumbleService,
+            builder: (context, _) {
+              final devices = mumbleService.outputDevices;
+              final hasCurrent =
+                  settings.outputDeviceId == null ||
+                  devices.any((d) => d.id.toString() == settings.outputDeviceId);
 
-                return ShadSelect<String?>(
-                  placeholder: const Text('Default Output'),
-                  initialValue: settings.outputDeviceId,
-                  onChanged: (value) async {
-                    settings.setOutputDeviceId(value);
-                    await mumbleService.updateAudioSettings(
-                      outputDeviceId: value,
-                    );
-                    if (context.mounted) setDialogState(() {});
-                  },
-                  options: [
+              return ShadSelect<String?>(
+                placeholder: const Text('Default Output'),
+                initialValue: settings.outputDeviceId,
+                onChanged: (value) async {
+                  settings.setOutputDeviceId(value);
+                  await mumbleService.updateAudioSettings(
+                    outputDeviceId: value,
+                  );
+                  if (context.mounted) setDialogState(() {});
+                },
+                options: [
+                  ShadOption<String?>(
+                    value: null,
+                    child: const Text('Default Output'),
+                  ),
+                  if (!hasCurrent && settings.outputDeviceId != null)
                     ShadOption<String?>(
-                      value: null,
-                      child: const Text('Default Output'),
+                      value: settings.outputDeviceId,
+                      child: const Text('Current Device'),
                     ),
-                    if (!hasCurrent && settings.outputDeviceId != null)
-                      ShadOption<String?>(
-                        value: settings.outputDeviceId,
-                        child: const Text('Current Device'),
-                      ),
-                    ...devices.map(
-                      (d) => ShadOption<String?>(
-                        value: d.id.toString(),
-                        child: Text(d.name.toString()),
-                      ),
+                  ...devices.map(
+                    (d) => ShadOption<String?>(
+                      value: d.id.toString(),
+                      child: Text(d.name.toString()),
                     ),
-                  ],
-                  selectedOptionBuilder: (context, value) {
-                    if (value == null) return const Text('Default Output');
-                    final dev = devices.cast<dynamic>().firstWhere(
-                      (d) => d.id.toString() == value,
-                      orElse: () => null,
-                    );
-                    return Text(dev?.name ?? 'Current Device');
+                  ),
+                ],
+                selectedOptionBuilder: (context, value) {
+                  if (value == null) return const Text('Default Output');
+                  final dev = devices.cast<dynamic>().firstWhere(
+                    (d) => d.id.toString() == value,
+                    orElse: () => null,
+                  );
+                  return Text(dev?.name ?? 'Current Device');
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Input Gain',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ShadSlider(
+                  initialValue: settings.inputGain,
+                  min: 0.0,
+                  max: 2.0,
+                  onChanged: (v) {
+                    settings.setInputGain(v);
+                    mumbleService.updateAudioSettings(inputGain: v);
+                    setDialogState(() {});
                   },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Input Gain',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ShadSlider(
-                    initialValue: settings.inputGain,
-                    min: 0.0,
-                    max: 2.0,
-                    onChanged: (v) {
-                      settings.setInputGain(v);
-                      mumbleService.updateAudioSettings(inputGain: v);
-                      setDialogState(() {});
-                    },
-                  ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '${(settings.inputGain * 100).round()}%',
-                  style: theme.textTheme.muted,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${(settings.inputGain * 100).round()}%',
+                style: theme.textTheme.muted,
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Output Volume',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ShadSlider(
+                  initialValue: settings.outputVolume,
+                  min: 0.0,
+                  max: 1.5,
+                  onChanged: (v) {
+                    settings.setOutputVolume(v);
+                    mumbleService.updateAudioSettings(outputVolume: v);
+                    setDialogState(() {});
+                  },
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Output Volume',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ShadSlider(
-                    initialValue: settings.outputVolume,
-                    min: 0.0,
-                    max: 1.5,
-                    onChanged: (v) {
-                      settings.setOutputVolume(v);
-                      mumbleService.updateAudioSettings(outputVolume: v);
-                      setDialogState(() {});
-                    },
-                  ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${(settings.outputVolume * 100).round()}%',
+                style: theme.textTheme.muted,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'Microphone Test',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: mumbleService,
+            builder: (context, _) {
+              final volume = mumbleService.currentVolume;
+              return Container(
+                height: 24,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '${(settings.outputVolume * 100).round()}%',
-                  style: theme.textTheme.muted,
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'Microphone Test',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ListenableBuilder(
-              listenable: mumbleService,
-              builder: (context, _) {
-                final volume = mumbleService.currentVolume;
-                return Container(
-                  height: 24,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Stack(
-                    children: [
-                      FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: volume.clamp(0.0, 1.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Colors.greenAccent, Colors.green],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
+                child: Stack(
+                  children: [
+                    FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: volume.clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Colors.greenAccent, Colors.green],
                           ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Speak into your mic to see the level.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Speak into your mic to see the level.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
@@ -564,156 +617,153 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     StateSetter setDialogState,
   ) {
     return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 20, right: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Appearance',
-              style: TextStyle(fontWeight: FontWeight.bold),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Appearance',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: ShadSelect<ThemeMode>(
+              placeholder: const Text('Select Theme'),
+              initialValue: settings.themeMode,
+              onChanged: (value) {
+                if (value != null) {
+                  settings.setThemeMode(value);
+                  setDialogState(() {});
+                }
+              },
+              options: [
+                ShadOption(
+                  value: ThemeMode.system,
+                  child: const Text('System'),
+                ),
+                ShadOption(
+                  value: ThemeMode.light,
+                  child: const Text('Light'),
+                ),
+                ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
+              ],
+              selectedOptionBuilder: (context, value) =>
+                  Text(value.name.toUpperCase()),
             ),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: ShadSelect<ThemeMode>(
-                placeholder: const Text('Select Theme'),
-                initialValue: settings.themeMode,
-                onChanged: (value) {
-                  if (value != null) {
-                    settings.setThemeMode(value);
-                    setDialogState(() {});
-                  }
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Connection',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Reconnect to last server on startup'),
+              ShadSwitch(
+                value: settings.reconnectToLastServer,
+                onChanged: (val) {
+                  settings.setReconnectToLastServer(val);
+                  setDialogState(() {});
                 },
-                options: [
-                  ShadOption(
-                    value: ThemeMode.system,
-                    child: const Text('System'),
-                  ),
-                  ShadOption(
-                    value: ThemeMode.light,
-                    child: const Text('Light'),
-                  ),
-                  ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
-                ],
-                selectedOptionBuilder: (context, value) =>
-                    Text(value.name.toUpperCase()),
               ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'PTT Hotkey',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ShadSelect<PttKey>(
+                    placeholder: const Text('Select a key'),
+                    initialValue: settings.pttKey,
+                    onChanged: (value) {
+                      if (value != null) {
+                        settings.setPttKey(value);
+                        setDialogState(() {});
+                      }
+                    },
+                    options: [
+                      ...PttKey.values.map((k) {
+                        String label = k.name.toUpperCase();
+                        if (k == PttKey.none) label = 'DISABLED';
+                        return ShadOption(value: k, child: Text(label));
+                      }),
+                    ],
+                    selectedOptionBuilder: (context, value) {
+                      if (value == PttKey.none &&
+                          settings.customHotkey != null) {
+                        return Text(
+                          'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
+                        );
+                      }
+                      return Text(value.name.toUpperCase());
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ShadButton.outline(
+                  onPressed: () => _showHotkeyRecorder(context, settings),
+                  child: const Text('Record...'),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Connection',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
+          ),
+          const SizedBox(height: 16),
+          if (settings.pttKey != PttKey.none ||
+              settings.customHotkey != null) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Reconnect to last server on startup'),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text(
+                            'Suppress original key function',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          ShadTooltip(
+                            builder: (context) => const Text(
+                              'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
+                            ),
+                            child: ShadGestureDetector(
+                              child: Icon(
+                                LucideIcons.info,
+                                size: 14,
+                                color: ShadTheme.of(
+                                  context,
+                                ).colorScheme.mutedForeground,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 ShadSwitch(
-                  value: settings.reconnectToLastServer,
+                  value: settings.pttSuppress,
                   onChanged: (val) {
-                    settings.setReconnectToLastServer(val);
+                    settings.setPttSuppress(val);
                     setDialogState(() {});
                   },
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'PTT Hotkey',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ShadSelect<PttKey>(
-                      placeholder: const Text('Select a key'),
-                      initialValue: settings.pttKey,
-                      onChanged: (value) {
-                        if (value != null) {
-                          settings.setPttKey(value);
-                          setDialogState(() {});
-                        }
-                      },
-                      options: [
-                        ...PttKey.values.map((k) {
-                          String label = k.name.toUpperCase();
-                          if (k == PttKey.none) label = 'DISABLED';
-                          return ShadOption(value: k, child: Text(label));
-                        }),
-                      ],
-                      selectedOptionBuilder: (context, value) {
-                        if (value == PttKey.none &&
-                            settings.customHotkey != null) {
-                          return Text(
-                            'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
-                          );
-                        }
-                        return Text(value.name.toUpperCase());
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ShadButton.outline(
-                    onPressed: () => _showHotkeyRecorder(context, settings),
-                    child: const Text('Record...'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (settings.pttKey != PttKey.none ||
-                settings.customHotkey != null) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text(
-                              'Suppress original key function',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 8),
-                            ShadTooltip(
-                              builder: (context) => const Text(
-                                'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
-                              ),
-                              child: ShadGestureDetector(
-                                child: Icon(
-                                  LucideIcons.info,
-                                  size: 14,
-                                  color: ShadTheme.of(
-                                    context,
-                                  ).colorScheme.mutedForeground,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  ShadSwitch(
-                    value: settings.pttSuppress,
-                    onChanged: (val) {
-                      settings.setPttSuppress(val);
-                      setDialogState(() {});
-                    },
-                  ),
-                ],
-              ),
-            ],
           ],
-        ),
+        ],
       ),
     );
   }
@@ -725,239 +775,217 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     final certService = Provider.of<CertificateService>(context);
     final theme = ShadTheme.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Identity Certificates',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Row(
-                children: [
-                  ShadButton.outline(
-                    size: ShadButtonSize.sm,
-                    onPressed: () async {
-                      final result = await FilePicker.platform.pickFiles(
-                        type: FileType.custom,
-                        allowedExtensions: ['p12', 'pfx'],
-                      );
-                      if (result != null && result.files.single.path != null) {
-                        final data = await File(
-                          result.files.single.path!,
-                        ).readAsBytes();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                const Text(
+                  'Identity Certificates',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShadButton.outline(
+                      size: ShadButtonSize.sm,
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['p12', 'pfx'],
+                        );
+                        if (result != null && result.files.single.path != null) {
+                          final data = await File(
+                            result.files.single.path!,
+                          ).readAsBytes();
 
-                        // Simple name from filename
-                        final name = result.files.single.name;
+                          final name = result.files.single.name;
 
-                        // Show dialog for password
-                        if (!context.mounted) return;
-                        String? password;
-                        await showShadDialog(
-                          context: context,
-                          builder: (context) => ShadDialog(
-                            title: const Text('Certificate Password'),
-                            description: const Text(
-                              'Enter the password for the PKCS#12 file (leave empty if none).',
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ShadInput(
-                                  placeholder: const Text('Password'),
-                                  obscureText: true,
-                                  onChanged: (v) => password = v,
+                          if (!context.mounted) return;
+                          String? password;
+                          await showShadDialog(
+                            context: context,
+                            builder: (context) => ShadDialog(
+                              title: const Text('Certificate Password'),
+                              description: const Text(
+                                'Enter the password for the PKCS#12 file (leave empty if none).',
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ShadInput(
+                                    placeholder: const Text('Password'),
+                                    obscureText: true,
+                                    onChanged: (v) => password = v,
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                ShadButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('Import'),
                                 ),
                               ],
                             ),
-                            actions: [
-                              ShadButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Import'),
-                              ),
-                            ],
+                          );
+
+                          await certService.importFromP12(data, password, name);
+                          setDialogState(() {});
+                        }
+                      },
+                      child: const Text('Import P12'),
+                    ),
+                    const SizedBox(width: 8),
+                    ShadButton(
+                      size: ShadButtonSize.sm,
+                      onPressed: () async {
+                        await certService.generateCertificate('My Mumble Cert');
+                        setDialogState(() {});
+                      },
+                      child: const Text('Generate'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        Expanded(
+          child: _buildCertificateList(context, certService, theme, setDialogState),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCertificateList(
+    BuildContext context,
+    CertificateService certService,
+    ShadThemeData theme,
+    StateSetter setDialogState,
+  ) {
+    if (certService.certificates.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('No certificates found.'),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: certService.certificates.length,
+      itemBuilder: (context, index) {
+        final cert = certService.certificates[index];
+        final isDefault = cert.id == certService.defaultCertificateId;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.border),
+            borderRadius: BorderRadius.circular(8),
+            color: isDefault ? theme.colorScheme.primary.withValues(alpha: 0.05) : null,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(cert.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Created: ${cert.createdAt.toString().split('.')[0]}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  ShadTooltip(
+                    builder: (context) => const Text('Set as default'),
+                    child: ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      onPressed: () {
+                        certService.setDefaultCertificate(cert.id);
+                        setDialogState(() {});
+                      },
+                      child: Icon(
+                        isDefault ? LucideIcons.circleCheck : LucideIcons.circle,
+                        size: 16,
+                        color: isDefault ? kBrandGreen : null,
+                      ),
+                    ),
+                  ),
+                  ShadTooltip(
+                    builder: (context) => const Text('Export P12'),
+                    child: ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      onPressed: () async {
+                        final path = await FilePicker.platform.saveFile(
+                          fileName: '${cert.name}.p12',
+                          type: FileType.custom,
+                          allowedExtensions: ['p12'],
+                        );
+                        if (path != null) {
+                          final p12Data = certService.exportToP12(cert, null);
+                          await File(path).writeAsBytes(p12Data);
+                        }
+                      },
+                      child: const Icon(LucideIcons.download, size: 16),
+                    ),
+                  ),
+                  ShadTooltip(
+                    builder: (context) => const Text('Delete'),
+                    child: ShadButton.ghost(
+                      size: ShadButtonSize.sm,
+                      onPressed: () {
+                        final certId = cert.id;
+                        final certName = cert.name;
+                        certService.hideCertificate(certId);
+                        setDialogState(() {});
+                        bool undone = false;
+                        ShadToaster.of(context).show(
+                          ShadToast(
+                            title: Text('Deleted $certName'),
+                            action: ShadButton.outline(
+                              size: ShadButtonSize.sm,
+                              onPressed: () {
+                                undone = true;
+                                certService.unhideCertificate(certId);
+                                setDialogState(() {});
+                                ShadToaster.of(context).hide();
+                              },
+                              child: const Text('Undo'),
+                            ),
                           ),
                         );
-
-                        await certService.importFromP12(data, password, name);
-                        setDialogState(() {});
-                      }
-                    },
-                    child: const Text('Import P12'),
-                  ),
-                  const SizedBox(width: 8),
-                  ShadButton(
-                    size: ShadButtonSize.sm,
-                    onPressed: () async {
-                      await certService.generateCertificate('My Mumble Cert');
-                      setDialogState(() {});
-                    },
-                    child: const Text('Generate'),
+                        Future.delayed(const Duration(seconds: 5), () {
+                          if (!undone) certService.deleteCertificate(certId);
+                        });
+                      },
+                      child: Icon(
+                        LucideIcons.trash2,
+                        size: 16,
+                        color: theme.colorScheme.destructive,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (certService.certificates.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text('No certificates generated yet.'),
-              ),
-            )
-          else
-            SizedBox(
-              height: 400,
-              child: SingleChildScrollView(
-                child: Column(
-                  children: certService.certificates.map((cert) {
-                    final isDefault =
-                        cert.id == certService.defaultCertificateId;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.border),
-                        borderRadius: BorderRadius.circular(8),
-                        color: isDefault
-                            ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                            : null,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  cert.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  'Created: ${cert.createdAt.toString().split('.')[0]}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.mutedForeground,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              ShadTooltip(
-                                builder: (context) =>
-                                    const Text('Set as default'),
-                                child: ShadButton.ghost(
-                                  size: ShadButtonSize.sm,
-                                  onPressed: () {
-                                    certService.setDefaultCertificate(cert.id);
-                                    setDialogState(() {});
-                                  },
-                                  child: Icon(
-                                    isDefault
-                                        ? LucideIcons.circleCheck
-                                        : LucideIcons.circle,
-                                    size: 16,
-                                    color: isDefault ? kBrandGreen : null,
-                                  ),
-                                ),
-                              ),
-                              ShadTooltip(
-                                builder: (context) => const Text('Export P12'),
-                                child: ShadButton.ghost(
-                                  size: ShadButtonSize.sm,
-                                  onPressed: () async {
-                                    final path = await FilePicker.platform
-                                        .saveFile(
-                                          fileName: '${cert.name}.p12',
-                                          type: FileType.custom,
-                                          allowedExtensions: ['p12'],
-                                        );
-                                    if (path != null) {
-                                      // Export without password for now or prompt
-                                      final p12Data = certService.exportToP12(
-                                        cert,
-                                        null,
-                                      );
-                                      await File(path).writeAsBytes(p12Data);
-                                    }
-                                  },
-                                  child: const Icon(
-                                    LucideIcons.download,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              ShadTooltip(
-                                builder: (context) => const Text('Delete'),
-                                child: ShadButton.ghost(
-                                  size: ShadButtonSize.sm,
-                                  onPressed: () {
-                                    final certId = cert.id;
-                                    final certName = cert.name;
-
-                                    // Hide it first
-                                    certService.hideCertificate(certId);
-                                    setDialogState(() {});
-
-                                    bool undone = false;
-                                    ShadToaster.of(context).show(
-                                      ShadToast(
-                                        title: Text('Deleted $certName'),
-                                        description: const Text(
-                                          'The certificate has been removed.',
-                                        ),
-                                        action: ShadButton.outline(
-                                          size: ShadButtonSize.sm,
-                                          onPressed: () {
-                                            undone = true;
-                                            certService.unhideCertificate(
-                                              certId,
-                                            );
-                                            setDialogState(() {});
-                                            ShadToaster.of(context).hide();
-                                          },
-                                          child: const Text('Undo'),
-                                        ),
-                                      ),
-                                    );
-
-                                    // Actually delete after a delay if not undone
-                                    Future.delayed(
-                                      const Duration(seconds: 5),
-                                      () {
-                                        if (!undone) {
-                                          certService.deleteCertificate(certId);
-                                        }
-                                      },
-                                    );
-                                  },
-                                  child: Icon(
-                                    LucideIcons.trash2,
-                                    size: 16,
-                                    color: theme.colorScheme.destructive,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
