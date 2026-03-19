@@ -3,7 +3,7 @@
 [x] mumble can usse certificates to identify users. lets add support for that.
 [x] let the user choose the mic and speakers
 [] lets add support for auto updates on all platforms if possible. on per default but can be turned off in the settings maybe
-[] show the ping and the user count and capacity(eg 3/100) in the server list items for each server
+[x] show the ping and the user count and capacity(eg 3/100) in the server list items for each server
 [] in the settings the tabs are so many that the user can not use it with smal width displays and also the content in the tabs is hard to use (eg the many items in one row in the certificate tab (headline, button, button))
 
 [] add auto activation (voice activity detection)
