@@ -73,7 +73,7 @@ flutter_launcher_icons:
   remove_alpha_ios: true
   macos:
     generate: true
-    image_path: "assets/splash_foreground.png"
+    image_path: "assets/splash_with_bg.png"
   windows:
     generate: true
     image_path: "assets/splash_foreground.png"
@@ -108,3 +108,4 @@ flutter:
   assets:
     - assets/icon.png
     - assets/splash_foreground.png
+    - assets/splash_with_bg.png
