@@ -21,6 +21,10 @@ class SettingsService extends ChangeNotifier {
   static const String _kWindowY = 'window_y';
   static const String _kReconnectToLastServer = 'reconnect_last_server';
   static const String _kLastServerJson = 'last_server_json';
+  static const String _kInputDeviceId = 'input_device_id';
+  static const String _kOutputDeviceId = 'output_device_id';
+  static const String _kInputGain = 'input_gain';
+  static const String _kOutputVolume = 'output_volume';
 
   final SharedPreferences _prefs;
 
@@ -30,13 +34,21 @@ class SettingsService extends ChangeNotifier {
   Map<String, dynamic>? _customHotkey;
   bool _reconnectToLastServer;
   String? _lastServerJson;
+  String? _inputDeviceId;
+  String? _outputDeviceId;
+  double _inputGain;
+  double _outputVolume;
 
   SettingsService(this._prefs)
       : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
         _pttSuppress = _prefs.getBool(_kPttSuppress) ?? true,
         _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2],
         _reconnectToLastServer = _prefs.getBool(_kReconnectToLastServer) ?? false,
-        _lastServerJson = _prefs.getString(_kLastServerJson) {
+        _lastServerJson = _prefs.getString(_kLastServerJson),
+        _inputDeviceId = _prefs.getString(_kInputDeviceId),
+        _outputDeviceId = _prefs.getString(_kOutputDeviceId),
+        _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
+        _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0 {
     final String? customJson = _prefs.getString(_kCustomHotkey);
     if (customJson != null) {
       try {
@@ -51,6 +63,10 @@ class SettingsService extends ChangeNotifier {
   Map<String, dynamic>? get customHotkey => _customHotkey;
   bool get reconnectToLastServer => _reconnectToLastServer;
   String? get lastServerJson => _lastServerJson;
+  String? get inputDeviceId => _inputDeviceId;
+  String? get outputDeviceId => _outputDeviceId;
+  double get inputGain => _inputGain;
+  double get outputVolume => _outputVolume;
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
   double? get windowHeight => _prefs.getDouble(_kWindowHeight);
@@ -114,6 +130,38 @@ class SettingsService extends ChangeNotifier {
     } else {
       await _prefs.remove(_kLastServerJson);
     }
+    notifyListeners();
+  }
+
+  Future<void> setInputDeviceId(String? id) async {
+    _inputDeviceId = id;
+    if (id != null) {
+      await _prefs.setString(_kInputDeviceId, id);
+    } else {
+      await _prefs.remove(_kInputDeviceId);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setOutputDeviceId(String? id) async {
+    _outputDeviceId = id;
+    if (id != null) {
+      await _prefs.setString(_kOutputDeviceId, id);
+    } else {
+      await _prefs.remove(_kOutputDeviceId);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setInputGain(double gain) async {
+    _inputGain = gain;
+    await _prefs.setDouble(_kInputGain, gain);
+    notifyListeners();
+  }
+
+  Future<void> setOutputVolume(double volume) async {
+    _outputVolume = volume;
+    await _prefs.setDouble(_kOutputVolume, volume);
     notifyListeners();
   }
 }

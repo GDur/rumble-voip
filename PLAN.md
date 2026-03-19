@@ -2,7 +2,9 @@
 
 [x] mumble can usse certificates to identify users. lets add support for that.
 [] let the user choose the mic and speakers
+[] lets add support for auto updates on all platforms if possible. on per default but can be turned off in the settings maybe
 [] show the ping and the user count and capacity(eg 3/100) in the server list items for each server
+
 [] add auto activation (voice activity detection)
     [] add a slider to control the sensitivity of the auto activation
 [] add always send voice option
@@ -17,6 +19,6 @@ is then turned on as default but can be turned off in the settings.
     [] on mobile, the floating component should be able to be moved around the screen by dragging it.
     [] on mobile, the floating component should be able to be hidden by tapping on it.
     [] on mobile, the floating component should be able to be expanded to see the hole app again by tapping a max button inside.
-[] lets add support for auto updates on all platforms if possible. on per default but can be turned off in the settings maybe
+
     
     

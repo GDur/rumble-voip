@@ -11,7 +11,7 @@ import 'package:rumble/models/server.dart';
 import 'package:rumble/services/audio_playback_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
 
-class MumbleService extends ChangeNotifier 
+class MumbleService extends ChangeNotifier
     with MumbleClientListener, ChannelListener, UserListener, AudioListener {
   MumbleClient? _client;
   bool _isConnected = false;
@@ -19,32 +19,38 @@ class MumbleService extends ChangeNotifier
   List<Channel> _channels = [];
   bool _isTalking = false;
   bool _hasMicPermission = false;
-  
+  double _inputGain = 1.0;
+  String? _inputDeviceId;
+  String? _outputDeviceId;
+
   // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
-  
+
   // Audio recording and encoding (Outgoing)
   late final AudioRecorder _recorder;
   StreamSubscription<Uint8List>? _micSubscription;
   AudioFrameSink? _audioSink;
   MumbleOpusEncoder? _opusEncoder;
-  
+
   // Audio decoding (Incoming)
   final Map<int, MumbleOpusDecoder> _decoders = {};
   bool _audioPlayerInitialized = false;
-  
+
   // Jitter Buffer / Playback Buffering
   final Map<int, List<int>> _userBuffers = {};
   final Map<int, bool> _userPlaying = {};
   static const int _bufferThreshold = 960 * 5; // 100ms jitter buffer
-  
+
   // Volume monitoring
   double _currentVolume = 0.0;
   Timer? _volumeTimer;
-  
+
+  // Cached devices
+  List<dynamic> _inputDevices = [];
+
   // Buffer for raw PCM data (Outgoing)
   final List<int> _pcmBuffer = [];
-  
+
   MumbleClient? get client => _client;
   bool get isConnected => _isConnected;
   String? get error => _error;
@@ -54,11 +60,25 @@ class MumbleService extends ChangeNotifier
   Map<int, bool> get talkingUsers => _talkingUsers;
   bool get isSuppressed => _client?.self.suppress ?? false;
   bool get hasMicPermission => _hasMicPermission;
+  List<dynamic> get inputDevices => _inputDevices;
 
   MumbleService() {
     _recorder = AudioRecorder();
-    _initAudioPlayer();
-    _initGlobalAudioResources();
+  }
+
+  // Called from main.dart after settings are ready
+  Future<void> initialize(
+    double inputGain,
+    double outputVolume,
+    String? inputId,
+    String? outputId,
+  ) async {
+    _inputGain = inputGain;
+    _inputDeviceId = inputId;
+    _outputDeviceId = outputId;
+
+    await _initAudioPlayer(outputVolume);
+    await _initGlobalAudioResources();
   }
 
   Future<void> _initGlobalAudioResources() async {
@@ -66,16 +86,18 @@ class MumbleService extends ChangeNotifier
     try {
       debugPrint('[MumbleService] Configuring Global Audio Session...');
       final session = await AudioSession.instance;
-      await session.configure(AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-        avAudioSessionCategoryOptions:
-            AVAudioSessionCategoryOptions.allowBluetooth |
-            AVAudioSessionCategoryOptions.defaultToSpeaker,
-        avAudioSessionMode: AVAudioSessionMode.voiceChat,
-        avAudioSessionRouteSharingPolicy:
-            AVAudioSessionRouteSharingPolicy.defaultPolicy,
-        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
-      ));
+      await session.configure(
+        AudioSessionConfiguration(
+          avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
+          avAudioSessionCategoryOptions:
+              AVAudioSessionCategoryOptions.allowBluetooth |
+              AVAudioSessionCategoryOptions.defaultToSpeaker,
+          avAudioSessionMode: AVAudioSessionMode.voiceChat,
+          avAudioSessionRouteSharingPolicy:
+              AVAudioSessionRouteSharingPolicy.defaultPolicy,
+          avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        ),
+      );
       await session.setActive(true);
       debugPrint('[MumbleService] Global Audio Session configured.');
     } catch (e) {
@@ -92,16 +114,78 @@ class MumbleService extends ChangeNotifier
     // 3. Start passive mic monitoring/streaming immediately (WARM UP)
     _startMicStream();
     _startVolumeMonitoring();
-    
+
     debugPrint('[MumbleService] Global audio layer is WARM.');
   }
 
-  Future<void> _initAudioPlayer() async {
+  Future<void> updateAudioSettings({
+    double? inputGain,
+    double? outputVolume,
+    String? inputDeviceId,
+    String? outputDeviceId,
+  }) async {
+    bool restartMic = false;
+    bool restartPlayer = false;
+
+    if (inputGain != null) _inputGain = inputGain;
+    if (inputDeviceId != _inputDeviceId) {
+      _inputDeviceId = inputDeviceId;
+      restartMic = true;
+    }
+    if (outputVolume != null) {
+      AudioPlaybackService().setOutputVolume(outputVolume);
+    }
+    if (outputDeviceId != _outputDeviceId) {
+      _outputDeviceId = outputDeviceId;
+      restartPlayer = true;
+    }
+
+    if (restartMic) {
+      await _startMicStream();
+    }
+    if (restartPlayer) {
+      // Re-initialize player with new device
+      _audioPlayerInitialized = false;
+      await AudioPlaybackService().dispose();
+      await _initAudioPlayer(outputVolume ?? 1.0);
+    }
+
+    notifyListeners();
+  }
+
+  Future<List<dynamic>> getInputDevices() async {
+    if (_inputDevices.isNotEmpty) return _inputDevices;
+    return refreshInputDevices();
+  }
+
+  Future<List<dynamic>> refreshInputDevices() async {
+    try {
+      final devices = await _recorder.listInputDevices();
+      _inputDevices = devices.where((d) {
+        final label = d.label.toString().toLowerCase();
+        // Ignore internal CoreAudio aggregate devices which aren't real mics
+        if (label.contains('aggregate')) return false;
+        return true;
+      }).toList();
+      notifyListeners();
+      return _inputDevices;
+    } catch (e) {
+      debugPrint('[MumbleService] Error refreshing devices: $e');
+      return [];
+    }
+  }
+
+  Future<List<String>> getOutputDevices() async {
+    return [];
+  }
+
+  Future<void> _initAudioPlayer(double volume) async {
     try {
       debugPrint('[MumbleService] Initializing audio service...');
       await AudioPlaybackService().initialize(
         sampleRate: 48000,
         channels: 1,
+        volume: volume,
       );
       _audioPlayerInitialized = true;
       debugPrint('[MumbleService] Audio service initialized.');
@@ -112,9 +196,11 @@ class MumbleService extends ChangeNotifier
 
   void _startVolumeMonitoring() {
     if (_volumeTimer?.isActive ?? false) return;
-    
+
     debugPrint('[MumbleService] Starting volume monitoring...');
-    _volumeTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) async {
+    _volumeTimer = Timer.periodic(const Duration(milliseconds: 50), (
+      timer,
+    ) async {
       try {
         if (await _recorder.isRecording()) {
           final amplitude = await _recorder.getAmplitude();
@@ -138,7 +224,10 @@ class MumbleService extends ChangeNotifier
     });
   }
 
-  Future<void> connect(MumbleServer server, {MumbleCertificate? certificate}) async {
+  Future<void> connect(
+    MumbleServer server, {
+    MumbleCertificate? certificate,
+  }) async {
     _isConnected = false;
     _error = null;
     _channels = [];
@@ -146,7 +235,9 @@ class MumbleService extends ChangeNotifier
     notifyListeners();
 
     try {
-      debugPrint('[MumbleService] Connecting to ${server.host}:${server.port}...');
+      debugPrint(
+        '[MumbleService] Connecting to ${server.host}:${server.port}...',
+      );
 
       SecurityContext? context;
       if (certificate != null) {
@@ -171,9 +262,9 @@ class MumbleService extends ChangeNotifier
       _client?.add(this as MumbleClientListener);
       _client?.self.add(this as UserListener);
       _client?.audio.add(this as AudioListener);
-      
+
       _updateChannelsInternal();
-      
+
       _isConnected = true;
       notifyListeners();
 
@@ -214,31 +305,51 @@ class MumbleService extends ChangeNotifier
 
     const sampleRate = 48000;
     const channels = 1;
-    /// Frame size of 480 (10ms @ 48kHz) is chosen for the best balance of 
+
+    /// Frame size of 480 (10ms @ 48kHz) is chosen for the best balance of
     /// low latency and mobile processing stability. 20ms (960) can be used
     /// for better bandwidth efficiency but may feel 'choppy' on slower networks.
 
-    final micStream = await _recorder.startStream(
-      const RecordConfig(
-        encoder: AudioEncoder.pcm16bits,
-        sampleRate: sampleRate,
-        numChannels: channels,
-      ),
+    final devices = await _recorder.listInputDevices();
+    dynamic selectedDevice;
+    if (_inputDeviceId != null && devices.isNotEmpty) {
+      for (final d in devices) {
+        if (d.id == _inputDeviceId) {
+          selectedDevice = d;
+          break;
+        }
+      }
+    }
+
+    final config = RecordConfig(
+      encoder: AudioEncoder.pcm16bits,
+      sampleRate: sampleRate,
+      numChannels: channels,
+
+      /// In 6.x, the 'device' parameter accepts an 'InputDevice' object.
+      /// We grab it from listDevices if we have an ID.
+      device: selectedDevice,
     );
 
+    final micStream = await _recorder.startStream(config);
+
     _pcmBuffer.clear();
-    _micSubscription = micStream.listen((data) {
-      /// CRITICAL: Uint8List.fromList(data) ensures the underlying buffer is 
-      /// ByteData-aligned for 16-bit interpretation. Directly using data.buffer 
-      /// can cause Bus Errors or RangeErrors on some architectures.
-      final int16data = Uint8List.fromList(data).buffer.asInt16List();
-      _pcmBuffer.addAll(int16data);
-      _processPcmBuffer();
-    }, onDone: () {
-      debugPrint('[MumbleService] Mic stream closed.');
-    }, onError: (e) {
-      debugPrint('[MumbleService] Mic stream error: $e');
-    });
+    _micSubscription = micStream.listen(
+      (data) {
+        /// CRITICAL: Uint8List.fromList(data) ensures the underlying buffer is
+        /// ByteData-aligned for 16-bit interpretation. Directly using data.buffer
+        /// can cause Bus Errors or RangeErrors on some architectures.
+        final int16data = Uint8List.fromList(data).buffer.asInt16List();
+        _pcmBuffer.addAll(int16data);
+        _processPcmBuffer();
+      },
+      onDone: () {
+        debugPrint('[MumbleService] Mic stream closed.');
+      },
+      onError: (e) {
+        debugPrint('[MumbleService] Mic stream error: $e');
+      },
+    );
 
     // Also start a periodic timer to process the buffer in case the mic stream is inactive
     // but samples are being injected manually (e.g. for debug tests)
@@ -253,26 +364,37 @@ class MumbleService extends ChangeNotifier
 
   void _setupServerAudioSink() {
     if (_client == null || !_isConnected) return;
-    
+
     debugPrint('[MumbleService] Initializing server-specific audio sink...');
-    
+
     // Reset sequence number so a new server doesn't get a huge number
     AudioClient.resetSequenceNumber();
-    
+
     // CRITICAL: Clear any leftover audio from the previous server/session
     _pcmBuffer.clear();
-    
+
     // Create the sink for THIS server
     _audioSink = _client!.audio.sendAudio(codec: AudioCodec.opus);
-    
+
     debugPrint('[MumbleService] Server sink ready.');
   }
 
   void _processPcmBuffer() {
     const frameSize = 480;
     while (_pcmBuffer.length >= frameSize) {
-      final frameSamples = Int16List.fromList(_pcmBuffer.sublist(0, frameSize));
+      final sub = _pcmBuffer.sublist(0, frameSize);
       _pcmBuffer.removeRange(0, frameSize);
+
+      // Apply input gain
+      Int16List frameSamples;
+      if (_inputGain != 1.0) {
+        frameSamples = Int16List(frameSize);
+        for (int i = 0; i < frameSize; i++) {
+          frameSamples[i] = (sub[i] * _inputGain).round().clamp(-32768, 32767);
+        }
+      } else {
+        frameSamples = Int16List.fromList(sub);
+      }
 
       if (_isTalking && _opusEncoder != null && _audioSink != null) {
         try {
@@ -287,29 +409,29 @@ class MumbleService extends ChangeNotifier
 
   Future<void> sendAudioSamples(Int16List samples) async {
     if (!_isConnected || _client == null) return;
-    
+
     // Ensure we are in talking mode to send audio
     if (!_isTalking) {
       await startPushToTalk();
     }
-    
+
     _pcmBuffer.addAll(samples);
     _processPcmBuffer();
   }
 
   Future<void> startPushToTalk() async {
     if (!_isConnected || _isTalking || _client == null) return;
-    
+
     try {
       debugPrint('[MumbleService] PTT Active');
       _isTalking = true;
       _talkingUsers[_client!.self.session] = true;
-      
+
       // If sink was somehow dropped, recreate it
       if (_audioSink == null) {
         _setupServerAudioSink();
       }
-      
+
       notifyListeners();
     } catch (e) {
       debugPrint('[MumbleService] Error starting PTT: $e');
@@ -322,12 +444,12 @@ class MumbleService extends ChangeNotifier
     debugPrint('[MumbleService] PTT Inactive');
     _isTalking = false;
     if (_client != null) {
-       _talkingUsers[_client!.self.session] = false;
+      _talkingUsers[_client!.self.session] = false;
     }
-    
+
     // We do NOT close the sink or dispose the encoder here to maintain a persistent stream.
     // This solves the issue where subsequent PTT presses are ignored by the server.
-    
+
     notifyListeners();
   }
 
@@ -350,7 +472,7 @@ class MumbleService extends ChangeNotifier
     _micSubscription = null;
     await _recorder.stop();
     _volumeTimer?.cancel();
-    
+
     await _client?.close();
     _client = null;
     _isConnected = false;
@@ -366,51 +488,64 @@ class MumbleService extends ChangeNotifier
   }
 
   @override
-  void onAudioReceived(Stream<AudioFrame> voiceData, AudioCodec codec, User? user, TalkMode talkMode) {
+  void onAudioReceived(
+    Stream<AudioFrame> voiceData,
+    AudioCodec codec,
+    User? user,
+    TalkMode talkMode,
+  ) {
     if (user != null && codec == AudioCodec.opus) {
       final sessionId = user.session;
       _talkingUsers[sessionId] = true;
       notifyListeners();
 
-      final decoder = _decoders.putIfAbsent(sessionId, () => MumbleOpusDecoder(sampleRate: 48000, channels: 1));
+      final decoder = _decoders.putIfAbsent(
+        sessionId,
+        () => MumbleOpusDecoder(sampleRate: 48000, channels: 1),
+      );
       final buffer = _userBuffers.putIfAbsent(sessionId, () => []);
 
-      voiceData.listen((AudioFrame frame) {
-        final frameData = frame.frame;
-        // Decode Opus frame to PCM samples (Int16List)
-        final pcm = decoder.decode(frameData, 5760); 
-        
-        if (pcm.isNotEmpty) {
-          buffer.addAll(pcm);
-          
-          if (!_userPlaying.containsKey(sessionId) || _userPlaying[sessionId] == false) {
-            if (buffer.length >= _bufferThreshold) {
-              _userPlaying[sessionId] = true;
-              if (_audioPlayerInitialized) {
-                AudioPlaybackService().start();
+      voiceData.listen(
+        (AudioFrame frame) {
+          final frameData = frame.frame;
+          // Decode Opus frame to PCM samples (Int16List)
+          final pcm = decoder.decode(frameData, 5760);
+
+          if (pcm.isNotEmpty) {
+            buffer.addAll(pcm);
+
+            if (!_userPlaying.containsKey(sessionId) ||
+                _userPlaying[sessionId] == false) {
+              if (buffer.length >= _bufferThreshold) {
+                _userPlaying[sessionId] = true;
+                if (_audioPlayerInitialized) {
+                  AudioPlaybackService().start();
+                }
               }
             }
-          }
-          
-          if (_userPlaying[sessionId] == true || buffer.length > 5000) {
-             while (buffer.length >= 960) {
+
+            if (_userPlaying[sessionId] == true || buffer.length > 5000) {
+              while (buffer.length >= 960) {
                 final chunk = buffer.sublist(0, 960);
                 buffer.removeRange(0, 960);
                 if (_audioPlayerInitialized) {
-                   AudioPlaybackService().feed(Int16List.fromList(chunk));
+                  AudioPlaybackService().feed(Int16List.fromList(chunk));
                 }
-             }
+              }
+            }
           }
-        }
-      }, onDone: () {
-        _talkingUsers[sessionId] = false;
-        _userPlaying[sessionId] = false;
-        notifyListeners();
-      }, onError: (_) {
-         _talkingUsers[sessionId] = false;
-         _userPlaying[sessionId] = false;
-         notifyListeners();
-      });
+        },
+        onDone: () {
+          _talkingUsers[sessionId] = false;
+          _userPlaying[sessionId] = false;
+          notifyListeners();
+        },
+        onError: (_) {
+          _talkingUsers[sessionId] = false;
+          _userPlaying[sessionId] = false;
+          notifyListeners();
+        },
+      );
     }
   }
 
@@ -424,7 +559,8 @@ class MumbleService extends ChangeNotifier
   void onChannelRemoved(Channel channel) => _updateChannelsInternal();
 
   @override
-  void onChannelChanged(Channel channel, ChannelChanges changes) => _updateChannelsInternal();
+  void onChannelChanged(Channel channel, ChannelChanges changes) =>
+      _updateChannelsInternal();
 
   @override
   void onUserAdded(User user) {
@@ -433,7 +569,8 @@ class MumbleService extends ChangeNotifier
   }
 
   @override
-  void onUserChanged(User user, User? actor, UserChanges changes) => notifyListeners();
+  void onUserChanged(User user, User? actor, UserChanges changes) =>
+      notifyListeners();
 
   @override
   void onUserRemoved(User user, User? actor, String? reason, bool? ban) {
