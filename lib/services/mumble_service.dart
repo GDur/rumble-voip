@@ -47,6 +47,7 @@ class MumbleService extends ChangeNotifier
 
   // Cached devices
   List<dynamic> _inputDevices = [];
+  List<dynamic> _outputDevices = [];
 
   // Buffer for raw PCM data (Outgoing)
   final List<int> _pcmBuffer = [];
@@ -61,6 +62,7 @@ class MumbleService extends ChangeNotifier
   bool get isSuppressed => _client?.self.suppress ?? false;
   bool get hasMicPermission => _hasMicPermission;
   List<dynamic> get inputDevices => _inputDevices;
+  List<dynamic> get outputDevices => _outputDevices;
 
   MumbleService() {
     _recorder = AudioRecorder();
@@ -175,8 +177,26 @@ class MumbleService extends ChangeNotifier
     }
   }
 
-  Future<List<String>> getOutputDevices() async {
-    return [];
+  Future<List<dynamic>> getOutputDevices() async {
+    if (_outputDevices.isNotEmpty) return _outputDevices;
+    return refreshOutputDevices();
+  }
+
+  Future<List<dynamic>> refreshOutputDevices() async {
+    try {
+      final devices = await AudioPlaybackService().getOutputDevices();
+      _outputDevices = devices.where((d) {
+        final name = d.name.toString().toLowerCase();
+        // Ignore internal CoreAudio aggregate devices which aren't real outputs
+        if (name.contains('aggregate')) return false;
+        return true;
+      }).toList();
+      notifyListeners();
+      return _outputDevices;
+    } catch (e) {
+      debugPrint('[MumbleService] Error refreshing output devices: $e');
+      return [];
+    }
   }
 
   Future<void> _initAudioPlayer(double volume) async {
@@ -186,6 +206,7 @@ class MumbleService extends ChangeNotifier
         sampleRate: 48000,
         channels: 1,
         volume: volume,
+        deviceId: _outputDeviceId,
       );
       _audioPlayerInitialized = true;
       debugPrint('[MumbleService] Audio service initialized.');

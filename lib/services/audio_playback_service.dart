@@ -22,11 +22,12 @@ class AudioPlaybackService {
     int sampleRate = 48000,
     int channels = 1,
     double volume = 1.0,
+    String? deviceId,
   }) async {
     if (_initialized) return;
     _outputVolume = volume;
 
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (Platform.isAndroid || Platform.isIOS) {
       try {
         await pcm_sound.FlutterPcmSound.setup(
           sampleRate: sampleRate,
@@ -39,9 +40,19 @@ class AudioPlaybackService {
       } catch (e) {
         debugPrint('[AudioPlaybackService] Error initializing flutter_pcm_sound: $e');
       }
-    } else if (Platform.isWindows || Platform.isLinux) {
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       try {
-        await SoLoud.instance.init();
+        final devices = await SoLoud.instance.listPlaybackDevices();
+        dynamic targetDevice;
+        if (deviceId != null) {
+          for (final dev in devices) {
+            if (dev.id.toString() == deviceId) {
+              targetDevice = dev;
+              break;
+            }
+          }
+        }
+        await SoLoud.instance.init(device: targetDevice);
         // Updated API for flutter_soloud 3.x
         _soloudSource = SoLoud.instance.setBufferStream(
           sampleRate: sampleRate, // Now an int
@@ -59,9 +70,9 @@ class AudioPlaybackService {
 
   void start() {
     if (!_initialized) return;
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (Platform.isAndroid || Platform.isIOS) {
       pcm_sound.FlutterPcmSound.start();
-    } else if (Platform.isWindows || Platform.isLinux) {
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       if (_soloudSource != null && !_soloudPlaying) {
         SoLoud.instance.play(_soloudSource!, volume: _outputVolume);
         _soloudPlaying = true;
@@ -74,7 +85,7 @@ class AudioPlaybackService {
     if (!_initialized) return;
     // For soloud we can adjust volume of the playing handle if we had it, 
     // but for now we'll just set the global soloud volume or future play calls.
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       // soloud.setGlobalVolume(volume) could be used if we wanted to affect everything
     }
     // pcm_sound doesn't have a direct volume control for the stream, 
@@ -93,9 +104,9 @@ class AudioPlaybackService {
       }
     }
 
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (Platform.isAndroid || Platform.isIOS) {
       pcm_sound.FlutterPcmSound.feed(pcm_sound.PcmArrayInt16.fromList(processedSamples));
-    } else if (Platform.isWindows || Platform.isLinux) {
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       if (_soloudSource != null) {
         // flutter_soloud addAudioDataStream expects Uint8List (raw bytes)
         final bytes = processedSamples.buffer.asUint8List();
@@ -110,9 +121,9 @@ class AudioPlaybackService {
 
   Future<void> dispose() async {
     if (!_initialized) return;
-    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+    if (Platform.isAndroid || Platform.isIOS) {
       await pcm_sound.FlutterPcmSound.release();
-    } else if (Platform.isWindows || Platform.isLinux) {
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       if (_soloudSource != null) {
         SoLoud.instance.setDataIsEnded(_soloudSource!);
       }
@@ -122,5 +133,19 @@ class AudioPlaybackService {
       _soloudSource = null;
     }
     _initialized = false;
+  }
+
+  Future<List<dynamic>> getOutputDevices() async {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      try {
+        // listPlaybackDevices is static or instance method? 
+        // Based on search it is part of SoLoud instance or static. 
+        // In 3.x it is on the instance.
+        return SoLoud.instance.listPlaybackDevices();
+      } catch (e) {
+        debugPrint('[AudioPlaybackService] Error listing output devices: $e');
+      }
+    }
+    return [];
   }
 }

@@ -272,6 +272,7 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
     final settings = Provider.of<SettingsService>(context, listen: false);
     final mumbleService = Provider.of<MumbleService>(context, listen: false);
     mumbleService.getInputDevices(); // Warm up device list
+    mumbleService.getOutputDevices(); // Warm up output list
     String currentTab = 'general';
     showShadDialog(
       context: context,
@@ -400,6 +401,58 @@ class _HomeScreenState extends State<HomeScreen> with WindowListener {
                       orElse: () => null,
                     );
                     return Text(dev?.label ?? 'Current Device');
+                  },
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Output Device',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListenableBuilder(
+              listenable: mumbleService,
+              builder: (context, _) {
+                final devices = mumbleService.outputDevices;
+                final hasCurrent =
+                    settings.outputDeviceId == null ||
+                    devices.any((d) => d.id.toString() == settings.outputDeviceId);
+
+                return ShadSelect<String?>(
+                  placeholder: const Text('Default Output'),
+                  initialValue: settings.outputDeviceId,
+                  onChanged: (value) async {
+                    settings.setOutputDeviceId(value);
+                    await mumbleService.updateAudioSettings(
+                      outputDeviceId: value,
+                    );
+                    if (context.mounted) setDialogState(() {});
+                  },
+                  options: [
+                    ShadOption<String?>(
+                      value: null,
+                      child: const Text('Default Output'),
+                    ),
+                    if (!hasCurrent && settings.outputDeviceId != null)
+                      ShadOption<String?>(
+                        value: settings.outputDeviceId,
+                        child: const Text('Current Device'),
+                      ),
+                    ...devices.map(
+                      (d) => ShadOption<String?>(
+                        value: d.id.toString(),
+                        child: Text(d.name.toString()),
+                      ),
+                    ),
+                  ],
+                  selectedOptionBuilder: (context, value) {
+                    if (value == null) return const Text('Default Output');
+                    final dev = devices.cast<dynamic>().firstWhere(
+                      (d) => d.id.toString() == value,
+                      orElse: () => null,
+                    );
+                    return Text(dev?.name ?? 'Current Device');
                   },
                 );
               },
