@@ -115,9 +115,7 @@ class CertificateService extends ChangeNotifier {
     );
 
     _certificates.add(cert);
-    if (_defaultCertificateId == null) {
-      _defaultCertificateId = cert.id;
-    }
+    _defaultCertificateId ??= cert.id;
     
     await _save();
     notifyListeners();
@@ -151,17 +149,35 @@ class CertificateService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<MumbleCertificate?> importFromP12(Uint8List data, String? password, String name) async {
+  Future<MumbleCertificate?> importFromP12(
+    Uint8List data,
+    String? password,
+    String name,
+  ) async {
     try {
-      final pems = Pkcs12Utils.parsePkcs12(data, password: password);
+      debugPrint('[CertificateService] Attempting to import P12 with basic_utils...');
+      List<String> pems;
+      try {
+        final p12Password = password ?? "";
+        pems = Pkcs12Utils.parsePkcs12(data, password: p12Password);
+      } catch (e) {
+        debugPrint('[CertificateService] basic_utils import failed ($e). Trying openssl fallback...');
+        final fallback = await _tryOpensslFallback(data, password);
+        if (fallback != null && fallback.isNotEmpty) {
+          pems = fallback;
+        } else {
+          rethrow;
+        }
+      }
+
       String? certPem;
       String? keyPem;
 
       for (var pem in pems) {
         if (pem.contains('BEGIN CERTIFICATE')) {
           certPem = pem;
-        } else if (pem.contains('BEGIN PRIVATE KEY') || 
-                   pem.contains('BEGIN RSA PRIVATE KEY')) {
+        } else if (pem.contains('BEGIN PRIVATE KEY') ||
+            pem.contains('BEGIN RSA PRIVATE KEY')) {
           keyPem = pem;
         }
       }
@@ -176,15 +192,70 @@ class CertificateService extends ChangeNotifier {
         );
 
         _certificates.add(cert);
-        if (_defaultCertificateId == null) {
-          _defaultCertificateId = cert.id;
-        }
+        _defaultCertificateId ??= cert.id;
         await _save();
         notifyListeners();
+        debugPrint('[CertificateService] Successfully imported certificate: $name');
         return cert;
+      } else {
+        debugPrint('[CertificateService] Failed to find both certificate and private key in P12.');
       }
     } catch (e) {
-      debugPrint('Error importing P12: $e');
+      debugPrint('[CertificateService] Final error importing P12: $e');
+    }
+    return null;
+  }
+
+  Future<List<String>?> _tryOpensslFallback(Uint8List data, String? password) async {
+    if (kIsWeb) return null;
+    if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows)) return null;
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/rumble_import_${DateTime.now().millisecondsSinceEpoch}.p12');
+      await tempFile.writeAsBytes(data);
+
+      debugPrint('[CertificateService] Running openssl pkcs12 export...');
+      final result = await Process.run('openssl', [
+        'pkcs12',
+        '-in',
+        tempFile.path,
+        '-nodes',
+        '-passin',
+        'pass:${password ?? ""}',
+      ]);
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      if (result.exitCode == 0) {
+        final String output = result.stdout as String;
+        final List<String> pems = [];
+        
+        // Extract PEM blocks
+        final certRegex = RegExp(r'-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----');
+        final keyRegex = RegExp(r'-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----');
+        
+        final certs = certRegex.allMatches(output);
+        final keys = keyRegex.allMatches(output);
+        
+        for (final m in certs) {
+          pems.add(m.group(0)!);
+        }
+        for (final m in keys) {
+          pems.add(m.group(0)!);
+        }
+        
+        if (pems.isNotEmpty) {
+          debugPrint('[CertificateService] Openssl fallback succeeded.');
+          return pems;
+        }
+      } else {
+        debugPrint('[CertificateService] Openssl failed with exit code ${result.exitCode}: ${result.stderr}');
+      }
+    } catch (e) {
+      debugPrint('[CertificateService] Openssl fallback process error: $e');
     }
     return null;
   }

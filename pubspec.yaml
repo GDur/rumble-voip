@@ -99,6 +99,10 @@ flutter_native_splash:
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
+dependency_overrides:
+  basic_utils: ^5.8.2
+  pointycastle: ^4.0.0
+
 flutter:
   uses-material-design: true
   assets:
