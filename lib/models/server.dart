@@ -7,6 +7,10 @@ class MumbleServer {
   final String username;
   final String password;
   final bool isArchived;
+  // Transient data for server list
+  final int? ping;
+  final int? userCount;
+  final int? maxUsers;
 
   MumbleServer({
     String? id,
@@ -16,6 +20,9 @@ class MumbleServer {
     required this.username,
     this.password = '',
     this.isArchived = false,
+    this.ping,
+    this.userCount,
+    this.maxUsers,
   }) : id = id ?? '${host}_$port';
 
   Map<String, dynamic> toJson() => {
@@ -26,6 +33,9 @@ class MumbleServer {
     'username': username,
     'password': password,
     'isArchived': isArchived,
+    if (ping != null) 'ping': ping,
+    if (userCount != null) 'userCount': userCount,
+    if (maxUsers != null) 'maxUsers': maxUsers,
   };
 
   factory MumbleServer.fromJson(Map<String, dynamic> json) => MumbleServer(
@@ -36,6 +46,9 @@ class MumbleServer {
     username: json['username'],
     password: json['password'] ?? '',
     isArchived: json['isArchived'] ?? false,
+    ping: json['ping'],
+    userCount: json['userCount'],
+    maxUsers: json['maxUsers'],
   );
 
   MumbleServer copyWith({
@@ -45,6 +58,9 @@ class MumbleServer {
     String? username,
     String? password,
     bool? isArchived,
+    int? ping,
+    int? userCount,
+    int? maxUsers,
   }) => MumbleServer(
     id: id,
     name: name ?? this.name,
@@ -53,6 +69,9 @@ class MumbleServer {
     username: username ?? this.username,
     password: password ?? this.password,
     isArchived: isArchived ?? this.isArchived,
+    ping: ping ?? this.ping,
+    userCount: userCount ?? this.userCount,
+    maxUsers: maxUsers ?? this.maxUsers,
   );
 }
 

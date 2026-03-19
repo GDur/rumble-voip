@@ -1,17 +1,34 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/models/server.dart';
+import 'package:rumble/services/mumble_ping_service.dart';
 
 class ServerProvider extends ChangeNotifier {
   List<MumbleServer> _servers = [];
   bool _isLoading = true;
+  Timer? _pingTimer;
 
   List<MumbleServer> get servers => _servers;
   bool get isLoading => _isLoading;
 
   ServerProvider() {
     _loadServers();
+    _startPeriodicPings();
+  }
+
+  void _startPeriodicPings() {
+     _pingTimer?.cancel();
+     _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+       refreshAllPings();
+     });
+  }
+
+  @override
+  void dispose() {
+    _pingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadServers() async {
@@ -34,6 +51,31 @@ class ServerProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+      refreshAllPings();
+    }
+  }
+
+  Future<void> refreshAllPings() async {
+    for (int i = 0; i < _servers.length; i++) {
+      _pingServer(i);
+    }
+  }
+
+  Future<void> _pingServer(int index) async {
+    final server = _servers[index];
+    try {
+      final response = await MumblePingService.ping(server.host, server.port);
+      _servers[index] = _servers[index].copyWith(
+        ping: response.latency,
+        userCount: response.users,
+        maxUsers: response.maxUsers,
+      );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Ping failed for ${server.host}: $e');
+      // Optionally clear old data if it fails
+      // _servers[index] = _servers[index].copyWith(ping: null);
+      // notifyListeners();
     }
   }
 
