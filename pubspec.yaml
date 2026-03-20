@@ -80,9 +80,9 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/splash_foreground.png"
-  image_path: "assets/splash_foreground.png"
+  image_path: "assets/icon_android.png"
   adaptive_icon_background: "#0F172A"
-  adaptive_icon_foreground: "assets/splash_foreground.png"
+  adaptive_icon_foreground: "assets/icon_android.png"
   min_sdk_android: 21
 
 flutter_native_splash:
