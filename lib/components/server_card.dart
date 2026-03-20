@@ -81,7 +81,7 @@ class ServerCard extends StatelessWidget {
                 Expanded(
                   child: _buildDetails(theme),
                 ),
-                _buildStats(theme, horizontal: false),
+                _buildStats(theme),
               ],
             ),
             const SizedBox(height: 16),
@@ -110,20 +110,13 @@ class ServerCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  _buildDetails(theme),
-                  if (server.ping != null || server.userCount != null) ...[
-                    const SizedBox(width: 12),
-                    _buildDot(theme),
-                    const SizedBox(width: 12),
-                    _buildStats(theme, horizontal: true),
-                  ],
-                ],
-              ),
+              _buildDetails(theme),
             ],
           ),
         ),
+        const SizedBox(width: 24),
+        _buildStats(theme),
+        const SizedBox(width: 24),
         _buildConnectButton(theme),
         const SizedBox(width: 8),
         _buildActions(context),
@@ -168,58 +161,56 @@ class ServerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStats(ShadThemeData theme, {required bool horizontal}) {
+  Widget _buildStats(ShadThemeData theme) {
     final ping = server.ping;
     final userCount = server.userCount;
+    final maxUsers = server.maxUsers;
     
-    if (ping == null && userCount == null) return const SizedBox.shrink();
-
-    final widgets = [
-      if (ping != null)
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               LucideIcons.wifi,
-              color: _getPingColor(ping),
+              color: ping != null ? _getPingColor(ping) : theme.colorScheme.mutedForeground,
               size: 14,
             ),
             const SizedBox(width: 4),
             Text(
-              '${ping}ms',
+              ping != null ? '${ping}ms' : '---',
               style: TextStyle(
-                color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                color: theme.colorScheme.foreground.withValues(alpha: 0.6),
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-      if (horizontal && ping != null && userCount != null) const SizedBox(width: 12),
-      if (!horizontal && ping != null && userCount != null) const SizedBox(height: 4),
-      if (userCount != null)
+        const SizedBox(height: 4),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               LucideIcons.users,
-              color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+              color: theme.colorScheme.foreground.withValues(alpha: 0.4),
               size: 14,
             ),
             const SizedBox(width: 4),
             Text(
-              '$userCount/${server.maxUsers ?? "?"}',
+              userCount != null ? '$userCount/${maxUsers ?? "?"}' : '0/0',
               style: TextStyle(
-                color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+                color: theme.colorScheme.foreground.withValues(alpha: 0.6),
                 fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
         ),
-    ];
-
-    return horizontal 
-      ? Row(mainAxisSize: MainAxisSize.min, children: widgets)
-      : Column(crossAxisAlignment: CrossAxisAlignment.end, children: widgets);
+      ],
+    );
   }
 
   Widget _buildConnectButton(ShadThemeData theme, {double? width, ShadButtonSize? size}) {
@@ -273,16 +264,6 @@ class ServerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDot(ShadThemeData theme) {
-    return Container(
-      width: 3,
-      height: 3,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: theme.colorScheme.foreground.withValues(alpha: 0.3),
-      ),
-    );
-  }
 
   Color _getPingColor(int ping) {
     if (ping < 50) return Colors.green;

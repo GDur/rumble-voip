@@ -4,7 +4,7 @@ import 'package:rumble/models/server.dart';
 import 'package:rumble/services/server_provider.dart';
 
 // Component: server-actions
-class ServerActions extends StatelessWidget {
+class ServerActions extends StatefulWidget {
   final ServerProvider provider;
   final MumbleServer server;
   final Function(BuildContext, MumbleServer?) onShowAddServerDialog;
@@ -19,38 +19,73 @@ class ServerActions extends StatelessWidget {
   });
 
   @override
+  State<ServerActions> createState() => _ServerActionsState();
+}
+
+class _ServerActionsState extends State<ServerActions> {
+  final controller = ShadPopoverController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
-    final isArchived = server.isArchived;
-    
-    return ShadContextMenuRegion(
-      tapEnabled: true,
-      items: [
-        ShadContextMenuItem(
-          onPressed: () => onShowAddServerDialog(context, server),
-          leading: const Icon(LucideIcons.pencil, size: 16),
-          child: const Text('Edit'),
-        ),
-        ShadContextMenuItem(
-          onPressed: () {
-            if (isArchived) {
-              provider.unarchiveServer(server.id);
-            } else {
-              onArchiveServerWithUndo(context, provider, server);
-            }
-          },
-          leading: Icon(isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
-          child: Text(isArchived ? 'Restore' : 'Archive'),
-        ),
-      ],
-      child: ShadButton.ghost(
-        padding: EdgeInsets.zero,
-        size: ShadButtonSize.sm,
-        child: Icon(
+    final isArchived = widget.server.isArchived;
+
+    return ShadPopover(
+      controller: controller,
+      popover: (context) {
+        return SizedBox(
+          width: 140,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ShadButton.ghost(
+                onPressed: () {
+                  controller.hide();
+                  widget.onShowAddServerDialog(context, widget.server);
+                },
+                leading: const Icon(LucideIcons.pencil, size: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                mainAxisAlignment: MainAxisAlignment.start,
+                child: const Text('Edit'),
+              ),
+              ShadButton.ghost(
+                onPressed: () {
+                  controller.hide();
+                  if (isArchived) {
+                    widget.provider.unarchiveServer(widget.server.id);
+                  } else {
+                    widget.onArchiveServerWithUndo(context, widget.provider, widget.server);
+                  }
+                },
+                leading: Icon(isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                mainAxisAlignment: MainAxisAlignment.start,
+                child: Text(isArchived ? 'Restore' : 'Archive'),
+              ),
+            ],
+          ),
+        );
+      },
+      child: ShadIconButton.ghost(
+        icon: Icon(
           LucideIcons.ellipsisVertical,
           size: 16,
           color: theme.colorScheme.foreground.withValues(alpha: 0.5),
         ),
+        width: 32,
+        height: 32,
+        padding: EdgeInsets.zero,
+        decoration: ShadDecoration(
+          shape: BoxShape.circle,
+        ),
+        onPressed: () => controller.toggle(),
       ),
     );
   }
