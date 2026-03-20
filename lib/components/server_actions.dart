@@ -23,7 +23,8 @@ class ServerActions extends StatelessWidget {
     final theme = ShadTheme.of(context);
     final isArchived = server.isArchived;
     
-    return ShadContextMenu(
+    return ShadContextMenuRegion(
+      tapEnabled: true,
       items: [
         ShadContextMenuItem(
           onPressed: () => onShowAddServerDialog(context, server),
@@ -40,35 +41,6 @@ class ServerActions extends StatelessWidget {
           },
           leading: Icon(isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
           child: Text(isArchived ? 'Restore' : 'Archive'),
-        ),
-        const Divider(), // ShadContextMenu doesn't have a specific divider, using Divider or just list
-        ShadContextMenuItem(
-          onPressed: () {
-            showShadDialog(
-              context: context,
-              builder: (context) => ShadDialog.alert(
-                title: const Text('Delete Server'),
-                description: Text(
-                  'Are you sure you want to delete "${server.name}"? This action cannot be undone.',
-                ),
-                actions: [
-                  ShadButton.outline(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  ShadButton.destructive(
-                    onPressed: () {
-                      provider.deleteServer(server.id);
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Delete'),
-                  ),
-                ],
-              ),
-            );
-          },
-          leading: const Icon(LucideIcons.trash2, size: 16),
-          child: const Text('Delete'),
         ),
       ],
       child: ShadButton.ghost(

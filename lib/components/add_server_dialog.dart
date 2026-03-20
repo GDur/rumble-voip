@@ -198,13 +198,20 @@ class _AddServerDialogState extends State<AddServerDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(text),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         ShadTooltip(
-          builder: (context) => Text(tooltip),
-          child: Icon(
-            LucideIcons.info,
-            size: 14,
-            color: ShadTheme.of(context).colorScheme.mutedForeground,
+          builder: (context) => Container(
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(maxWidth: 200),
+            child: Text(tooltip),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Icon(
+              LucideIcons.info,
+              size: 14,
+              color: ShadTheme.of(context).colorScheme.mutedForeground,
+            ),
           ),
         ),
       ],
