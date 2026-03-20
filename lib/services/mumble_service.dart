@@ -29,6 +29,7 @@ class MumbleService extends ChangeNotifier
   // Audio recording and encoding (Outgoing)
   late final AudioRecorder _recorder;
   StreamSubscription<Uint8List>? _micSubscription;
+  Timer? _processingTimer;
   AudioFrameSink? _audioSink;
   MumbleOpusEncoder? _opusEncoder;
 
@@ -103,6 +104,10 @@ class MumbleService extends ChangeNotifier
 
     await _initAudioPlayer(outputVolume);
     await _initGlobalAudioResources();
+
+    // Refresh device lists so they are available in the settings UI
+    await refreshInputDevices();
+    await refreshOutputDevices();
   }
 
   Future<void> _initGlobalAudioResources() async {
@@ -153,6 +158,7 @@ class MumbleService extends ChangeNotifier
 
     if (inputGain != null) _inputGain = inputGain;
     if (inputDeviceId != _inputDeviceId) {
+      debugPrint('[MumbleService] Input device changing to $inputDeviceId');
       _inputDeviceId = inputDeviceId;
       restartMic = true;
     }
@@ -160,6 +166,7 @@ class MumbleService extends ChangeNotifier
       AudioPlaybackService().setOutputVolume(outputVolume);
     }
     if (outputDeviceId != _outputDeviceId) {
+      debugPrint('[MumbleService] Output device changing to $outputDeviceId');
       _outputDeviceId = outputDeviceId;
       restartPlayer = true;
     }
@@ -188,7 +195,8 @@ class MumbleService extends ChangeNotifier
       _inputDevices = devices.where((d) {
         final label = d.label.toString().toLowerCase();
         // Ignore internal CoreAudio aggregate devices which aren't real mics
-        if (label.contains('aggregate')) return false;
+        // And ignore DACs that shouldn't be used as mic sources
+        if (label.contains('aggregate') || label.contains('dac')) return false;
         return true;
       }).toList();
       notifyListeners();
@@ -209,8 +217,8 @@ class MumbleService extends ChangeNotifier
       final devices = await AudioPlaybackService().getOutputDevices();
       _outputDevices = devices.where((d) {
         final name = d.name.toString().toLowerCase();
-        // Ignore internal CoreAudio aggregate devices which aren't real outputs
-        if (name.contains('aggregate')) return false;
+        // Ignore internal CoreAudio aggregate devices and DACs
+        if (name.contains('aggregate') || name.contains('dac')) return false;
         return true;
       }).toList();
       notifyListeners();
@@ -334,14 +342,12 @@ class MumbleService extends ChangeNotifier
     _hasMicPermission = true;
     notifyListeners();
 
-    // If already recording and subscription is active, don't restart
-    if (_micSubscription != null && await _recorder.isRecording()) {
-      debugPrint('[MumbleService] Mic stream already active.');
-      return;
-    }
-
     // Clean up old state if any
     await _micSubscription?.cancel();
+    _micSubscription = null;
+    _processingTimer?.cancel();
+    _processingTimer = null;
+
     if (await _recorder.isRecording()) {
       await _recorder.stop();
     }
@@ -379,24 +385,15 @@ class MumbleService extends ChangeNotifier
     _pcmBuffer.clear();
     _micSubscription = micStream.listen(
       (data) {
-        /// CRITICAL: Uint8List.fromList(data) ensures the underlying buffer is
-        /// ByteData-aligned for 16-bit interpretation. Directly using data.buffer
-        /// can cause Bus Errors or RangeErrors on some architectures.
         final int16data = Uint8List.fromList(data).buffer.asInt16List();
         _pcmBuffer.addAll(int16data);
         _processPcmBuffer();
       },
-      onDone: () {
-        debugPrint('[MumbleService] Mic stream closed.');
-      },
-      onError: (e) {
-        debugPrint('[MumbleService] Mic stream error: $e');
-      },
+      onDone: () => debugPrint('[MumbleService] Mic stream closed.'),
+      onError: (e) => debugPrint('[MumbleService] Mic stream error: $e'),
     );
 
-    // Also start a periodic timer to process the buffer in case the mic stream is inactive
-    // but samples are being injected manually (e.g. for debug tests)
-    Timer.periodic(const Duration(milliseconds: 20), (timer) {
+    _processingTimer = Timer.periodic(const Duration(milliseconds: 20), (timer) {
       if (!_isConnected || _client == null) {
         timer.cancel();
         return;

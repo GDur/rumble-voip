@@ -28,6 +28,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
   String _currentTab = 'general';
 
   @override
+  void initState() {
+    super.initState();
+    // Refresh devices whenever the dialog is opened to catch new ones
+    widget.mumbleService.refreshInputDevices();
+    widget.mumbleService.refreshOutputDevices();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final sideBarItems = [
       (id: 'audio', label: 'Audio', icon: LucideIcons.volume2),
