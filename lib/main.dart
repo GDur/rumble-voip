@@ -292,11 +292,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final mumbleService = Provider.of<MumbleService>(context);
+    final theme = ShadTheme.of(context);
     
     return Scaffold(
-      backgroundColor: ShadTheme.of(context).colorScheme.background,
+      backgroundColor: theme.colorScheme.background,
       body: Column(
         children: [
+          _buildHeader(mumbleService),
           const PermissionBanner(),
           Expanded(
             child: ListenableBuilder(
@@ -322,6 +324,40 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildHeader(MumbleService mumbleService) {
+    final theme = ShadTheme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.background,
+        border: Border(bottom: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5))),
+      ),
+      child: Row(
+        children: [
+          Image.asset('assets/icon.png', height: 32, width: 32),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Rumble', style: theme.textTheme.large.copyWith(fontWeight: FontWeight.bold, height: 1.1)),
+              Text('Mumble Reloaded', style: theme.textTheme.muted.copyWith(fontSize: 10, height: 1.0)),
+            ],
+          ),
+          const Spacer(),
+          if (mumbleService.isConnected)
+            ShadIconButton.ghost(
+              icon: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive, size: 20),
+              onPressed: () => mumbleService.disconnect(),
+            ),
+          ShadIconButton.ghost(
+            icon: const Icon(LucideIcons.settings, size: 20),
+            onPressed: () => _showSettingsDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildServerList() {
     final theme = ShadTheme.of(context);
@@ -360,11 +396,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Row(
                   children: [
-                    ShadIconButton.ghost(
-                      icon: const Icon(LucideIcons.settings),
-                      onPressed: () => _showSettingsDialog(context),
-                    ),
-                    const SizedBox(width: 8),
                     ShadButton(
                       leading: const Icon(LucideIcons.plus, size: 16),
                       onPressed: () => _showAddServerDialog(context),
