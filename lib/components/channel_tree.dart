@@ -521,14 +521,16 @@ class _ChannelTreeState extends State<ChannelTree> {
     final bool isMuted = u.mute ?? false;
     final bool isDeaf = u.deaf ?? false;
     final bool isSuppressed = u.suppress ?? false;
+    final bool isSelfMuted = u.selfMute ?? false;
+    final bool isSelfDeafened = u.selfDeaf ?? false;
 
     Color statusColor;
     if (isTalking) {
       statusColor = Colors.blueAccent;
     } else {
-      if (isDeaf) {
+      if (isDeaf || isSelfDeafened) {
         statusColor = Colors.redAccent.withValues(alpha: 0.6);
-      } else if (isMuted || isSuppressed) {
+      } else if (isMuted || isSelfMuted || isSuppressed) {
         statusColor = Colors.grey;
       } else {
         final bool hasMic = isMe ? widget.hasMicPermission : true;
@@ -611,7 +613,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                   ),
                 ),
               ),
-              if (isMuted || isSuppressed) ...[
+              if (isMuted || isSelfMuted || isSuppressed) ...[
                 const SizedBox(width: 8),
                 ShadButton.ghost(
                   padding: EdgeInsets.zero,
@@ -620,24 +622,29 @@ class _ChannelTreeState extends State<ChannelTree> {
                   onPressed: () {}, // Handled by ShadPopover internal trigger
                   child: ShadPopover(
                     controller: ShadPopoverController(),
-                    popover: (context) => Container(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        isMuted && isSuppressed 
-                            ? 'Muted & Suppressed' 
-                            : isMuted ? 'Muted' : 'Suppressed by Server',
-                        style: theme.textTheme.small,
-                      ),
-                    ),
+                    popover: (context) {
+                      String label = 'Muted';
+                      if (isSelfMuted && isMuted) label = 'Muted (Self & Server)';
+                      else if (isSelfMuted) label = 'Muted themselves';
+                      else if (isMuted) label = 'Muted by Server';
+                      else if (isSuppressed) label = 'Suppressed by Server';
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(label, style: theme.textTheme.small),
+                      );
+                    },
                     child: Icon(
-                      isMuted ? LucideIcons.micOff : LucideIcons.micOff,
+                      LucideIcons.micOff,
                       size: 14,
-                      color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                      color: (isMuted || isSuppressed) 
+                          ? theme.colorScheme.destructive.withValues(alpha: 0.7)
+                          : theme.colorScheme.foreground.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
               ],
-              if (isDeaf) ...[
+              if (isDeaf || isSelfDeafened) ...[
                 const SizedBox(width: 4),
                 ShadButton.ghost(
                   padding: EdgeInsets.zero,
@@ -646,14 +653,23 @@ class _ChannelTreeState extends State<ChannelTree> {
                   onPressed: () {},
                   child: ShadPopover(
                     controller: ShadPopoverController(),
-                    popover: (context) => Container(
-                      padding: const EdgeInsets.all(12),
-                      child: Text('Deafened', style: theme.textTheme.small),
-                    ),
+                    popover: (context) {
+                      String label = 'Deafened';
+                      if (isSelfDeafened && isDeaf) label = 'Deafened (Self & Server)';
+                      else if (isSelfDeafened) label = 'Deafened themselves';
+                      else if (isDeaf) label = 'Deafened by Server';
+
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(label, style: theme.textTheme.small),
+                      );
+                    },
                     child: Icon(
                       LucideIcons.headphoneOff,
                       size: 14,
-                      color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                      color: isDeaf 
+                          ? theme.colorScheme.destructive.withValues(alpha: 0.7)
+                          : theme.colorScheme.foreground.withValues(alpha: 0.4),
                     ),
                   ),
                 ),

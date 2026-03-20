@@ -22,6 +22,7 @@ class MumbleService extends ChangeNotifier
   double _inputGain = 1.0;
   String? _inputDeviceId;
   String? _outputDeviceId;
+  String? _pttErrorMessage;
 
   // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
@@ -50,6 +51,16 @@ class MumbleService extends ChangeNotifier
   // Buffer for raw PCM data (Outgoing)
   final List<int> _pcmBuffer = [];
 
+  // User stats storage (session ID -> stats)
+  final Map<int, UserStats> _userStats = {};
+
+  void _updateSync() {
+    if (client != null) {
+      _channels = client!.getChannels().values.toList();
+      notifyListeners();
+    }
+  }
+
   MumbleClient? get client => _client;
   bool get isConnected => _isConnected;
   String? get error => _error;
@@ -57,6 +68,7 @@ class MumbleService extends ChangeNotifier
   bool get isTalking => _isTalking;
   double get currentVolume => _currentVolume;
   Map<int, bool> get talkingUsers => _talkingUsers;
+  Map<int, UserStats> get userStats => _userStats;
   bool get isSuppressed => _client?.self.suppress ?? false;
   bool get isMuted => _client?.self.selfMute ?? false;
   bool get isDeafened => _client?.self.selfDeaf ?? false;
@@ -65,6 +77,14 @@ class MumbleService extends ChangeNotifier
   bool get hasMicPermission => _hasMicPermission;
   List<dynamic> get inputDevices => _inputDevices;
   List<dynamic> get outputDevices => _outputDevices;
+  String? get pttErrorMessage => _pttErrorMessage;
+
+  void clearPttErrorMessage() {
+    if (_pttErrorMessage != null) {
+      _pttErrorMessage = null;
+      notifyListeners();
+    }
+  }
 
   MumbleService() {
     _recorder = AudioRecorder();
@@ -89,6 +109,10 @@ class MumbleService extends ChangeNotifier
       _client!.self.moveToChannel(channel: channel);
       notifyListeners();
     }
+  }
+
+  void requestUserStats(User user) {
+    user.requestUserStats();
   }
 
   // Called from main.dart after settings are ready
@@ -460,7 +484,21 @@ class MumbleService extends ChangeNotifier
   }
 
   Future<void> startPushToTalk() async {
-    if (!_isConnected || _isTalking || _client == null) return;
+    if (!_isConnected || _client == null) return;
+
+    if (isSuppressed) {
+      _pttErrorMessage = 'You are suppressed by the server';
+      notifyListeners();
+      return;
+    }
+
+    if (isMuted) {
+      _pttErrorMessage = 'You are muted. Unmute to talk';
+      notifyListeners();
+      return;
+    }
+
+    if (_isTalking) return;
 
     try {
       debugPrint('[MumbleService] PTT Active');
@@ -501,6 +539,10 @@ class MumbleService extends ChangeNotifier
       }
       for (final user in _client!.getUsers().values) {
         user.add(this as UserListener);
+        // If we see a user with a comment hash but no comment, request it
+        if (user.commentHash != null) {
+          user.requestUserComment();
+        }
       }
       notifyListeners();
     }
@@ -623,25 +665,33 @@ class MumbleService extends ChangeNotifier
   @override
   void onChannelAdded(Channel channel) {
     channel.add(this as ChannelListener);
-    _updateChannelsInternal();
+    _updateSync();
   }
 
   @override
-  void onChannelRemoved(Channel channel) => _updateChannelsInternal();
+  void onChannelRemoved(Channel channel) => _updateSync();
 
   @override
   void onChannelChanged(Channel channel, ChannelChanges changes) =>
-      _updateChannelsInternal();
+      _updateSync();
 
   @override
   void onUserAdded(User user) {
     user.add(this as UserListener);
-    _updateChannelsInternal();
+    // Request comment if they have one
+    if (user.commentHash != null) {
+       user.requestUserComment();
+    }
+    _updateSync();
   }
 
   @override
-  void onUserChanged(User user, User? actor, UserChanges changes) =>
-      notifyListeners();
+  void onUserChanged(User user, User? actor, UserChanges changes) {
+    if (changes.commentHash && user.commentHash != null) {
+      user.requestUserComment();
+    }
+    notifyListeners();
+  }
 
   @override
   void onUserRemoved(User user, User? actor, String? reason, bool? ban) {
@@ -671,7 +721,10 @@ class MumbleService extends ChangeNotifier
   @override
   void onChannelPermissionsReceived(Channel channel, Permission permission) {}
   @override
-  void onUserStats(User user, UserStats stats) {}
+  void onUserStats(User user, UserStats stats) {
+    _userStats[user.session] = stats;
+    notifyListeners();
+  }
 
   @override
   void onError(Object error, [StackTrace? stackTrace]) {

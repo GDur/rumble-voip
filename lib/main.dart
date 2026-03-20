@@ -198,6 +198,47 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkLastServer();
+    
+    // Listen for PTT errors/warnings globally in the Home Screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final mumbleService = Provider.of<MumbleService>(context, listen: false);
+      mumbleService.addListener(_handlePttWarning);
+    });
+  }
+
+  @override
+  void dispose() {
+    // We can't use Provider.of in dispose, so we'd need a reference 
+    // but MumbleService is a global provider so we can find it.
+    // However, since it's a singleton-like in this app context, and the app is closed, it's usually fine.
+    // But for good practice:
+    _removePttListener();
+    super.dispose();
+  }
+
+  void _removePttListener() {
+    try {
+      final mumbleService = Provider.of<MumbleService>(context, listen: false);
+      mumbleService.removeListener(_handlePttWarning);
+    } catch (_) {}
+  }
+
+  void _handlePttWarning() {
+    if (!mounted) return;
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    if (mumbleService.pttErrorMessage != null) {
+      final message = mumbleService.pttErrorMessage!;
+      mumbleService.clearPttErrorMessage();
+
+      ShadSonner.of(context).show(
+        ShadToast.destructive(
+          title: const Text('Cannot Talk'),
+          description: Text(message),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _checkLastServer() async {
@@ -557,17 +598,21 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPTTButton(MumbleService service) {
     final bool isTalking = service.isTalking;
     final bool isSuppressed = service.isSuppressed;
+    final bool isMuted = service.isMuted;
     final settings = Provider.of<SettingsService>(context);
 
-    String label = isSuppressed ? 'SUPPRESSED' : (isTalking ? 'TALKING...' : 'HOLD TO TALK');
-    if (!isSuppressed && !isTalking && settings.pttKey != PttKey.none) {
+    String label = 'HOLD TO TALK';
+    if (isSuppressed) label = 'SUPPRESSED';
+    else if (isMuted) label = 'MUTED';
+    else if (isTalking) label = 'TALKING...';
+    else if (settings.pttKey != PttKey.none) {
       label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
     }
 
     final theme = ShadTheme.of(context);
 
     return Listener(
-      onPointerDown: (_) => isSuppressed ? null : service.startPushToTalk(),
+      onPointerDown: (_) => service.startPushToTalk(),
       onPointerUp: (_) => service.stopPushToTalk(),
       onPointerCancel: (_) => service.stopPushToTalk(),
       child: AnimatedContainer(
@@ -576,7 +621,7 @@ class _HomeScreenState extends State<HomeScreen> {
         height: 48, // Fixed height to prevent resizing
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          gradient: isSuppressed
+          gradient: (isSuppressed || isMuted)
               ? LinearGradient(colors: [theme.colorScheme.destructive.withValues(alpha: 0.1), theme.colorScheme.destructive.withValues(alpha: 0.2)])
               : isTalking
                   ? const LinearGradient(colors: [Colors.blueAccent, Color(0xFF448AFF)])
@@ -584,7 +629,7 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: isSuppressed ? Colors.transparent : isTalking ? Colors.blueAccent.withValues(alpha: 0.4) : kBrandGreen.withValues(alpha: 0.2),
+              color: (isSuppressed || isMuted) ? Colors.transparent : isTalking ? Colors.blueAccent.withValues(alpha: 0.4) : kBrandGreen.withValues(alpha: 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -593,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isTalking ? Colors.white : (isSuppressed ? theme.colorScheme.destructive : Colors.black),
+            color: isTalking ? Colors.white : ((isSuppressed || isMuted) ? theme.colorScheme.destructive : Colors.black),
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
           ),
