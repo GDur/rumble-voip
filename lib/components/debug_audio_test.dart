@@ -83,8 +83,8 @@ class _DebugAudioTestState extends State<DebugAudioTest> {
       mumbleService.sendAudioSamples(samples);
     } else {
       // If not connected, we can still play locally for "offline" testing
-      AudioPlaybackService().start();
-      AudioPlaybackService().feed(samples);
+      AudioPlaybackService().startSession(0);
+      AudioPlaybackService().feed(0, samples);
     }
 
     Future.delayed(Duration(milliseconds: durationMs), () {

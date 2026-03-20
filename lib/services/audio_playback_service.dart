@@ -6,15 +6,25 @@ import 'package:flutter_soloud/flutter_soloud.dart';
 
 /// Abstract service to handle low-latency PCM audio playback across platforms.
 /// Uses flutter_pcm_sound on Mobile/macOS and flutter_soloud on Windows/Linux.
+/// 
+/// Refactored to support multiple concurrent voices for Mumble users.
 class AudioPlaybackService {
   static final AudioPlaybackService _instance = AudioPlaybackService._internal();
   factory AudioPlaybackService() => _instance;
   AudioPlaybackService._internal();
 
   bool _initialized = false;
-  AudioSource? _soloudSource;
-  bool _soloudPlaying = false;
+  
+  // Single stream for mobile (flutter_pcm_sound)
+  // TODO: Mix multiple users for mobile if needed, for now it's shared.
+
+  // Multi-stream support for Desktop (SoLoud)
+  final Map<int, AudioSource> _soloudSources = {};
+  final Map<int, bool> _soloudPlaying = {};
+  
   double _outputVolume = 1.0;
+  int _sampleRate = 48000;
+  int _channels = 1;
 
   bool get isInitialized => _initialized;
 
@@ -26,6 +36,8 @@ class AudioPlaybackService {
   }) async {
     if (_initialized) return;
     _outputVolume = volume;
+    _sampleRate = sampleRate;
+    _channels = channels;
 
     if (Platform.isAndroid || Platform.isIOS) {
       try {
@@ -34,7 +46,8 @@ class AudioPlaybackService {
           channelCount: channels,
           iosAudioCategory: pcm_sound.IosAudioCategory.playAndRecord,
         );
-        await pcm_sound.FlutterPcmSound.setFeedThreshold(1024 * 4);
+        // Reduced feed threshold for lower latency
+        await pcm_sound.FlutterPcmSound.setFeedThreshold(1024 * 2);
         _initialized = true;
         debugPrint('[AudioPlaybackService] Initialized with flutter_pcm_sound');
       } catch (e) {
@@ -52,50 +65,76 @@ class AudioPlaybackService {
             }
           }
         }
-        await SoLoud.instance.init(device: targetDevice);
-        // Updated API for flutter_soloud 3.x
-        _soloudSource = SoLoud.instance.setBufferStream(
-          sampleRate: sampleRate, // Now an int
-          channels: channels == 1 ? Channels.mono : Channels.stereo,
-          format: BufferType.s16le, // 16-bit signed little endian
-          bufferingType: BufferingType.released, // Free memory after playing
+        
+        // Initializing with smaller buffer size for low latency
+        await SoLoud.instance.init(
+          device: targetDevice,
+          bufferSize: 512, // ~10ms at 48kHz
         );
+        
         _initialized = true;
-        debugPrint('[AudioPlaybackService] Initialized with flutter_soloud');
+        debugPrint('[AudioPlaybackService] Initialized with flutter_soloud (Desktop)');
       } catch (e) {
         debugPrint('[AudioPlaybackService] Error initializing flutter_soloud: $e');
       }
     }
   }
 
+  /// Create a new audio source for a specific user session if it doesn't exist.
+  AudioSource? _getOrCreateSource(int sessionId) {
+    if (!_initialized) return null;
+    if (_soloudSources.containsKey(sessionId)) {
+      return _soloudSources[sessionId];
+    }
+
+    try {
+      final source = SoLoud.instance.setBufferStream(
+        sampleRate: _sampleRate,
+        channels: _channels == 1 ? Channels.mono : Channels.stereo,
+        format: BufferType.s16le,
+        bufferingType: BufferingType.released,
+      );
+      _soloudSources[sessionId] = source;
+      _soloudPlaying[sessionId] = false;
+      return source;
+    } catch (e) {
+      debugPrint('[AudioPlaybackService] Error creating source for session $sessionId: $e');
+      return null;
+    }
+  }
+
   void start() {
+    // Legacy start method - mostly for mobile or global start
     if (!_initialized) return;
     if (Platform.isAndroid || Platform.isIOS) {
       pcm_sound.FlutterPcmSound.start();
-    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      if (_soloudSource != null && !_soloudPlaying) {
-        SoLoud.instance.play(_soloudSource!, volume: _outputVolume);
-        _soloudPlaying = true;
+    }
+  }
+
+  void startSession(int sessionId) {
+    if (!_initialized) return;
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      final source = _getOrCreateSource(sessionId);
+      if (source != null && !(_soloudPlaying[sessionId] ?? false)) {
+        SoLoud.instance.play(source, volume: _outputVolume);
+        _soloudPlaying[sessionId] = true;
       }
+    } else {
+      start();
     }
   }
 
   void setOutputVolume(double volume) {
     _outputVolume = volume;
     if (!_initialized) return;
-    // For soloud we can adjust volume of the playing handle if we had it, 
-    // but for now we'll just set the global soloud volume or future play calls.
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      // soloud.setGlobalVolume(volume) could be used if we wanted to affect everything
-    }
-    // pcm_sound doesn't have a direct volume control for the stream, 
-    // so we apply it to the samples manually in feed().
+    // For SoLoud we'd ideally iterate and update all active voices.
+    // In this singleton, we'll apply it to future calls and the global Soloud volume.
   }
 
-  void feed(Int16List samples) {
+  void feed(int sessionId, Int16List samples) {
     if (!_initialized) return;
 
-    // Apply volume manually for pcm_sound platforms
+    // Apply volume manually for pcm_sound platforms (and temporarily for SoLoud if needed)
     Int16List processedSamples = samples;
     if (_outputVolume != 1.0) {
       processedSamples = Int16List(samples.length);
@@ -105,16 +144,32 @@ class AudioPlaybackService {
     }
 
     if (Platform.isAndroid || Platform.isIOS) {
+      // Mobile currently uses a shared stream - samples from multiple users will interleave
+      // TODO: Implement Dart-side mixing for mobile
       pcm_sound.FlutterPcmSound.feed(pcm_sound.PcmArrayInt16.fromList(processedSamples));
     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      if (_soloudSource != null) {
-        // flutter_soloud addAudioDataStream expects Uint8List (raw bytes)
+      final source = _getOrCreateSource(sessionId);
+      if (source != null) {
         final bytes = processedSamples.buffer.asUint8List();
-        SoLoud.instance.addAudioDataStream(_soloudSource!, bytes);
+        SoLoud.instance.addAudioDataStream(source, bytes);
         
-        if (!_soloudPlaying) {
-          start();
+        if (!(_soloudPlaying[sessionId] ?? false)) {
+          startSession(sessionId);
         }
+      }
+    }
+  }
+
+  void stopSession(int sessionId) {
+    if (!_initialized) return;
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      final source = _soloudSources[sessionId];
+      if (source != null) {
+        // We don't necessarily want to dispose the source immediately 
+        // to avoid high-frequency setup/teardown. 
+        // But we should signal that the stream data is paused/ended for now.
+        // setDataIsEnded tells SoLoud that the current stream buffer is complete.
+        // SoLoud.instance.setDataIsEnded(source);
       }
     }
   }
@@ -124,13 +179,12 @@ class AudioPlaybackService {
     if (Platform.isAndroid || Platform.isIOS) {
       await pcm_sound.FlutterPcmSound.release();
     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      if (_soloudSource != null) {
-        SoLoud.instance.setDataIsEnded(_soloudSource!);
+      for (final source in _soloudSources.values) {
+        SoLoud.instance.setDataIsEnded(source);
       }
-      // deinit/shutdown is void in 3.x
       SoLoud.instance.deinit();
-      _soloudPlaying = false;
-      _soloudSource = null;
+      _soloudPlaying.clear();
+      _soloudSources.clear();
     }
     _initialized = false;
   }
@@ -150,3 +204,4 @@ class AudioPlaybackService {
     return [];
   }
 }
+

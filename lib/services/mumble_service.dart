@@ -36,10 +36,7 @@ class MumbleService extends ChangeNotifier
   final Map<int, MumbleOpusDecoder> _decoders = {};
   bool _audioPlayerInitialized = false;
 
-  // Jitter Buffer / Playback Buffering
-  final Map<int, List<int>> _userBuffers = {};
-  final Map<int, bool> _userPlaying = {};
-  static const int _bufferThreshold = 960 * 5; // 100ms jitter buffer
+  // (Jitter buffer fields moved down near onAudioReceived for clarity)
 
   // Volume monitoring
   double _currentVolume = 0.0;
@@ -507,7 +504,13 @@ class MumbleService extends ChangeNotifier
     _userPlaying.clear();
     notifyListeners();
   }
+  // Jitter Buffer / Playback Buffering
+  final Map<int, List<int>> _userBuffers = {};
+  final Map<int, bool> _userPlaying = {};
+  // Lowered threshold to 60ms (3 * 20ms frames) for better responsiveness
+  static const int _bufferThreshold = 960 * 3; 
 
+  // Volume monitoring
   @override
   void onAudioReceived(
     Stream<AudioFrame> voiceData,
@@ -530,43 +533,68 @@ class MumbleService extends ChangeNotifier
         (AudioFrame frame) {
           final frameData = frame.frame;
           // Decode Opus frame to PCM samples (Int16List)
+          // Mumble frames are typically 20ms (960 samples)
           final pcm = decoder.decode(frameData, 5760);
 
           if (pcm.isNotEmpty) {
             buffer.addAll(pcm);
 
+            // Jitter Buffer Logic:
+            // Wait until we have enough data to start smooth playback.
             if (!_userPlaying.containsKey(sessionId) ||
                 _userPlaying[sessionId] == false) {
               if (buffer.length >= _bufferThreshold) {
                 _userPlaying[sessionId] = true;
                 if (_audioPlayerInitialized) {
-                  AudioPlaybackService().start();
+                  AudioPlaybackService().startSession(sessionId);
                 }
               }
             }
 
+            // If we are in playing state, or buffer is getting dangerously large, feed the player.
             if (_userPlaying[sessionId] == true || buffer.length > 5000) {
-              while (buffer.length >= 960) {
-                final chunk = buffer.sublist(0, 960);
-                buffer.removeRange(0, 960);
-                if (_audioPlayerInitialized) {
-                  AudioPlaybackService().feed(Int16List.fromList(chunk));
-                }
-              }
+              _drainUserBuffer(sessionId, buffer);
             }
           }
         },
         onDone: () {
           _talkingUsers[sessionId] = false;
           _userPlaying[sessionId] = false;
+          
+          // Drain what's left in the buffer so we don't have "tail" audio 
+          // playing at the start of the next talk burst.
+          _drainUserBuffer(sessionId, buffer);
+          
+          AudioPlaybackService().stopSession(sessionId);
           notifyListeners();
         },
         onError: (_) {
           _talkingUsers[sessionId] = false;
           _userPlaying[sessionId] = false;
+          AudioPlaybackService().stopSession(sessionId);
           notifyListeners();
         },
       );
+    }
+  }
+
+  /// Helper to feed the audio playback service in standard chunks.
+  void _drainUserBuffer(int sessionId, List<int> buffer) {
+    if (!_audioPlayerInitialized) return;
+    
+    // Process everything we have in 20ms chunks (960 samples)
+    while (buffer.length >= 960) {
+      final chunk = buffer.sublist(0, 960);
+      buffer.removeRange(0, 960);
+      AudioPlaybackService().feed(sessionId, Int16List.fromList(chunk));
+    }
+    
+    // If we're catching up or ending, we might have a small remainder.
+    // For Mumble, we can usually just wait for more or discard.
+    // But if it's the end of a burst, we should probably send it too if it's large enough.
+    if (buffer.isNotEmpty && !_talkingUsers[sessionId]!) {
+       AudioPlaybackService().feed(sessionId, Int16List.fromList(buffer));
+       buffer.clear();
     }
   }
 
@@ -599,6 +627,7 @@ class MumbleService extends ChangeNotifier
     _decoders.remove(user.session)?.dispose();
     _userBuffers.remove(user.session);
     _userPlaying.remove(user.session);
+    AudioPlaybackService().stopSession(user.session);
     _updateChannelsInternal();
   }
 
