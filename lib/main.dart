@@ -474,9 +474,41 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = ShadTheme.of(context);
     final isMuted = service.isMuted;
     final isDeafened = service.isDeafened;
-    
+    final volume = service.currentVolume;
+
     return Row(
       children: [
+        // Mic signal indicator (circle that grows with volume)
+        Container(
+          width: 8,
+          height: 8,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: kBrandGreen.withValues(alpha: 0.1),
+          ),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 50),
+              width: 2 + (8 * volume).clamp(0, 8),
+              height: 2 + (8 * volume).clamp(0, 8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: (isMuted || isDeafened) 
+                    ? theme.colorScheme.mutedForeground.withValues(alpha: 0.3)
+                    : kBrandGreen.withValues(alpha: (0.4 + (volume * 0.6)).clamp(0, 1.0)),
+                boxShadow: [
+                  if (!isMuted && !isDeafened && volume > 0.1)
+                    BoxShadow(
+                      color: kBrandGreen.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
         ShadIconButton.ghost(
           icon: Icon(isMuted ? LucideIcons.micOff : LucideIcons.mic, 
             color: isMuted ? theme.colorScheme.destructive : theme.colorScheme.primary),
@@ -509,7 +541,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onPointerCancel: (_) => service.stopPushToTalk(),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        width: 180, // Fixed width to prevent resizing
+        height: 48, // Fixed height to prevent resizing
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: isSuppressed
               ? LinearGradient(colors: [theme.colorScheme.destructive.withValues(alpha: 0.1), theme.colorScheme.destructive.withValues(alpha: 0.2)])
