@@ -63,7 +63,10 @@ class GeneralTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Reconnect to last server on startup'),
+              const Expanded(
+                child: Text('Reconnect to last server on startup'),
+              ),
+              const SizedBox(width: 8),
               ShadSwitch(
                 value: settings.reconnectToLastServer,
                 onChanged: (val) {
@@ -126,38 +129,36 @@ class GeneralTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          const Text(
-                            'Suppress original key function',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                      const Flexible(
+                        child: Text(
+                          'Suppress original key function',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ShadTooltip(
+                        builder: (context) => Text(
+                          'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
+                          style: TextStyle(
+                            color: ShadTheme.of(context)
+                                .colorScheme
+                                .mutedForeground,
                           ),
-                          const SizedBox(width: 8),
-                          ShadTooltip(
-                            builder: (context) => Text(
-                              'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
-                              style: TextStyle(
-                                color: ShadTheme.of(context)
-                                    .colorScheme
-                                    .mutedForeground,
-                              ),
-                            ),
-                            child: Icon(
-                              LucideIcons.info,
-                              size: 14,
-                              color: ShadTheme.of(context)
-                                  .colorScheme
-                                  .mutedForeground,
-                            ),
-                          ),
-                        ],
+                        ),
+                        child: Icon(
+                          LucideIcons.info,
+                          size: 14,
+                          color: ShadTheme.of(context)
+                              .colorScheme
+                              .mutedForeground,
+                        ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 ShadSwitch(
                   value: settings.pttSuppress,
                   onChanged: (val) {
