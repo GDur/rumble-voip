@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dumble/dumble.dart' as dumble;
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:provider/provider.dart';
+import 'package:rumble/services/mumble_service.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<dumble.Channel> channels;
@@ -94,6 +96,44 @@ class _ChannelTreeState extends State<ChannelTree> {
       _selectedUserSession = user.session;
       _selectedChannelId = null;
     });
+  }
+
+  void _showSetNoticeDialog(BuildContext context, dumble.Self self) {
+    final controller = TextEditingController(text: self.comment ?? '');
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Set Your Notice'),
+        description: const Text('This will be visible to other users on the server.'),
+        actions: [
+          ShadButton.outline(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ShadButton(
+            child: const Text('Save Notice'),
+            onPressed: () {
+              self.setComment(comment: controller.text);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: SingleChildScrollView(
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: ShadInput(
+                controller: controller,
+                placeholder: const Text('Enter your notice here...'),
+                maxLines: 3,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -420,6 +460,15 @@ class _ChannelTreeState extends State<ChannelTree> {
                               ),
                             ),
                           ],
+                          if (channel.description != null &&
+                              channel.description!.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            NoticeButton(
+                              title: 'Channel Description',
+                              notice: channel.description!,
+                              icon: LucideIcons.info,
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -469,21 +518,38 @@ class _ChannelTreeState extends State<ChannelTree> {
     final bool isMe = widget.self?.session == u.session;
     final bool isSelected = _selectedUserSession == u.session;
     final bool isHovered = _hoveredUserSession == u.session;
+    final bool isMuted = u.mute ?? false;
+    final bool isDeaf = u.deaf ?? false;
+    final bool isSuppressed = u.suppress ?? false;
+
     Color statusColor;
     if (isTalking) {
       statusColor = Colors.blueAccent;
     } else {
-      final bool hasMic = isMe
-          ? widget.hasMicPermission
-          : !(u.suppress ?? false);
-      statusColor = hasMic ? Colors.greenAccent : Colors.grey;
+      if (isDeaf) {
+        statusColor = Colors.redAccent.withValues(alpha: 0.6);
+      } else if (isMuted || isSuppressed) {
+        statusColor = Colors.grey;
+      } else {
+        final bool hasMic = isMe ? widget.hasMicPermission : true;
+        statusColor = hasMic ? Colors.greenAccent : Colors.grey;
+      }
     }
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hoveredUserSession = u.session),
-      onExit: (_) => setState(() => _hoveredUserSession = null),
-      child: GestureDetector(
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    final stats = mumbleService.userStats[u.session];
+
+    // Auto-request stats if hovering or selected to get certificate/note info
+    if (isHovered || isSelected) {
+      if (stats == null) {
+        mumbleService.requestUserStats(u);
+      }
+    }
+
+    final String? comment = u.comment;
+    final bool hasCert = stats?.strongCertificate == true;
+
+    Widget content = GestureDetector(
         onTapDown: (_) => _selectUser(u),
         onTap: () {}, // Handled by onTapDown for instant feel
         child: Container(
@@ -519,7 +585,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                 height: 10,
                 decoration: BoxDecoration(
                   color: statusColor,
-                  shape: BoxShape.circle,
+                shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
                       color: statusColor.withValues(alpha: 0.4),
@@ -545,15 +611,199 @@ class _ChannelTreeState extends State<ChannelTree> {
                   ),
                 ),
               ),
-              if (u.suppress == true) ...[
+              if (isMuted || isSuppressed) ...[
                 const SizedBox(width: 8),
-                Icon(
-                  LucideIcons.micOff,
-                  size: 14,
-                  color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                ShadButton.ghost(
+                  padding: EdgeInsets.zero,
+                  width: 20,
+                  height: 20,
+                  onPressed: () {}, // Handled by ShadPopover internal trigger
+                  child: ShadPopover(
+                    controller: ShadPopoverController(),
+                    popover: (context) => Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        isMuted && isSuppressed 
+                            ? 'Muted & Suppressed' 
+                            : isMuted ? 'Muted' : 'Suppressed by Server',
+                        style: theme.textTheme.small,
+                      ),
+                    ),
+                    child: Icon(
+                      isMuted ? LucideIcons.micOff : LucideIcons.micOff,
+                      size: 14,
+                      color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+              if (isDeaf) ...[
+                const SizedBox(width: 4),
+                ShadButton.ghost(
+                  padding: EdgeInsets.zero,
+                  width: 20,
+                  height: 20,
+                  onPressed: () {},
+                  child: ShadPopover(
+                    controller: ShadPopoverController(),
+                    popover: (context) => Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Text('Deafened', style: theme.textTheme.small),
+                    ),
+                    child: Icon(
+                      LucideIcons.headphoneOff,
+                      size: 14,
+                      color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+              if (comment != null && comment.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                NoticeButton(
+                  title: 'User Notice',
+                  notice: comment,
+                  icon: LucideIcons.fileText,
+                ),
+              ],
+              if (hasCert) ...[
+                const SizedBox(width: 6),
+                ShadButton.ghost(
+                  padding: EdgeInsets.zero,
+                  width: 20,
+                  height: 20,
+                  onPressed: () {},
+                  child: ShadPopover(
+                    controller: ShadPopoverController(),
+                    popover: (context) => Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Text('Authenticated with Certificate', style: theme.textTheme.small),
+                    ),
+                    child: Icon(
+                      LucideIcons.shieldCheck,
+                      size: 14,
+                      color: Colors.blueAccent.withValues(alpha: 0.8),
+                    ),
+                  ),
                 ),
               ],
             ],
+          ),
+        ),
+      );
+
+    if (isMe && widget.self != null) {
+      content = ShadContextMenuRegion(
+        longPressEnabled: true,
+        items: [
+          ShadContextMenuItem(
+            onPressed: () => _showSetNoticeDialog(context, widget.self!),
+            leading: const Icon(LucideIcons.filePenLine, size: 16),
+            child: const Text('Set Self Notice'),
+          ),
+          const Divider(height: 1),
+          ShadContextMenuItem(
+            onPressed: () => mumbleService.toggleMute(),
+            leading: Icon(mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff, size: 16),
+            child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
+          ),
+          ShadContextMenuItem(
+            onPressed: () => mumbleService.toggleDeafen(),
+            leading: Icon(mumbleService.isDeafened ? LucideIcons.headphones : LucideIcons.headphoneOff, size: 16),
+            child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
+          ),
+        ],
+        child: content,
+      );
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hoveredUserSession = u.session),
+      onExit: (_) => setState(() => _hoveredUserSession = null),
+      child: content,
+    );
+  }
+}
+
+class NoticeButton extends StatefulWidget {
+  final String title;
+  final String notice;
+  final IconData icon;
+
+  const NoticeButton({
+    super.key,
+    required this.title,
+    required this.notice,
+    required this.icon,
+  });
+
+  @override
+  State<NoticeButton> createState() => _NoticeButtonState();
+}
+
+class _NoticeButtonState extends State<NoticeButton> {
+  final controller = ShadPopoverController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+
+    // Filter out simple HTML formatting for better display in plain text
+    // In a real app we might use a proper HTML renderer
+    final displayNotice = widget.notice
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .trim();
+
+    if (displayNotice.isEmpty) return const SizedBox.shrink();
+
+    return MouseRegion(
+      onEnter: (_) => controller.show(),
+      onExit: (_) => controller.hide(),
+      child: ShadPopover(
+        controller: controller,
+        popover: (context) => Container(
+          padding: const EdgeInsets.all(12),
+          constraints: const BoxConstraints(maxWidth: 320, maxHeight: 400),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.title,
+                  style: theme.textTheme.small.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  displayNotice,
+                  style: theme.textTheme.p.copyWith(
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        child: ShadButton.ghost(
+          padding: EdgeInsets.zero,
+          width: 24,
+          height: 24,
+          onPressed: () => controller.toggle(),
+          child: Icon(
+            widget.icon,
+            size: 14,
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
           ),
         ),
       ),
