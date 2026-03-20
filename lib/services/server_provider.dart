@@ -19,10 +19,10 @@ class ServerProvider extends ChangeNotifier {
   }
 
   void _startPeriodicPings() {
-     _pingTimer?.cancel();
-     _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-       refreshAllPings();
-     });
+    _pingTimer?.cancel();
+    _pingTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
+      refreshAllPings();
+    });
   }
 
   @override

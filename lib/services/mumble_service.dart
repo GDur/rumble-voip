@@ -57,12 +57,37 @@ class MumbleService extends ChangeNotifier
   double get currentVolume => _currentVolume;
   Map<int, bool> get talkingUsers => _talkingUsers;
   bool get isSuppressed => _client?.self.suppress ?? false;
+  bool get isMuted => _client?.self.selfMute ?? false;
+  bool get isDeafened => _client?.self.selfDeaf ?? false;
+  List<User> get users => _client?.getUsers().values.toList() ?? [];
+  Self? get self => _client?.self;
   bool get hasMicPermission => _hasMicPermission;
   List<dynamic> get inputDevices => _inputDevices;
   List<dynamic> get outputDevices => _outputDevices;
 
   MumbleService() {
     _recorder = AudioRecorder();
+  }
+
+  void toggleMute() {
+    if (_client != null) {
+      _client!.self.setSelfMute(mute: !(_client!.self.selfMute ?? false));
+      notifyListeners();
+    }
+  }
+
+  void toggleDeafen() {
+    if (_client != null) {
+      _client!.self.setSelfDeaf(deaf: !(_client!.self.selfDeaf ?? false));
+      notifyListeners();
+    }
+  }
+
+  Future<void> joinChannel(Channel channel) async {
+    if (_client != null) {
+      _client!.self.moveToChannel(channel: channel);
+      notifyListeners();
+    }
   }
 
   // Called from main.dart after settings are ready
