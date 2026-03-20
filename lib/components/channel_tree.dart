@@ -154,7 +154,7 @@ class _ChannelTreeState extends State<ChannelTree> {
         LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
       },
       child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         physics: const BouncingScrollPhysics(),
         children: uniqueRoots
             .map((c) => _buildChannelItem(context, c, 0))
@@ -339,7 +339,7 @@ class _ChannelTreeState extends State<ChannelTree> {
             onDoubleTap: () => _onEnterChannel(channel),
             onLongPress: () => _onEnterChannel(channel),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
               decoration: BoxDecoration(
                 color: isSelected
                     ? theme.colorScheme.primary.withValues(alpha: 0.15)
@@ -361,10 +361,10 @@ class _ChannelTreeState extends State<ChannelTree> {
               ),
               child: Padding(
                 padding: EdgeInsets.only(
-                  left: 12.0 + (depth * 20.0),
+                  left: 12.0 + (depth * 16.0),
                   right: 12.0,
-                  top: 10.0,
-                  bottom: 10.0,
+                  top: 6.0,
+                  bottom: 6.0,
                 ),
                 child: Row(
                   children: [
@@ -488,12 +488,12 @@ class _ChannelTreeState extends State<ChannelTree> {
         onTap: () {}, // Handled by onTapDown for instant feel
         child: Container(
           margin: EdgeInsets.only(
-            left: 48.0 + 12.0 + (depth * 20.0),
+            left: 48.0 + 8.0 + (depth * 16.0),
             right: 16,
-            top: 2,
-            bottom: 2,
+            top: 1,
+            bottom: 1,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: isSelected
                 ? theme.colorScheme.primary.withValues(alpha: 0.15)

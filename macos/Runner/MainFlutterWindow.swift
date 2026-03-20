@@ -15,7 +15,9 @@ class MainFlutterWindow: NSWindow {
     channel.setMethodCallHandler { (call, result) in
       if call.method == "checkAccessibility" {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
-        result(AXIsProcessTrustedWithOptions(options))
+        let isTrusted = AXIsProcessTrustedWithOptions(options)
+        print("native: checkAccessibility returning \(isTrusted)")
+        result(isTrusted)
       } else if call.method == "openAccessibility" {
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
         NSWorkspace.shared.open(url)

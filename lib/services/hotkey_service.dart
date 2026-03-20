@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
+import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
 
@@ -13,6 +14,10 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   final ValueNotifier<bool> hasAccessibilityPermission = ValueNotifier<bool>(true);
   final ValueNotifier<String?> appPath = ValueNotifier<String?>(null);
   HotKey? _currentHotKey;
+  
+  static HotkeyService of(BuildContext context, {bool listen = false}) {
+    return Provider.of<HotkeyService>(context, listen: listen);
+  }
 
   HotkeyService(this._mumbleService, this._settingsService) {
     _init();

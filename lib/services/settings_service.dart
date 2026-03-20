@@ -25,6 +25,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kOutputDeviceId = 'output_device_id';
   static const String _kInputGain = 'input_gain';
   static const String _kOutputVolume = 'output_volume';
+  static const String _kIgnoreAccessibility = 'ignore_accessibility';
 
   final SharedPreferences _prefs;
 
@@ -38,6 +39,7 @@ class SettingsService extends ChangeNotifier {
   String? _outputDeviceId;
   double _inputGain;
   double _outputVolume;
+  bool _ignoreAccessibility;
 
   SettingsService(this._prefs)
       : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -48,7 +50,8 @@ class SettingsService extends ChangeNotifier {
         _inputDeviceId = _prefs.getString(_kInputDeviceId),
         _outputDeviceId = _prefs.getString(_kOutputDeviceId),
         _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
-        _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0 {
+        _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
+        _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false {
     final String? customJson = _prefs.getString(_kCustomHotkey);
     if (customJson != null) {
       try {
@@ -67,6 +70,7 @@ class SettingsService extends ChangeNotifier {
   String? get outputDeviceId => _outputDeviceId;
   double get inputGain => _inputGain;
   double get outputVolume => _outputVolume;
+  bool get ignoreAccessibility => _ignoreAccessibility;
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
   double? get windowHeight => _prefs.getDouble(_kWindowHeight);
@@ -162,6 +166,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setOutputVolume(double volume) async {
     _outputVolume = volume;
     await _prefs.setDouble(_kOutputVolume, volume);
+    notifyListeners();
+  }
+
+  Future<void> setIgnoreAccessibility(bool value) async {
+    _ignoreAccessibility = value;
+    await _prefs.setBool(_kIgnoreAccessibility, value);
     notifyListeners();
   }
 }

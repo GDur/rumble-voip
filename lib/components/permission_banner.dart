@@ -24,6 +24,10 @@ class _PermissionBannerState extends State<PermissionBanner> {
       return const SizedBox.shrink();
     }
 
+    if (settings.ignoreAccessibility) {
+      return const SizedBox.shrink();
+    }
+
     if (_showSuccessBanner) {
       return Container(
         width: double.infinity,
@@ -71,7 +75,22 @@ class _PermissionBannerState extends State<PermissionBanner> {
                 color: ShadTheme.of(context).colorScheme.destructive,
                 size: 20,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
+              ShadIconButton.ghost(
+                width: 32,
+                height: 32,
+                padding: EdgeInsets.zero,
+                icon: const Icon(LucideIcons.x, size: 16),
+                onPressed: () {
+                  settings.setIgnoreAccessibility(true);
+                  ShadToaster.of(context).show(
+                    const ShadToast(
+                      title: Text('Banner hidden'),
+                      description: Text('You can re-enable this check in General Settings.'),
+                    ),
+                  );
+                },
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,6 +145,21 @@ class _PermissionBannerState extends State<PermissionBanner> {
                       ),
                     );
                   }
+                },
+              ),
+              ShadIconButton.ghost(
+                width: 32,
+                height: 32,
+                padding: EdgeInsets.zero,
+                icon: const Icon(LucideIcons.x, size: 16),
+                onPressed: () {
+                  settings.setIgnoreAccessibility(true);
+                  ShadToaster.of(context).show(
+                    const ShadToast(
+                      title: Text('Banner hidden'),
+                      description: Text('You can re-enable this check in General Settings.'),
+                    ),
+                  );
                 },
               ),
             ],
