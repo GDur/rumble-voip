@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dumble/dumble.dart' as dumble;
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<dumble.Channel> channels;
@@ -760,54 +764,111 @@ class NoticeButton extends StatefulWidget {
 
 class _NoticeButtonState extends State<NoticeButton> {
   final controller = ShadPopoverController();
+  Timer? _hideTimer;
 
   @override
   void dispose() {
+    _hideTimer?.cancel();
     controller.dispose();
     super.dispose();
+  }
+
+  void _showPopover() {
+    _hideTimer?.cancel();
+    if (!controller.isOpen) controller.show();
+  }
+
+  void _hidePopover() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) controller.hide();
+    });
+  }
+
+  void _showImageModal(String imageUrl) {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Image Preview'),
+        description: const Text('Click outside to close'),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: InteractiveViewer(
+              child: imageUrl.startsWith('data:image')
+                  ? Image.memory(
+                      base64Decode(imageUrl.split(',').last),
+                      fit: BoxFit.contain,
+                    )
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
 
-    // Filter out simple HTML formatting for better display in plain text
-    // In a real app we might use a proper HTML renderer
-    final displayNotice = widget.notice
-        .replaceAll(RegExp(r'<[^>]*>'), '')
-        .trim();
-
-    if (displayNotice.isEmpty) return const SizedBox.shrink();
+    if (widget.notice.trim().isEmpty) return const SizedBox.shrink();
 
     return MouseRegion(
-      onEnter: (_) => controller.show(),
-      onExit: (_) => controller.hide(),
+      onEnter: (_) => _showPopover(),
+      onExit: (_) => _hidePopover(),
       child: ShadPopover(
         controller: controller,
-        popover: (context) => Container(
-          padding: const EdgeInsets.all(12),
-          constraints: const BoxConstraints(maxWidth: 320, maxHeight: 400),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.title,
-                  style: theme.textTheme.small.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
+        popover: (context) => MouseRegion(
+          onEnter: (_) => _showPopover(), // Stay open if mouse enters popover
+          onExit: (_) => _hidePopover(),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(maxWidth: 380, maxHeight: 500),
+            child: SingleChildScrollView(
+              child: SelectionArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: theme.textTheme.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    HtmlWidget(
+                      widget.notice,
+                      textStyle: theme.textTheme.p.copyWith(
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                      onTapUrl: (url) async {
+                        final uri = Uri.tryParse(url);
+                        if (uri != null && await canLaunchUrl(uri)) {
+                          await launchUrl(uri);
+                        }
+                        return true;
+                      },
+                      onTapImage: (imageData) {
+                        final sources = imageData.sources;
+                        if (sources.isNotEmpty) {
+                          _showImageModal(sources.first.url);
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  displayNotice,
-                  style: theme.textTheme.p.copyWith(
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
