@@ -222,6 +222,7 @@ class _ChatViewState extends State<ChatView> {
                   child: ShadInput(
                     controller: _controller,
                     focusNode: _focusNode,
+                    autofocus: true,
                     placeholder: const Text('Type a message...'),
                     onSubmitted: (_) => _sendMessage(),
                   ),

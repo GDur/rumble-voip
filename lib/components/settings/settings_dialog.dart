@@ -82,6 +82,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     return ShadDialog(
       padding: EdgeInsets.zero,
       radius: const BorderRadius.all(Radius.circular(16)),
+      closeIconPosition: const ShadPosition(top: 12, right: 12),
       constraints: isMobile
           ? null
           : BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),

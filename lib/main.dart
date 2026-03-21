@@ -324,6 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
             topLeft: Radius.circular(16),
             bottomLeft: Radius.circular(16),
           ),
+          closeIconPosition: const ShadPosition(top: 12, right: 12),
           title: Padding(
             padding: const EdgeInsets.only(left: 16, top: 16),
             child: const Text('Chat'),
@@ -488,16 +489,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(MumbleService mumbleService) {
     final theme = ShadTheme.of(context);
-    final isSlimDesktop =
-        mumbleService.isConnected &&
-        !kIsWeb &&
+    final isDesktop = !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.linux ||
-            defaultTargetPlatform == TargetPlatform.macOS) &&
-        MediaQuery.of(context).size.width < 900;
+            defaultTargetPlatform == TargetPlatform.macOS);
+    final isWide = MediaQuery.of(context).size.width >= 900;
+    final showChatToggle = mumbleService.isConnected && !(isDesktop && isWide);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.only(left: 20, right: 8, top: 16, bottom: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.background,
         border: Border(
@@ -531,7 +531,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
-          if (isSlimDesktop)
+          if (showChatToggle)
             ShadIconButton.ghost(
               icon: const Icon(LucideIcons.messageSquare, size: 20),
               onPressed: () => _showChatSheet(context, mumbleService),
@@ -549,6 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(LucideIcons.settings, size: 20),
             onPressed: () => _showSettingsDialog(context),
           ),
+          const SizedBox(width: 8),
         ],
       ),
     );
@@ -792,13 +793,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = Provider.of<SettingsService>(context);
 
     String label = 'HOLD TO TALK';
-    if (isSuppressed)
+    if (isSuppressed) {
       label = 'SUPPRESSED';
-    else if (isMuted)
+    } else if (isMuted) {
       label = 'MUTED';
-    else if (isTalking)
+    } else if (isTalking) {
       label = 'TALKING...';
-    else if (settings.pttKey != PttKey.none) {
+    } else if (settings.pttKey != PttKey.none) {
       label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
     }
 

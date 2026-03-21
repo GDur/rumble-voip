@@ -37,7 +37,16 @@ class _AddServerDialogState extends State<AddServerDialog> {
       text: server?.username ?? 'Rumble - Mumble Reloaded',
     );
     _passwordController = TextEditingController(text: server?.password ?? '');
-    if (server != null) _isAutoName = false;
+    if (server != null) {
+      _isAutoName = false;
+      // selection for host field if editing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _hostController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _hostController.text.length,
+        );
+      });
+    }
   }
 
   @override
@@ -55,6 +64,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
     final isMobile = MediaQuery.of(context).size.width < 600;
     return ShadDialog(
       radius: const BorderRadius.all(Radius.circular(16)),
+      closeIconPosition: const ShadPosition(top: 12, right: 12),
       title: Text(widget.server == null ? 'Add New Server' : 'Edit Server'),
       actions: [
         ShadButton.outline(
@@ -113,6 +123,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                   ),
                   placeholder: const Text('mumble.example.com'),
                   controller: _hostController,
+                  autofocus: true,
                   onChanged: (val) {
                     if (_isAutoName) {
                       setState(() => _nameController.text = val);

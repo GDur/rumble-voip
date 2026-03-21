@@ -55,3 +55,17 @@ Mobile lists act as "drill-down" menus and require navigation cues.
 *   **Responsive Widths**:
     - Desktop Max: `1200px`.
     - Desktop Min: `700px`.
+
+## 5. Input Field Handling
+To streamline user interaction, especially on desktop:
+*   **Autofocus**: Any modal or sidebar that contains a primary input field (e.g., Add Server, Chat, Edit Notice) MUST have `autofocus: true` set on that field.
+*   **Auto-selection**: If an input field is opened with existing text (e.g., editing a server or changing a nickname), the entire text should be automatically selected so the user can immediately overwrite or delete it.
+*   **Implementation**:
+    ```dart
+    onInit: () {
+      _controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _controller.text.length,
+      );
+    }
+    ```
