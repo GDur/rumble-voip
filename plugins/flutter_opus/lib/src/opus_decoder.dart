@@ -7,18 +7,20 @@ import 'constants/opus_constants.dart';
 /// -------------------- Native FFI Type Definitions --------------------
 
 /// Native function signature for creating an Opus decoder.
-typedef OpusDecoderCreateNative = Pointer Function(Int32 sampleRate, Int32 channels, Pointer<Int32> error);
+typedef OpusDecoderCreateNative = Pointer Function(
+    Int32 sampleRate, Int32 channels, Pointer<Int32> error);
 
 /// Dart function signature for creating an Opus decoder.
-typedef OpusDecoderCreate = Pointer Function(int sampleRate, int channels, Pointer<Int32> error);
+typedef OpusDecoderCreate = Pointer Function(
+    int sampleRate, int channels, Pointer<Int32> error);
 
 /// Native function signature for decoding Opus packets.
-typedef OpusDecodeNative = Int32 Function(
-    Pointer decoder, Pointer<Uint8> data, Int32 len, Pointer<Int16> pcm, Int32 frameSize, Int32 decodeFec);
+typedef OpusDecodeNative = Int32 Function(Pointer decoder, Pointer<Uint8> data,
+    Int32 len, Pointer<Int16> pcm, Int32 frameSize, Int32 decodeFec);
 
 /// Dart function signature for decoding Opus packets.
-typedef OpusDecode = int Function(
-    Pointer decoder, Pointer<Uint8> data, int len, Pointer<Int16> pcm, int frameSize, int decodeFec);
+typedef OpusDecode = int Function(Pointer decoder, Pointer<Uint8> data, int len,
+    Pointer<Int16> pcm, int frameSize, int decodeFec);
 
 /// Native function signature for destroying an Opus decoder.
 typedef OpusDecoderDestroyNative = Void Function(Pointer decoder);
@@ -41,16 +43,21 @@ class OpusDecoder {
   /// The dynamically loaded native libopus library.
   static final DynamicLibrary _lib = _loadOpusLibrary();
 
-  static final OpusDecoderCreate _opusDecoderCreate =
-      _lib.lookup<NativeFunction<OpusDecoderCreateNative>>('opus_decoder_create').asFunction();
+  static final OpusDecoderCreate _opusDecoderCreate = _lib
+      .lookup<NativeFunction<OpusDecoderCreateNative>>('opus_decoder_create')
+      .asFunction();
 
-  static final OpusDecode _opusDecode = _lib.lookup<NativeFunction<OpusDecodeNative>>('opus_decode').asFunction();
+  static final OpusDecode _opusDecode =
+      _lib.lookup<NativeFunction<OpusDecodeNative>>('opus_decode').asFunction();
 
-  static final OpusDecoderDestroy _opusDecoderDestroy =
-      _lib.lookup<NativeFunction<OpusDecoderDestroyNative>>('opus_decoder_destroy').asFunction();
+  static final OpusDecoderDestroy _opusDecoderDestroy = _lib
+      .lookup<NativeFunction<OpusDecoderDestroyNative>>('opus_decoder_destroy')
+      .asFunction();
 
-  static final OpusGetVersionString _opusGetVersionString =
-      _lib.lookup<NativeFunction<OpusGetVersionStringNative>>('opus_get_version_string').asFunction();
+  static final OpusGetVersionString _opusGetVersionString = _lib
+      .lookup<NativeFunction<OpusGetVersionStringNative>>(
+          'opus_get_version_string')
+      .asFunction();
 
   /// Pointer to the native decoder instance.
   Pointer? _decoder;

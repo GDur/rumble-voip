@@ -34,9 +34,10 @@ class AudioTab extends StatelessWidget {
             builder: (context, _) {
               final devices = mumbleService.inputDevices;
               final inputDeviceId = settings.inputDeviceId;
-              final hasCurrent = inputDeviceId == null || 
-                               devices.any((d) => d.id.toString() == inputDeviceId);
-              
+              final hasCurrent =
+                  inputDeviceId == null ||
+                  devices.any((d) => d.id.toString() == inputDeviceId);
+
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
                 initialValue: inputDeviceId,

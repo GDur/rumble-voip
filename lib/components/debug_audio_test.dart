@@ -24,9 +24,9 @@ class _DebugAudioTestState extends State<DebugAudioTest> {
 
     const int sampleRate = 48000;
     // 440Hz (A4)
-    const double frequency = 440.0; 
+    const double frequency = 440.0;
     // 300ms
-    const int durationMs = 300; 
+    const int durationMs = 300;
     const int numSamples = (sampleRate * durationMs ~/ 1000);
     final Int16List samples = Int16List(numSamples);
 
@@ -34,13 +34,13 @@ class _DebugAudioTestState extends State<DebugAudioTest> {
       double t = i / sampleRate;
       // Simple sine wave
       double value = math.sin(2 * math.pi * frequency * t);
-      
+
       // Add a slight fade in/out to avoid clicks
       double fade = 1.0;
       if (i < 500) fade = i / 500;
       if (i > numSamples - 500) fade = (numSamples - i) / 500;
-      
-      samples[i] = (value * 15000 * fade).toInt(); 
+
+      samples[i] = (value * 15000 * fade).toInt();
     }
 
     _handleAudioOutput(samples, durationMs);
@@ -52,25 +52,25 @@ class _DebugAudioTestState extends State<DebugAudioTest> {
 
     const int sampleRate = 48000;
     // 1.2 seconds of "talking"
-    const int totalDurationMs = 1200; 
+    const int totalDurationMs = 1200;
     const int numSamples = (sampleRate * totalDurationMs ~/ 1000);
     final Int16List samples = Int16List(numSamples);
 
     final random = math.Random();
-    
+
     for (int i = 0; i < numSamples; i++) {
       double t = i / sampleRate;
-      double baseFreq = 150 + (math.sin(t * 10) * 50); 
+      double baseFreq = 150 + (math.sin(t * 10) * 50);
       double signal = 0;
       signal += math.sin(2 * math.pi * baseFreq * t);
       signal += 0.5 * math.sin(2 * math.pi * baseFreq * 2 * t);
       signal += 0.25 * math.sin(2 * math.pi * baseFreq * 3 * t);
       signal += (random.nextDouble() - 0.5) * 0.15;
       double envelope = 0.5 + 0.5 * math.sin(t * 25);
-      if (envelope < 0.2) envelope = 0; 
+      if (envelope < 0.2) envelope = 0;
       if (i < 1000) signal *= (i / 1000);
       if (i > numSamples - 1000) signal *= (numSamples - i) / 1000;
-      samples[i] = (signal * 8000 * envelope).toInt(); 
+      samples[i] = (signal * 8000 * envelope).toInt();
     }
 
     _handleAudioOutput(samples, totalDurationMs);

@@ -18,7 +18,10 @@ class MumblePingResponse {
 class MumblePingService {
   static Future<MumblePingResponse> ping(String host, int port) async {
     final Completer<MumblePingResponse> completer = Completer();
-    final RawDatagramSocket socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+    final RawDatagramSocket socket = await RawDatagramSocket.bind(
+      InternetAddress.anyIPv4,
+      0,
+    );
 
     final int timestamp = DateTime.now().millisecondsSinceEpoch;
     final ByteData packet = ByteData(12);
@@ -27,7 +30,9 @@ class MumblePingService {
 
     InternetAddress? address;
     try {
-      final List<InternetAddress> addresses = await InternetAddress.lookup(host);
+      final List<InternetAddress> addresses = await InternetAddress.lookup(
+        host,
+      );
       if (addresses.isEmpty) throw Exception('Could not resolve host');
       address = addresses.first;
     } catch (e) {
@@ -45,37 +50,43 @@ class MumblePingService {
       }
     });
 
-    socket.listen((RawSocketEvent event) {
-      if (event == RawSocketEvent.read) {
-        final Datagram? dg = socket.receive();
-        if (dg != null && dg.data.length >= 24) {
-          final ByteData response = ByteData.sublistView(dg.data);
-          final int receivedTimestamp = response.getUint64(4);
-          
-          if (receivedTimestamp == timestamp) {
-            final int users = response.getUint32(12);
-            final int maxUsers = response.getUint32(16);
-            final int latency = DateTime.now().millisecondsSinceEpoch - timestamp;
+    socket.listen(
+      (RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final Datagram? dg = socket.receive();
+          if (dg != null && dg.data.length >= 24) {
+            final ByteData response = ByteData.sublistView(dg.data);
+            final int receivedTimestamp = response.getUint64(4);
 
-            if (!completer.isCompleted) {
-              completer.complete(MumblePingResponse(
-                latency: latency,
-                users: users,
-                maxUsers: maxUsers,
-              ));
-              timeoutTimer?.cancel();
-              socket.close();
+            if (receivedTimestamp == timestamp) {
+              final int users = response.getUint32(12);
+              final int maxUsers = response.getUint32(16);
+              final int latency =
+                  DateTime.now().millisecondsSinceEpoch - timestamp;
+
+              if (!completer.isCompleted) {
+                completer.complete(
+                  MumblePingResponse(
+                    latency: latency,
+                    users: users,
+                    maxUsers: maxUsers,
+                  ),
+                );
+                timeoutTimer?.cancel();
+                socket.close();
+              }
             }
           }
         }
-      }
-    }, onError: (e) {
-      if (!completer.isCompleted) {
-        completer.completeError(e);
-        timeoutTimer?.cancel();
-        socket.close();
-      }
-    });
+      },
+      onError: (e) {
+        if (!completer.isCompleted) {
+          completer.completeError(e);
+          timeoutTimer?.cancel();
+          socket.close();
+        }
+      },
+    );
 
     return completer.future;
   }

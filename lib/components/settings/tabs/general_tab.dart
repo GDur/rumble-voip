@@ -44,10 +44,7 @@ class GeneralTab extends StatelessWidget {
                   value: ThemeMode.system,
                   child: const Text('System'),
                 ),
-                ShadOption(
-                  value: ThemeMode.light,
-                  child: const Text('Light'),
-                ),
+                ShadOption(value: ThemeMode.light, child: const Text('Light')),
                 ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
               ],
               selectedOptionBuilder: (context, value) =>
@@ -142,17 +139,17 @@ class GeneralTab extends StatelessWidget {
                         builder: (context) => Text(
                           'If enabled, the key will not perform its original duty (e.g. CapsLock LED won\'t toggle).',
                           style: TextStyle(
-                            color: ShadTheme.of(context)
-                                .colorScheme
-                                .mutedForeground,
+                            color: ShadTheme.of(
+                              context,
+                            ).colorScheme.mutedForeground,
                           ),
                         ),
                         child: Icon(
                           LucideIcons.info,
                           size: 14,
-                          color: ShadTheme.of(context)
-                              .colorScheme
-                              .mutedForeground,
+                          color: ShadTheme.of(
+                            context,
+                          ).colorScheme.mutedForeground,
                         ),
                       ),
                     ],
@@ -179,13 +176,13 @@ class GeneralTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: ShadTheme.of(context)
-                    .colorScheme
-                    .muted
-                    .withValues(alpha: 0.5),
+                color: ShadTheme.of(
+                  context,
+                ).colorScheme.muted.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: ShadTheme.of(context).colorScheme.border),
+                border: Border.all(
+                  color: ShadTheme.of(context).colorScheme.border,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,8 +197,9 @@ class GeneralTab extends StatelessWidget {
                       ),
                       const Spacer(),
                       ValueListenableBuilder<bool>(
-                        valueListenable:
-                            HotkeyService.of(context).hasAccessibilityPermission,
+                        valueListenable: HotkeyService.of(
+                          context,
+                        ).hasAccessibilityPermission,
                         builder: (context, granted, _) {
                           return Container(
                             padding: const EdgeInsets.symmetric(
@@ -242,15 +240,16 @@ class GeneralTab extends StatelessWidget {
                     children: [
                       ShadButton.outline(
                         size: ShadButtonSize.sm,
-                        onPressed: () => HotkeyService.of(context)
-                            .openAccessibilitySettings(),
+                        onPressed: () => HotkeyService.of(
+                          context,
+                        ).openAccessibilitySettings(),
                         child: const Text('Open System Settings'),
                       ),
                       const SizedBox(width: 8),
                       ShadButton.ghost(
                         size: ShadButtonSize.sm,
-                        onPressed: () => HotkeyService.of(context)
-                            .checkPermission(),
+                        onPressed: () =>
+                            HotkeyService.of(context).checkPermission(),
                         child: const Text('Refresh Status'),
                       ),
                     ],

@@ -12,10 +12,7 @@ const kBrandGreen = Color(0xFF64FFDA);
 class CertificateTab extends StatelessWidget {
   final StateSetter onUpdate;
 
-  const CertificateTab({
-    super.key,
-    required this.onUpdate,
-  });
+  const CertificateTab({super.key, required this.onUpdate});
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +44,8 @@ class CertificateTab extends StatelessWidget {
                           type: FileType.custom,
                           allowedExtensions: ['p12', 'pfx'],
                         );
-                        if (result != null && result.files.single.path != null) {
+                        if (result != null &&
+                            result.files.single.path != null) {
                           final data = await File(
                             result.files.single.path!,
                           ).readAsBytes();
@@ -104,9 +102,7 @@ class CertificateTab extends StatelessWidget {
           },
         ),
         const SizedBox(height: 20),
-        Expanded(
-          child: _buildCertificateList(context, certService, theme),
-        ),
+        Expanded(child: _buildCertificateList(context, certService, theme)),
       ],
     );
   }
@@ -136,7 +132,9 @@ class CertificateTab extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border.all(color: theme.colorScheme.border),
             borderRadius: BorderRadius.circular(8),
-            color: isDefault ? theme.colorScheme.primary.withValues(alpha: 0.05) : null,
+            color: isDefault
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : null,
           ),
           child: Row(
             children: [
@@ -144,7 +142,10 @@ class CertificateTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(cert.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      cert.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Text(
                       'Created: ${cert.createdAt.toString().split('.')[0]}',
                       style: TextStyle(
@@ -166,7 +167,9 @@ class CertificateTab extends StatelessWidget {
                         onUpdate(() {});
                       },
                       child: Icon(
-                        isDefault ? LucideIcons.circleCheck : LucideIcons.circle,
+                        isDefault
+                            ? LucideIcons.circleCheck
+                            : LucideIcons.circle,
                         size: 16,
                         color: isDefault ? kBrandGreen : null,
                       ),

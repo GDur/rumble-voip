@@ -11,14 +11,16 @@ import 'package:rumble/services/hotkey_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  testWidgets('Server management: add, archive, and connect attempt', (WidgetTester tester) async {
+  testWidgets('Server management: add, archive, and connect attempt', (
+    WidgetTester tester,
+  ) async {
     // 1. Setup
     final mockPrefs = {
       'reconnect_last_server': false,
       'mumble_servers': jsonEncode([]),
     };
     SharedPreferences.setMockInitialValues(mockPrefs);
-    
+
     final prefs = await SharedPreferences.getInstance();
     final settingsService = SettingsService(prefs);
     final serverProvider = ServerProvider();
@@ -30,7 +32,11 @@ void main() {
           ChangeNotifierProvider.value(value: serverProvider),
           ChangeNotifierProvider.value(value: settingsService),
           ChangeNotifierProvider(create: (_) => CertificateService()),
-          ChangeNotifierProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+          ChangeNotifierProxyProvider2<
+            MumbleService,
+            SettingsService,
+            HotkeyService
+          >(
             create: (context) => HotkeyService(
               Provider.of<MumbleService>(context, listen: false),
               Provider.of<SettingsService>(context, listen: false),
@@ -63,7 +69,7 @@ void main() {
       await tester.enterText(editableTextFinder.at(1), 'Test Server');
       await tester.enterText(editableTextFinder.at(3), 'Tester');
     }
-    
+
     // Tap Save
     await tester.tap(find.text('Save Server'));
     await tester.pumpAndSettle();

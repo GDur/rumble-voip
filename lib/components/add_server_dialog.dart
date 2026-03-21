@@ -30,8 +30,12 @@ class _AddServerDialogState extends State<AddServerDialog> {
     final server = widget.server;
     _hostController = TextEditingController(text: server?.host ?? '');
     _nameController = TextEditingController(text: server?.name ?? '');
-    _portController = TextEditingController(text: server?.port.toString() ?? '64738');
-    _usernameController = TextEditingController(text: server?.username ?? 'Rumble - Mumble Reloaded');
+    _portController = TextEditingController(
+      text: server?.port.toString() ?? '64738',
+    );
+    _usernameController = TextEditingController(
+      text: server?.username ?? 'Rumble - Mumble Reloaded',
+    );
     _passwordController = TextEditingController(text: server?.password ?? '');
     if (server != null) _isAutoName = false;
   }
@@ -70,8 +74,11 @@ class _AddServerDialogState extends State<AddServerDialog> {
                 username: username,
                 password: _passwordController.text,
               );
-              
-              final provider = Provider.of<ServerProvider>(context, listen: false);
+
+              final provider = Provider.of<ServerProvider>(
+                context,
+                listen: false,
+              );
               if (widget.server == null) {
                 provider.addServer(newServer);
               } else {
@@ -95,7 +102,10 @@ class _AddServerDialogState extends State<AddServerDialog> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: ShadInputFormField(
                   id: 'host',
-                  label: _buildLabelWithTooltip('Server Address (Host)', 'The hostname or IP of the Mumble server.'),
+                  label: _buildLabelWithTooltip(
+                    'Server Address (Host)',
+                    'The hostname or IP of the Mumble server.',
+                  ),
                   placeholder: const Text('mumble.example.com'),
                   controller: _hostController,
                   onChanged: (val) {
@@ -114,7 +124,10 @@ class _AddServerDialogState extends State<AddServerDialog> {
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: ShadInputFormField(
                   id: 'name',
-                  label: _buildLabelWithTooltip('Display Name', 'How this server appears in your list.'),
+                  label: _buildLabelWithTooltip(
+                    'Display Name',
+                    'How this server appears in your list.',
+                  ),
                   placeholder: const Text('My Awesome Server'),
                   controller: _nameController,
                   onChanged: (val) => setState(() => _isAutoName = false),
@@ -152,7 +165,10 @@ class _AddServerDialogState extends State<AddServerDialog> {
                       constraints: const BoxConstraints(maxWidth: 250),
                       child: ShadInputFormField(
                         id: 'username',
-                        label: _buildLabelWithTooltip('Username', 'Public display name on server.'),
+                        label: _buildLabelWithTooltip(
+                          'Username',
+                          'Public display name on server.',
+                        ),
                         placeholder: const Text('Your Nickname'),
                         controller: _usernameController,
                         validator: (v) {
@@ -181,8 +197,12 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     width: 24,
                     height: 24,
                     padding: EdgeInsets.zero,
-                    onPressed: () => setState(() => _passwordObscure = !_passwordObscure),
-                    icon: Icon(_passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff, size: 16),
+                    onPressed: () =>
+                        setState(() => _passwordObscure = !_passwordObscure),
+                    icon: Icon(
+                      _passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                      size: 16,
+                    ),
                   ),
                 ),
               ),

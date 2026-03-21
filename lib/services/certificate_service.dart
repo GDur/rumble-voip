@@ -58,7 +58,7 @@ class CertificateService extends ChangeNotifier {
         final prefs = jsonDecode(await prefsFile.readAsString());
         _defaultCertificateId = prefs['defaultCertificateId'];
       }
-      
+
       // If no certificates but we need one, we might want to auto-generate one later
       // But for now, we leave it to the user or initial setup.
     } catch (e) {
@@ -73,9 +73,9 @@ class CertificateService extends ChangeNotifier {
       await file.writeAsString(content);
 
       final prefsFile = await _getPrefsFile();
-      await prefsFile.writeAsString(jsonEncode({
-        'defaultCertificateId': _defaultCertificateId,
-      }));
+      await prefsFile.writeAsString(
+        jsonEncode({'defaultCertificateId': _defaultCertificateId}),
+      );
     } catch (e) {
       debugPrint('Error saving certificates: $e');
     }
@@ -116,7 +116,7 @@ class CertificateService extends ChangeNotifier {
 
     _certificates.add(cert);
     _defaultCertificateId ??= cert.id;
-    
+
     await _save();
     notifyListeners();
     return cert;
@@ -126,8 +126,9 @@ class CertificateService extends ChangeNotifier {
     _certificates.removeWhere((c) => c.id == id);
     _hiddenIds.remove(id);
     if (_defaultCertificateId == id) {
-      _defaultCertificateId =
-          _certificates.isNotEmpty ? _certificates.first.id : null;
+      _defaultCertificateId = _certificates.isNotEmpty
+          ? _certificates.first.id
+          : null;
     }
     await _save();
     notifyListeners();
@@ -155,13 +156,17 @@ class CertificateService extends ChangeNotifier {
     String name,
   ) async {
     try {
-      debugPrint('[CertificateService] Attempting to import P12 with basic_utils...');
+      debugPrint(
+        '[CertificateService] Attempting to import P12 with basic_utils...',
+      );
       List<String> pems;
       try {
         final p12Password = password ?? "";
         pems = Pkcs12Utils.parsePkcs12(data, password: p12Password);
       } catch (e) {
-        debugPrint('[CertificateService] basic_utils import failed ($e). Trying openssl fallback...');
+        debugPrint(
+          '[CertificateService] basic_utils import failed ($e). Trying openssl fallback...',
+        );
         final fallback = await _tryOpensslFallback(data, password);
         if (fallback != null && fallback.isNotEmpty) {
           pems = fallback;
@@ -195,10 +200,14 @@ class CertificateService extends ChangeNotifier {
         _defaultCertificateId ??= cert.id;
         await _save();
         notifyListeners();
-        debugPrint('[CertificateService] Successfully imported certificate: $name');
+        debugPrint(
+          '[CertificateService] Successfully imported certificate: $name',
+        );
         return cert;
       } else {
-        debugPrint('[CertificateService] Failed to find both certificate and private key in P12.');
+        debugPrint(
+          '[CertificateService] Failed to find both certificate and private key in P12.',
+        );
       }
     } catch (e) {
       debugPrint('[CertificateService] Final error importing P12: $e');
@@ -206,13 +215,19 @@ class CertificateService extends ChangeNotifier {
     return null;
   }
 
-  Future<List<String>?> _tryOpensslFallback(Uint8List data, String? password) async {
+  Future<List<String>?> _tryOpensslFallback(
+    Uint8List data,
+    String? password,
+  ) async {
     if (kIsWeb) return null;
-    if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows)) return null;
+    if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows))
+      return null;
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/rumble_import_${DateTime.now().millisecondsSinceEpoch}.p12');
+      final tempFile = File(
+        '${tempDir.path}/rumble_import_${DateTime.now().millisecondsSinceEpoch}.p12',
+      );
       await tempFile.writeAsBytes(data);
 
       debugPrint('[CertificateService] Running openssl pkcs12 export...');
@@ -232,27 +247,33 @@ class CertificateService extends ChangeNotifier {
       if (result.exitCode == 0) {
         final String output = result.stdout as String;
         final List<String> pems = [];
-        
+
         // Extract PEM blocks
-        final certRegex = RegExp(r'-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----');
-        final keyRegex = RegExp(r'-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----');
-        
+        final certRegex = RegExp(
+          r'-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----',
+        );
+        final keyRegex = RegExp(
+          r'-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA )?PRIVATE KEY-----',
+        );
+
         final certs = certRegex.allMatches(output);
         final keys = keyRegex.allMatches(output);
-        
+
         for (final m in certs) {
           pems.add(m.group(0)!);
         }
         for (final m in keys) {
           pems.add(m.group(0)!);
         }
-        
+
         if (pems.isNotEmpty) {
           debugPrint('[CertificateService] Openssl fallback succeeded.');
           return pems;
         }
       } else {
-        debugPrint('[CertificateService] Openssl failed with exit code ${result.exitCode}: ${result.stderr}');
+        debugPrint(
+          '[CertificateService] Openssl failed with exit code ${result.exitCode}: ${result.stderr}',
+        );
       }
     } catch (e) {
       debugPrint('[CertificateService] Openssl fallback process error: $e');

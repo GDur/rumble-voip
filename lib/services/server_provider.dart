@@ -38,7 +38,7 @@ class ServerProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? serversJson = prefs.getString('mumble_servers');
-      
+
       if (serversJson != null) {
         final List<dynamic> decoded = jsonDecode(serversJson);
         _servers = decoded.map((item) => MumbleServer.fromJson(item)).toList();
@@ -82,7 +82,9 @@ class ServerProvider extends ChangeNotifier {
   Future<void> _saveServers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String encoded = jsonEncode(_servers.map((s) => s.toJson()).toList());
+      final String encoded = jsonEncode(
+        _servers.map((s) => s.toJson()).toList(),
+      );
       await prefs.setString('mumble_servers', encoded);
     } catch (e) {
       debugPrint('Error saving servers: $e');

@@ -43,7 +43,8 @@ class PermissionPrompt extends StatelessWidget {
               const SizedBox(height: 40),
               ShadButton(
                 onPressed: () async {
-                  final granted = await PermissionUtils.requestMicrophonePermission();
+                  final granted =
+                      await PermissionUtils.requestMicrophonePermission();
                   if (granted) {
                     onGranted();
                   }

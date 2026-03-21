@@ -18,31 +18,70 @@ const int opusSignalVoice = 3001;
 
 /// -------------------- Native FFI Type Definitions --------------------
 
-typedef OpusDecoderCreateNative = Pointer Function(Int32 sampleRate, Int32 channels, Pointer<Int32> error);
-typedef OpusDecoderCreate = Pointer Function(int sampleRate, int channels, Pointer<Int32> error);
+typedef OpusDecoderCreateNative =
+    Pointer Function(Int32 sampleRate, Int32 channels, Pointer<Int32> error);
+typedef OpusDecoderCreate =
+    Pointer Function(int sampleRate, int channels, Pointer<Int32> error);
 
-typedef OpusDecodeNative = Int32 Function(
-    Pointer decoder, Pointer<Uint8> data, Int32 len, Pointer<Int16> pcm, Int32 frameSize, Int32 decodeFec);
-typedef OpusDecode = int Function(
-    Pointer decoder, Pointer<Uint8> data, int len, Pointer<Int16> pcm, int frameSize, int decodeFec);
+typedef OpusDecodeNative =
+    Int32 Function(
+      Pointer decoder,
+      Pointer<Uint8> data,
+      Int32 len,
+      Pointer<Int16> pcm,
+      Int32 frameSize,
+      Int32 decodeFec,
+    );
+typedef OpusDecode =
+    int Function(
+      Pointer decoder,
+      Pointer<Uint8> data,
+      int len,
+      Pointer<Int16> pcm,
+      int frameSize,
+      int decodeFec,
+    );
 
 typedef OpusDecoderDestroyNative = Void Function(Pointer decoder);
 typedef OpusDecoderDestroy = void Function(Pointer decoder);
 
-typedef OpusEncoderCreateNative = Pointer Function(
-    Int32 sampleRate, Int32 channels, Int32 application, Pointer<Int32> error);
-typedef OpusEncoderCreate = Pointer Function(
-    int sampleRate, int channels, int application, Pointer<Int32> error);
+typedef OpusEncoderCreateNative =
+    Pointer Function(
+      Int32 sampleRate,
+      Int32 channels,
+      Int32 application,
+      Pointer<Int32> error,
+    );
+typedef OpusEncoderCreate =
+    Pointer Function(
+      int sampleRate,
+      int channels,
+      int application,
+      Pointer<Int32> error,
+    );
 
-typedef OpusEncodeNative = Int32 Function(Pointer encoder, Pointer<Int16> pcm,
-    Int32 frameSize, Pointer<Uint8> data, Int32 maxDataBytes);
-typedef OpusEncode = int Function(Pointer encoder, Pointer<Int16> pcm,
-    int frameSize, Pointer<Uint8> data, int maxDataBytes);
+typedef OpusEncodeNative =
+    Int32 Function(
+      Pointer encoder,
+      Pointer<Int16> pcm,
+      Int32 frameSize,
+      Pointer<Uint8> data,
+      Int32 maxDataBytes,
+    );
+typedef OpusEncode =
+    int Function(
+      Pointer encoder,
+      Pointer<Int16> pcm,
+      int frameSize,
+      Pointer<Uint8> data,
+      int maxDataBytes,
+    );
 
 typedef OpusEncoderDestroyNative = Void Function(Pointer encoder);
 typedef OpusEncoderDestroy = void Function(Pointer encoder);
 
-typedef OpusEncoderCtlNative = Int32 Function(Pointer encoder, Int32 request, Int32 value);
+typedef OpusEncoderCtlNative =
+    Int32 Function(Pointer encoder, Int32 request, Int32 value);
 typedef OpusEncoderCtl = int Function(Pointer encoder, int request, int value);
 
 /// -------------------- MumbleAudioCodec --------------------
@@ -52,38 +91,47 @@ class MumbleAudioCodec {
 
   static DynamicLibrary _loadLibrary() {
     if (_lib != null) return _lib!;
-    
+
     if (Platform.isAndroid) {
-       _lib = DynamicLibrary.open('libopus.so');
+      _lib = DynamicLibrary.open('libopus.so');
     } else if (Platform.isIOS || Platform.isMacOS) {
-       _lib = DynamicLibrary.process();
+      _lib = DynamicLibrary.process();
     } else if (Platform.isWindows) {
-       _lib = DynamicLibrary.open('libopus.dll');
+      _lib = DynamicLibrary.open('libopus.dll');
     } else if (Platform.isLinux) {
-       _lib = DynamicLibrary.open('libopus.so');
+      _lib = DynamicLibrary.open('libopus.so');
     } else {
-       throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
+      throw UnsupportedError(
+        'Unsupported platform: ${Platform.operatingSystem}',
+      );
     }
     return _lib!;
   }
 
   // Decoders
   static final OpusDecoderCreate _opusDecoderCreate = _loadLibrary()
-      .lookup<NativeFunction<OpusDecoderCreateNative>>('opus_decoder_create').asFunction();
+      .lookup<NativeFunction<OpusDecoderCreateNative>>('opus_decoder_create')
+      .asFunction();
   static final OpusDecode _opusDecode = _loadLibrary()
-      .lookup<NativeFunction<OpusDecodeNative>>('opus_decode').asFunction();
+      .lookup<NativeFunction<OpusDecodeNative>>('opus_decode')
+      .asFunction();
   static final OpusDecoderDestroy _opusDecoderDestroy = _loadLibrary()
-      .lookup<NativeFunction<OpusDecoderDestroyNative>>('opus_decoder_destroy').asFunction();
+      .lookup<NativeFunction<OpusDecoderDestroyNative>>('opus_decoder_destroy')
+      .asFunction();
 
   // Encoders
   static final OpusEncoderCreate _opusEncoderCreate = _loadLibrary()
-      .lookup<NativeFunction<OpusEncoderCreateNative>>('opus_encoder_create').asFunction();
+      .lookup<NativeFunction<OpusEncoderCreateNative>>('opus_encoder_create')
+      .asFunction();
   static final OpusEncode _opusEncode = _loadLibrary()
-      .lookup<NativeFunction<OpusEncodeNative>>('opus_encode').asFunction();
+      .lookup<NativeFunction<OpusEncodeNative>>('opus_encode')
+      .asFunction();
   static final OpusEncoderDestroy _opusEncoderDestroy = _loadLibrary()
-      .lookup<NativeFunction<OpusEncoderDestroyNative>>('opus_encoder_destroy').asFunction();
+      .lookup<NativeFunction<OpusEncoderDestroyNative>>('opus_encoder_destroy')
+      .asFunction();
   static final OpusEncoderCtl _opusEncoderCtl = _loadLibrary()
-      .lookup<NativeFunction<OpusEncoderCtlNative>>('opus_encoder_ctl').asFunction();
+      .lookup<NativeFunction<OpusEncoderCtlNative>>('opus_encoder_ctl')
+      .asFunction();
 }
 
 class MumbleOpusDecoder {
@@ -94,7 +142,11 @@ class MumbleOpusDecoder {
   MumbleOpusDecoder({required this.sampleRate, required this.channels}) {
     final errorPtr = malloc<Int32>();
     try {
-      _decoder = MumbleAudioCodec._opusDecoderCreate(sampleRate, channels, errorPtr);
+      _decoder = MumbleAudioCodec._opusDecoderCreate(
+        sampleRate,
+        channels,
+        errorPtr,
+      );
       if (errorPtr.value != opusOk || _decoder == nullptr) {
         throw Exception('Failed to create Opus decoder: ${errorPtr.value}');
       }
@@ -112,13 +164,21 @@ class MumbleOpusDecoder {
       inputPtr.asTypedList(opusData.length).setAll(0, opusData);
 
       final samplesDecoded = MumbleAudioCodec._opusDecode(
-        _decoder!, inputPtr, opusData.length, outputPtr, frameSize, 0);
+        _decoder!,
+        inputPtr,
+        opusData.length,
+        outputPtr,
+        frameSize,
+        0,
+      );
 
       if (samplesDecoded < 0) {
         throw Exception('Opus decode fatal error: $samplesDecoded');
       }
 
-      return Int16List.fromList(outputPtr.asTypedList(samplesDecoded * channels));
+      return Int16List.fromList(
+        outputPtr.asTypedList(samplesDecoded * channels),
+      );
     } finally {
       malloc.free(inputPtr);
       malloc.free(outputPtr);
@@ -138,14 +198,23 @@ class MumbleOpusEncoder {
   final int sampleRate;
   final int channels;
 
-  MumbleOpusEncoder({required this.sampleRate, required this.channels, int application = opusApplicationVoip}) {
+  MumbleOpusEncoder({
+    required this.sampleRate,
+    required this.channels,
+    int application = opusApplicationVoip,
+  }) {
     final errorPtr = malloc<Int32>();
     try {
-      _encoder = MumbleAudioCodec._opusEncoderCreate(sampleRate, channels, application, errorPtr);
+      _encoder = MumbleAudioCodec._opusEncoderCreate(
+        sampleRate,
+        channels,
+        application,
+        errorPtr,
+      );
       if (errorPtr.value != opusOk || _encoder == nullptr) {
         throw Exception('Failed to create Opus encoder: ${errorPtr.value}');
       }
-      
+
       // Default configurations for quality and reliability
       setBitrate(48000);
       setComplexity(5); // Reduced from 10 to 5 for better mobile performance
@@ -160,31 +229,51 @@ class MumbleOpusEncoder {
 
   void setBitrate(int bitrate) {
     if (_encoder != null) {
-      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetBitrateRequest, bitrate);
+      MumbleAudioCodec._opusEncoderCtl(
+        _encoder!,
+        opusSetBitrateRequest,
+        bitrate,
+      );
     }
   }
 
   void setComplexity(int complexity) {
     if (_encoder != null) {
-      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetComplexityRequest, complexity);
+      MumbleAudioCodec._opusEncoderCtl(
+        _encoder!,
+        opusSetComplexityRequest,
+        complexity,
+      );
     }
   }
 
   void setVbr(bool vbr) {
     if (_encoder != null) {
-      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetVbrRequest, vbr ? 1 : 0);
+      MumbleAudioCodec._opusEncoderCtl(
+        _encoder!,
+        opusSetVbrRequest,
+        vbr ? 1 : 0,
+      );
     }
   }
 
   void setInbandFec(bool enabled) {
     if (_encoder != null) {
-      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetInbandFecRequest, enabled ? 1 : 0);
+      MumbleAudioCodec._opusEncoderCtl(
+        _encoder!,
+        opusSetInbandFecRequest,
+        enabled ? 1 : 0,
+      );
     }
   }
 
   void setPacketLossPercentage(int percentage) {
     if (_encoder != null) {
-      MumbleAudioCodec._opusEncoderCtl(_encoder!, opusSetPacketLossPercRequest, percentage);
+      MumbleAudioCodec._opusEncoderCtl(
+        _encoder!,
+        opusSetPacketLossPercRequest,
+        percentage,
+      );
     }
   }
 
@@ -204,7 +293,12 @@ class MumbleOpusEncoder {
       inputPtr.asTypedList(pcmData.length).setAll(0, pcmData);
 
       final bytesEncoded = MumbleAudioCodec._opusEncode(
-        _encoder!, inputPtr, frameSize, outputPtr, maxOutputSize);
+        _encoder!,
+        inputPtr,
+        frameSize,
+        outputPtr,
+        maxOutputSize,
+      );
 
       if (bytesEncoded < 0) {
         throw Exception('Opus encode fatal error: $bytesEncoded');

@@ -8,7 +8,8 @@ class ServerActions extends StatefulWidget {
   final ServerProvider provider;
   final MumbleServer server;
   final Function(BuildContext, MumbleServer?) onShowAddServerDialog;
-  final Function(BuildContext, ServerProvider, MumbleServer) onArchiveServerWithUndo;
+  final Function(BuildContext, ServerProvider, MumbleServer)
+  onArchiveServerWithUndo;
 
   const ServerActions({
     super.key,
@@ -51,7 +52,10 @@ class _ServerActionsState extends State<ServerActions> {
                   widget.onShowAddServerDialog(context, widget.server);
                 },
                 leading: const Icon(LucideIcons.pencil, size: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 mainAxisAlignment: MainAxisAlignment.start,
                 child: const Text('Edit'),
               ),
@@ -61,11 +65,21 @@ class _ServerActionsState extends State<ServerActions> {
                   if (isArchived) {
                     widget.provider.unarchiveServer(widget.server.id);
                   } else {
-                    widget.onArchiveServerWithUndo(context, widget.provider, widget.server);
+                    widget.onArchiveServerWithUndo(
+                      context,
+                      widget.provider,
+                      widget.server,
+                    );
                   }
                 },
-                leading: Icon(isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, size: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                leading: Icon(
+                  isArchived ? LucideIcons.archiveRestore : LucideIcons.archive,
+                  size: 16,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 mainAxisAlignment: MainAxisAlignment.start,
                 child: Text(isArchived ? 'Restore' : 'Archive'),
               ),
@@ -82,9 +96,7 @@ class _ServerActionsState extends State<ServerActions> {
         width: 32,
         height: 32,
         padding: EdgeInsets.zero,
-        decoration: ShadDecoration(
-          shape: BoxShape.circle,
-        ),
+        decoration: ShadDecoration(shape: BoxShape.circle),
         onPressed: () => controller.toggle(),
       ),
     );

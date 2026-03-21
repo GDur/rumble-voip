@@ -1,4 +1,3 @@
-
 class MumbleServer {
   final String id;
   final String name;

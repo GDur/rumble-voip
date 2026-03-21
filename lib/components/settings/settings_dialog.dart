@@ -25,7 +25,11 @@ class SettingsDialog extends StatefulWidget {
 }
 
 class _SettingsDialogState extends State<SettingsDialog> {
-  String _currentTab = 'general';
+  String? _currentTab;
+
+  bool _isMobile(BuildContext context) {
+    return MediaQuery.of(context).size.width < 600;
+  }
 
   @override
   void initState() {
@@ -38,58 +42,163 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   Widget build(BuildContext context) {
     final sideBarItems = [
-      (id: 'audio', label: 'Audio', icon: LucideIcons.volume2),
       (id: 'general', label: 'General', icon: LucideIcons.settings),
-      (id: 'certificates', label: 'Certificates', icon: LucideIcons.shieldCheck),
+      (id: 'audio', label: 'Audio', icon: LucideIcons.volume2),
+      (
+        id: 'certificates',
+        label: 'Certificates',
+        icon: LucideIcons.shieldCheck,
+      ),
       (id: 'about', label: 'About', icon: LucideIcons.info),
     ];
 
+    final isMobile = _isMobile(context);
+    final effectiveTab = _currentTab ?? (!isMobile ? 'general' : null);
+
+    final title = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        children: [
+          if (isMobile && effectiveTab != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: ShadIconButton.ghost(
+                onPressed: () => setState(() => _currentTab = null),
+                icon: const Icon(LucideIcons.arrowLeft, size: 20),
+              ),
+            ),
+          Text(
+            effectiveTab != null && isMobile
+                ? sideBarItems.firstWhere((i) => i.id == effectiveTab).label
+                : 'Settings',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+
     return ShadDialog(
       padding: EdgeInsets.zero,
-      title: const Padding(
-        padding: EdgeInsets.all(20),
-        child: Text('Settings'),
-      ),
+      title: title,
       child: SizedBox(
-        width: 700,
-        height: 550,
-        child: Row(
-          children: [
-            // Sidebar
-            Container(
-              width: 180,
-              decoration: BoxDecoration(
-                border: Border(
-                  right: BorderSide(
-                    color: ShadTheme.of(context).colorScheme.border,
-                  ),
-                ),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: sideBarItems.map((item) {
-                  final isSelected = _currentTab == item.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: ShadButton.ghost(
-                      onPressed: () => setState(() => _currentTab = item.id),
-                      width: double.infinity,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      backgroundColor: isSelected 
-                        ? ShadTheme.of(context).colorScheme.accent 
-                        : Colors.transparent,
-                      pressedBackgroundColor: ShadTheme.of(context).colorScheme.accent,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(item.icon, size: 16),
-                          const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        width: isMobile ? MediaQuery.of(context).size.width * 0.95 : 700,
+        height: isMobile ? MediaQuery.of(context).size.height * 0.7 : 550,
+        child: isMobile
+            ? _buildMobileContent(effectiveTab, sideBarItems)
+            : Row(
+                children: [
+                  // Sidebar
+                  Container(
+                    width: 180,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right: BorderSide(
+                          color: ShadTheme.of(context).colorScheme.border,
+                        ),
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: sideBarItems.map((item) {
+                        final isSelected = effectiveTab == item.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: ShadButton.ghost(
+                            onPressed: () =>
+                                setState(() => _currentTab = item.id),
+                            width: double.infinity,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            backgroundColor: isSelected
+                                ? ShadTheme.of(context).colorScheme.accent
+                                : Colors.transparent,
+                            pressedBackgroundColor: ShadTheme.of(
+                              context,
+                            ).colorScheme.accent,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(item.icon, size: 16),
+                                const SizedBox(width: 12),
+                                Text(
+                                  item.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
                             ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildTabContent(effectiveTab!)),
+                          const SizedBox(height: 16),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: ShadButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('Done'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildMobileContent(
+    String? effectiveTab,
+    List<({IconData icon, String id, String label})> sideBarItems,
+  ) {
+    if (effectiveTab == null) {
+      // Category List
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                children: sideBarItems.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: ShadButton.outline(
+                      onPressed: () => setState(() => _currentTab = item.id),
+                      size: ShadButtonSize.lg,
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(item.icon, size: 20),
+                              const SizedBox(width: 16),
+                              Text(
+                                item.label,
+                                style: const TextStyle(fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          Icon(
+                            LucideIcons.chevronRight,
+                            size: 16,
+                            color: ShadTheme.of(context).colorScheme.mutedForeground,
                           ),
                         ],
                       ),
@@ -98,32 +207,34 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 }).toList(),
               ),
             ),
-            // Content
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: _buildTabContent(_currentTab),
-                    ),
-                    const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: ShadButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Done'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 16),
+            ShadButton(
+              onPressed: () => Navigator.of(context).pop(),
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: const Text('Done'),
             ),
           ],
         ),
-      ),
-    );
+      );
+    } else {
+      // Tab Detail
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Expanded(
+              child: _buildTabContent(effectiveTab),
+            ),
+            const SizedBox(height: 16),
+            ShadButton.outline(
+              onPressed: () => setState(() => _currentTab = null),
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: const Text('Back to Settings'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildTabContent(String tab) {
@@ -141,9 +252,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           onShowHotkeyRecorder: widget.onShowHotkeyRecorder,
         );
       case 'certificates':
-        return CertificateTab(
-          onUpdate: setState,
-        );
+        return CertificateTab(onUpdate: setState);
       case 'about':
         return const AboutTab();
       default:

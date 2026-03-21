@@ -108,7 +108,9 @@ class _ChannelTreeState extends State<ChannelTree> {
       context: context,
       builder: (context) => ShadDialog(
         title: const Text('Set Your Notice'),
-        description: const Text('This will be visible to other users on the server.'),
+        description: const Text(
+          'This will be visible to other users on the server.',
+        ),
         actions: [
           ShadButton.outline(
             child: const Text('Cancel'),
@@ -556,161 +558,171 @@ class _ChannelTreeState extends State<ChannelTree> {
     final bool hasCert = stats?.strongCertificate == true;
 
     Widget content = GestureDetector(
-        onTapDown: (_) => _selectUser(u),
-        onTap: () {}, // Handled by onTapDown for instant feel
-        child: Container(
-          margin: EdgeInsets.only(
-            left: 48.0 + 8.0 + (depth * 16.0),
-            right: 16,
-            top: 1,
-            bottom: 1,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
+      onTapDown: (_) => _selectUser(u),
+      onTap: () {}, // Handled by onTapDown for instant feel
+      child: Container(
+        margin: EdgeInsets.only(
+          left: 48.0 + 8.0 + (depth * 16.0),
+          right: 16,
+          top: 1,
+          bottom: 1,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.15)
+              : isHovered
+              ? theme.colorScheme.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
             color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                ? theme.colorScheme.primary.withValues(alpha: 0.2)
                 : isHovered
-                ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                  : isHovered
-                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                  : Colors
-                        .transparent, // Always have a border to prevent layout shift
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor.withValues(alpha: 0.4),
-                      blurRadius: isTalking ? 8 : 4,
-                      spreadRadius: isTalking ? 2 : 1,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  isMe ? '${u.name} (You)' : (u.name ?? 'Unknown User'),
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 14,
-                    color: (isTalking || isSelected)
-                        ? theme.colorScheme.foreground
-                        : theme.colorScheme.foreground.withValues(alpha: 0.6),
-                    fontWeight: (isTalking || isMe || isSelected)
-                        ? FontWeight.w700
-                        : FontWeight.w400,
-                  ),
-                ),
-              ),
-              if (isMuted || isSelfMuted || isSuppressed) ...[
-                const SizedBox(width: 8),
-                ShadButton.ghost(
-                  padding: EdgeInsets.zero,
-                  width: 20,
-                  height: 20,
-                  onPressed: () {}, // Handled by ShadPopover internal trigger
-                  child: ShadPopover(
-                    controller: ShadPopoverController(),
-                    popover: (context) {
-                      String label = 'Muted';
-                      if (isSelfMuted && isMuted) label = 'Muted (Self & Server)';
-                      else if (isSelfMuted) label = 'Muted themselves';
-                      else if (isMuted) label = 'Muted by Server';
-                      else if (isSuppressed) label = 'Suppressed by Server';
-
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(label, style: theme.textTheme.small),
-                      );
-                    },
-                    child: Icon(
-                      LucideIcons.micOff,
-                      size: 14,
-                      color: (isMuted || isSuppressed) 
-                          ? theme.colorScheme.destructive.withValues(alpha: 0.7)
-                          : theme.colorScheme.foreground.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ),
-              ],
-              if (isDeaf || isSelfDeafened) ...[
-                const SizedBox(width: 4),
-                ShadButton.ghost(
-                  padding: EdgeInsets.zero,
-                  width: 20,
-                  height: 20,
-                  onPressed: () {},
-                  child: ShadPopover(
-                    controller: ShadPopoverController(),
-                    popover: (context) {
-                      String label = 'Deafened';
-                      if (isSelfDeafened && isDeaf) label = 'Deafened (Self & Server)';
-                      else if (isSelfDeafened) label = 'Deafened themselves';
-                      else if (isDeaf) label = 'Deafened by Server';
-
-                      return Container(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(label, style: theme.textTheme.small),
-                      );
-                    },
-                    child: Icon(
-                      LucideIcons.headphoneOff,
-                      size: 14,
-                      color: isDeaf 
-                          ? theme.colorScheme.destructive.withValues(alpha: 0.7)
-                          : theme.colorScheme.foreground.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ),
-              ],
-              if (comment != null && comment.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                NoticeButton(
-                  title: 'User Notice',
-                  notice: comment,
-                  icon: LucideIcons.fileText,
-                ),
-              ],
-              if (hasCert) ...[
-                const SizedBox(width: 6),
-                ShadButton.ghost(
-                  padding: EdgeInsets.zero,
-                  width: 20,
-                  height: 20,
-                  onPressed: () {},
-                  child: ShadPopover(
-                    controller: ShadPopoverController(),
-                    popover: (context) => Container(
-                      padding: const EdgeInsets.all(12),
-                      child: Text('Authenticated with Certificate', style: theme.textTheme.small),
-                    ),
-                    child: Icon(
-                      LucideIcons.shieldCheck,
-                      size: 14,
-                      color: Colors.blueAccent.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ),
-              ],
-            ],
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : Colors
+                      .transparent, // Always have a border to prevent layout shift
+            width: 1,
           ),
         ),
-      );
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: statusColor.withValues(alpha: 0.4),
+                    blurRadius: isTalking ? 8 : 4,
+                    spreadRadius: isTalking ? 2 : 1,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isMe ? '${u.name} (You)' : (u.name ?? 'Unknown User'),
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 14,
+                  color: (isTalking || isSelected)
+                      ? theme.colorScheme.foreground
+                      : theme.colorScheme.foreground.withValues(alpha: 0.6),
+                  fontWeight: (isTalking || isMe || isSelected)
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                ),
+              ),
+            ),
+            if (isMuted || isSelfMuted || isSuppressed) ...[
+              const SizedBox(width: 8),
+              ShadButton.ghost(
+                padding: EdgeInsets.zero,
+                width: 20,
+                height: 20,
+                onPressed: () {}, // Handled by ShadPopover internal trigger
+                child: ShadPopover(
+                  controller: ShadPopoverController(),
+                  popover: (context) {
+                    String label = 'Muted';
+                    if (isSelfMuted && isMuted)
+                      label = 'Muted (Self & Server)';
+                    else if (isSelfMuted)
+                      label = 'Muted themselves';
+                    else if (isMuted)
+                      label = 'Muted by Server';
+                    else if (isSuppressed)
+                      label = 'Suppressed by Server';
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(label, style: theme.textTheme.small),
+                    );
+                  },
+                  child: Icon(
+                    LucideIcons.micOff,
+                    size: 14,
+                    color: (isMuted || isSuppressed)
+                        ? theme.colorScheme.destructive.withValues(alpha: 0.7)
+                        : theme.colorScheme.foreground.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ],
+            if (isDeaf || isSelfDeafened) ...[
+              const SizedBox(width: 4),
+              ShadButton.ghost(
+                padding: EdgeInsets.zero,
+                width: 20,
+                height: 20,
+                onPressed: () {},
+                child: ShadPopover(
+                  controller: ShadPopoverController(),
+                  popover: (context) {
+                    String label = 'Deafened';
+                    if (isSelfDeafened && isDeaf)
+                      label = 'Deafened (Self & Server)';
+                    else if (isSelfDeafened)
+                      label = 'Deafened themselves';
+                    else if (isDeaf)
+                      label = 'Deafened by Server';
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(label, style: theme.textTheme.small),
+                    );
+                  },
+                  child: Icon(
+                    LucideIcons.headphoneOff,
+                    size: 14,
+                    color: isDeaf
+                        ? theme.colorScheme.destructive.withValues(alpha: 0.7)
+                        : theme.colorScheme.foreground.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ],
+            if (comment != null && comment.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              NoticeButton(
+                title: 'User Notice',
+                notice: comment,
+                icon: LucideIcons.fileText,
+              ),
+            ],
+            if (hasCert) ...[
+              const SizedBox(width: 6),
+              ShadButton.ghost(
+                padding: EdgeInsets.zero,
+                width: 20,
+                height: 20,
+                onPressed: () {},
+                child: ShadPopover(
+                  controller: ShadPopoverController(),
+                  popover: (context) => Container(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Authenticated with Certificate',
+                      style: theme.textTheme.small,
+                    ),
+                  ),
+                  child: Icon(
+                    LucideIcons.shieldCheck,
+                    size: 14,
+                    color: Colors.blueAccent.withValues(alpha: 0.8),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
 
     if (isMe && widget.self != null) {
       content = ShadContextMenuRegion(
@@ -724,12 +736,20 @@ class _ChannelTreeState extends State<ChannelTree> {
           const Divider(height: 1),
           ShadContextMenuItem(
             onPressed: () => mumbleService.toggleMute(),
-            leading: Icon(mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff, size: 16),
+            leading: Icon(
+              mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff,
+              size: 16,
+            ),
             child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
           ),
           ShadContextMenuItem(
             onPressed: () => mumbleService.toggleDeafen(),
-            leading: Icon(mumbleService.isDeafened ? LucideIcons.headphones : LucideIcons.headphoneOff, size: 16),
+            leading: Icon(
+              mumbleService.isDeafened
+                  ? LucideIcons.headphones
+                  : LucideIcons.headphoneOff,
+              size: 16,
+            ),
             child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
           ),
         ],
@@ -804,10 +824,7 @@ class _NoticeButtonState extends State<NoticeButton> {
                       base64Decode(imageUrl.split(',').last),
                       fit: BoxFit.contain,
                     )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.contain,
-                    ),
+                  : Image.network(imageUrl, fit: BoxFit.contain),
             ),
           ),
         ),

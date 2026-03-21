@@ -417,7 +417,9 @@ class MumbleService extends ChangeNotifier
       onError: (e) => debugPrint('[MumbleService] Mic stream error: $e'),
     );
 
-    _processingTimer = Timer.periodic(const Duration(milliseconds: 20), (timer) {
+    _processingTimer = Timer.periodic(const Duration(milliseconds: 20), (
+      timer,
+    ) {
       if (!_isConnected || _client == null) {
         timer.cancel();
         return;
@@ -568,11 +570,12 @@ class MumbleService extends ChangeNotifier
     _userPlaying.clear();
     notifyListeners();
   }
+
   // Jitter Buffer / Playback Buffering
   final Map<int, List<int>> _userBuffers = {};
   final Map<int, bool> _userPlaying = {};
   // Lowered threshold to 60ms (3 * 20ms frames) for better responsiveness
-  static const int _bufferThreshold = 960 * 3; 
+  static const int _bufferThreshold = 960 * 3;
 
   // Volume monitoring
   @override
@@ -624,11 +627,11 @@ class MumbleService extends ChangeNotifier
         onDone: () {
           _talkingUsers[sessionId] = false;
           _userPlaying[sessionId] = false;
-          
-          // Drain what's left in the buffer so we don't have "tail" audio 
+
+          // Drain what's left in the buffer so we don't have "tail" audio
           // playing at the start of the next talk burst.
           _drainUserBuffer(sessionId, buffer);
-          
+
           AudioPlaybackService().stopSession(sessionId);
           notifyListeners();
         },
@@ -645,20 +648,20 @@ class MumbleService extends ChangeNotifier
   /// Helper to feed the audio playback service in standard chunks.
   void _drainUserBuffer(int sessionId, List<int> buffer) {
     if (!_audioPlayerInitialized) return;
-    
+
     // Process everything we have in 20ms chunks (960 samples)
     while (buffer.length >= 960) {
       final chunk = buffer.sublist(0, 960);
       buffer.removeRange(0, 960);
       AudioPlaybackService().feed(sessionId, Int16List.fromList(chunk));
     }
-    
+
     // If we're catching up or ending, we might have a small remainder.
     // For Mumble, we can usually just wait for more or discard.
     // But if it's the end of a burst, we should probably send it too if it's large enough.
     if (buffer.isNotEmpty && !_talkingUsers[sessionId]!) {
-       AudioPlaybackService().feed(sessionId, Int16List.fromList(buffer));
-       buffer.clear();
+      AudioPlaybackService().feed(sessionId, Int16List.fromList(buffer));
+      buffer.clear();
     }
   }
 
@@ -680,7 +683,7 @@ class MumbleService extends ChangeNotifier
     user.add(this as UserListener);
     // Request comment if they have one
     if (user.commentHash != null) {
-       user.requestUserComment();
+      user.requestUserComment();
     }
     _updateSync();
   }

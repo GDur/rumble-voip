@@ -11,14 +11,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
-  testWidgets('Settings dialog can be opened and navigated', (WidgetTester tester) async {
+  testWidgets('Settings dialog can be opened and navigated', (
+    WidgetTester tester,
+  ) async {
     // Set a very large surface size to ensure no overflows during testing
     tester.view.physicalSize = const Size(2000, 1200);
     tester.view.devicePixelRatio = 1.0;
-    
+
     // Ignore RenderFlex overflow errors in this test
     FlutterError.onError = (FlutterErrorDetails details) {
-      if (details.exception is FlutterError && details.exception.toString().contains('overflowed')) {
+      if (details.exception is FlutterError &&
+          details.exception.toString().contains('overflowed')) {
         return;
       }
       FlutterError.presentError(details);
@@ -36,7 +39,11 @@ void main() {
           ChangeNotifierProvider(create: (_) => ServerProvider()),
           ChangeNotifierProvider.value(value: settingsService),
           ChangeNotifierProvider(create: (_) => CertificateService()),
-          ChangeNotifierProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+          ChangeNotifierProxyProvider2<
+            MumbleService,
+            SettingsService,
+            HotkeyService
+          >(
             create: (context) => HotkeyService(
               Provider.of<MumbleService>(context, listen: false),
               Provider.of<SettingsService>(context, listen: false),
@@ -81,7 +88,7 @@ void main() {
 
     // Verify dialog is closed
     expect(find.text('Settings'), findsNothing);
-    
+
     // Reset
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();

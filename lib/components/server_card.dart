@@ -25,7 +25,7 @@ class ServerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
     final isMobile = MediaQuery.of(context).size.width < 600;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -37,7 +37,9 @@ class ServerCard extends StatelessWidget {
       ),
       child: Padding(
         padding: EdgeInsets.all(isMobile ? 16 : 20),
-        child: isMobile ? _buildMobileLayout(context, theme) : _buildDesktopLayout(context, theme),
+        child: isMobile
+            ? _buildMobileLayout(context, theme)
+            : _buildDesktopLayout(context, theme),
       ),
     );
   }
@@ -46,11 +48,7 @@ class ServerCard extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Positioned(
-          top: -8,
-          right: -8,
-          child: _buildActions(context),
-        ),
+        Positioned(top: -8, right: -8, child: _buildActions(context)),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -78,9 +76,7 @@ class ServerCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: _buildDetails(theme),
-                ),
+                Expanded(child: _buildDetails(theme)),
                 _buildStats(theme),
               ],
             ),
@@ -165,7 +161,7 @@ class ServerCard extends StatelessWidget {
     final ping = server.ping;
     final userCount = server.userCount;
     final maxUsers = server.maxUsers;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
@@ -175,7 +171,9 @@ class ServerCard extends StatelessWidget {
           children: [
             Icon(
               LucideIcons.wifi,
-              color: ping != null ? _getPingColor(ping) : theme.colorScheme.mutedForeground,
+              color: ping != null
+                  ? _getPingColor(ping)
+                  : theme.colorScheme.mutedForeground,
               size: 14,
             ),
             const SizedBox(width: 4),
@@ -213,7 +211,11 @@ class ServerCard extends StatelessWidget {
     );
   }
 
-  Widget _buildConnectButton(ShadThemeData theme, {double? width, ShadButtonSize? size}) {
+  Widget _buildConnectButton(
+    ShadThemeData theme, {
+    double? width,
+    ShadButtonSize? size,
+  }) {
     return SizedBox(
       width: width,
       child: ShadButton(
@@ -246,11 +248,16 @@ class ServerCard extends StatelessWidget {
       provider: provider,
       server: server,
       onShowAddServerDialog: (context, s) => onEdit(s!),
-      onArchiveServerWithUndo: (context, p, s) => _archiveServerWithUndo(context, p, s),
+      onArchiveServerWithUndo: (context, p, s) =>
+          _archiveServerWithUndo(context, p, s),
     );
   }
 
-  void _archiveServerWithUndo(BuildContext context, ServerProvider provider, MumbleServer server) {
+  void _archiveServerWithUndo(
+    BuildContext context,
+    ServerProvider provider,
+    MumbleServer server,
+  ) {
     provider.archiveServer(server.id);
     ShadSonner.of(context).show(
       ShadToast(
@@ -263,7 +270,6 @@ class ServerCard extends StatelessWidget {
       ),
     );
   }
-
 
   Color _getPingColor(int ping) {
     if (ping < 50) return Colors.green;

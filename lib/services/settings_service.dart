@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum PttKey {
-  none,
-  control,
-  shift,
-  alt,
-  command,
-  capsLock,
-}
+enum PttKey { none, control, shift, alt, command, capsLock }
 
 class SettingsService extends ChangeNotifier {
   static const String _kPttKey = 'ptt_key';
@@ -42,20 +35,22 @@ class SettingsService extends ChangeNotifier {
   bool _ignoreAccessibility;
 
   SettingsService(this._prefs)
-      : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
-        _pttSuppress = _prefs.getBool(_kPttSuppress) ?? true,
-        _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2],
-        _reconnectToLastServer = _prefs.getBool(_kReconnectToLastServer) ?? false,
-        _lastServerJson = _prefs.getString(_kLastServerJson),
-        _inputDeviceId = _prefs.getString(_kInputDeviceId),
-        _outputDeviceId = _prefs.getString(_kOutputDeviceId),
-        _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
-        _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
-        _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false {
+    : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
+      _pttSuppress = _prefs.getBool(_kPttSuppress) ?? true,
+      _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2],
+      _reconnectToLastServer = _prefs.getBool(_kReconnectToLastServer) ?? false,
+      _lastServerJson = _prefs.getString(_kLastServerJson),
+      _inputDeviceId = _prefs.getString(_kInputDeviceId),
+      _outputDeviceId = _prefs.getString(_kOutputDeviceId),
+      _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
+      _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
+      _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false {
     final String? customJson = _prefs.getString(_kCustomHotkey);
     if (customJson != null) {
       try {
-        _customHotkey = Map<String, dynamic>.from(Uri.parse('http://foo?$customJson').queryParameters);
+        _customHotkey = Map<String, dynamic>.from(
+          Uri.parse('http://foo?$customJson').queryParameters,
+        );
       } catch (_) {}
     }
   }
@@ -104,7 +99,12 @@ class SettingsService extends ChangeNotifier {
     if (hotkey != null) {
       _pttKey = PttKey.none; // Clear preset when custom is chosen
       await _prefs.setInt(_kPttKey, PttKey.none.index);
-      await _prefs.setString(_kCustomHotkey, Uri(queryParameters: hotkey.map((k, v) => MapEntry(k, v.toString()))).query);
+      await _prefs.setString(
+        _kCustomHotkey,
+        Uri(
+          queryParameters: hotkey.map((k, v) => MapEntry(k, v.toString())),
+        ).query,
+      );
     } else {
       await _prefs.remove(_kCustomHotkey);
     }

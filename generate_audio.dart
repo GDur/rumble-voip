@@ -4,11 +4,11 @@ import 'dart:math' as math;
 
 void main() async {
   print('--- GENERATING TEST AUDIO ---');
-  
+
   const sampleRate = 48000;
   const durationSeconds = 3;
   const totalSamples = sampleRate * durationSeconds;
-  
+
   final originalSamples = Int16List(totalSamples);
   for (int i = 0; i < totalSamples; i++) {
     // 440Hz Sine Wave (Standard A4 note)
@@ -20,7 +20,7 @@ void main() async {
   final originalBytes = originalSamples.buffer.asUint8List();
   final originalFile = File('test_original.pcm');
   await originalFile.writeAsBytes(originalBytes);
-  
+
   print('✅ Saved: ${originalFile.absolute.path}');
   print('Size: ${originalFile.lengthSync()} bytes');
   print('\nTo play this on macOS with FFmpeg 8.x:');

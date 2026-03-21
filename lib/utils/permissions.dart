@@ -10,11 +10,12 @@ class PermissionUtils {
   static Future<bool> requestMicrophonePermission() async {
     if (Platform.isMacOS) {
       final status = await FlutterMacosPermissions.microphoneStatus();
-      if (status.toString().toLowerCase() == 'authorized' || status.toString().toLowerCase() == 'granted') {
+      if (status.toString().toLowerCase() == 'authorized' ||
+          status.toString().toLowerCase() == 'granted') {
         _manuallyGranted = true;
         return true;
       }
-      
+
       final result = await FlutterMacosPermissions.requestMicrophone();
       if (result) _manuallyGranted = true;
       return result;
@@ -24,7 +25,7 @@ class PermissionUtils {
         _manuallyGranted = true;
         return true;
       }
-      
+
       final result = await ph.Permission.microphone.request();
       if (result.isGranted) _manuallyGranted = true;
       return result.isGranted;
@@ -34,7 +35,7 @@ class PermissionUtils {
   // Check if microphone permission is already granted
   static Future<bool> isMicrophonePermissionGranted() async {
     if (_manuallyGranted) return true;
-    
+
     if (Platform.isMacOS) {
       final status = await FlutterMacosPermissions.microphoneStatus();
       debugPrint('[PermissionUtils] macOS mic status string: "$status"');

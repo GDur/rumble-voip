@@ -80,7 +80,11 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => CertificateService()..loadCertificates(),
         ),
-        ChangeNotifierProxyProvider2<MumbleService, SettingsService, HotkeyService>(
+        ChangeNotifierProxyProvider2<
+          MumbleService,
+          SettingsService,
+          HotkeyService
+        >(
           create: (context) => HotkeyService(
             Provider.of<MumbleService>(context, listen: false),
             Provider.of<SettingsService>(context, listen: false),
@@ -152,7 +156,8 @@ class _WindowResizeListener extends StatefulWidget {
   State<_WindowResizeListener> createState() => _WindowResizeListenerState();
 }
 
-class _WindowResizeListenerState extends State<_WindowResizeListener> with WindowListener {
+class _WindowResizeListenerState extends State<_WindowResizeListener>
+    with WindowListener {
   @override
   void initState() {
     super.initState();
@@ -198,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkLastServer();
-    
+
     // Listen for PTT errors/warnings globally in the Home Screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -209,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // We can't use Provider.of in dispose, so we'd need a reference 
+    // We can't use Provider.of in dispose, so we'd need a reference
     // but MumbleService is a global provider so we can find it.
     // However, since it's a singleton-like in this app context, and the app is closed, it's usually fine.
     // But for good practice:
@@ -247,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final serverMap = jsonDecode(settings.lastServerJson!);
       final lastServer = MumbleServer.fromJson(serverMap);
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
-      
+
       Timer(const Duration(milliseconds: 500), () {
         if (mounted) _connectToServer(mumbleService, lastServer);
       });
@@ -264,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showSettingsDialog(BuildContext context) {
     final settings = Provider.of<SettingsService>(context, listen: false);
     final mumbleService = Provider.of<MumbleService>(context, listen: false);
-    
+
     showShadDialog(
       context: context,
       builder: (context) => SettingsDialog(
@@ -282,15 +287,23 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _connectToServer(MumbleService service, MumbleServer server) async {
+  Future<void> _connectToServer(
+    MumbleService service,
+    MumbleServer server,
+  ) async {
     if (mounted) setState(() => _connectingServerId = server.id);
     try {
-      final certService = Provider.of<CertificateService>(context, listen: false);
+      final certService = Provider.of<CertificateService>(
+        context,
+        listen: false,
+      );
       final defaultCertId = certService.defaultCertificateId;
-      final certificate = defaultCertId != null ? certService.getCertificateById(defaultCertId) : null;
-      
+      final certificate = defaultCertId != null
+          ? certService.getCertificateById(defaultCertId)
+          : null;
+
       await service.connect(server, certificate: certificate);
-      
+
       if (mounted) {
         final settings = Provider.of<SettingsService>(context, listen: false);
         settings.setLastServerJson(jsonEncode(server.toJson()));
@@ -314,7 +327,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (errorStr.contains('password')) {
       message = message.isEmpty ? 'Incorrect password.' : message;
       showEdit = true;
-    } else if (errorStr.contains('hostname') || errorStr.contains('host not found')) {
+    } else if (errorStr.contains('hostname') ||
+        errorStr.contains('host not found')) {
       message = 'Invalid server address.';
       showEdit = true;
     }
@@ -334,7 +348,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final mumbleService = Provider.of<MumbleService>(context);
     final theme = ShadTheme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
       body: Column(
@@ -371,7 +385,11 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.background,
-        border: Border(bottom: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5))),
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.border.withValues(alpha: 0.5),
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -381,14 +399,30 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Rumble', style: theme.textTheme.large.copyWith(fontWeight: FontWeight.bold, height: 1.1)),
-              Text('Mumble Reloaded', style: theme.textTheme.muted.copyWith(fontSize: 10, height: 1.0)),
+              Text(
+                'Rumble',
+                style: theme.textTheme.large.copyWith(
+                  fontWeight: FontWeight.bold,
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                'Mumble Reloaded',
+                style: theme.textTheme.muted.copyWith(
+                  fontSize: 10,
+                  height: 1.0,
+                ),
+              ),
             ],
           ),
           const Spacer(),
           if (mumbleService.isConnected)
             ShadIconButton.ghost(
-              icon: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive, size: 20),
+              icon: Icon(
+                LucideIcons.logOut,
+                color: theme.colorScheme.destructive,
+                size: 20,
+              ),
               onPressed: () => mumbleService.disconnect(),
             ),
           ShadIconButton.ghost(
@@ -406,8 +440,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Consumer<ServerProvider>(
       builder: (context, provider, _) {
-        final activeServers = provider.servers.where((s) => !s.isArchived).toList();
-        final archivedServers = provider.servers.where((s) => s.isArchived).toList();
+        final activeServers = provider.servers
+            .where((s) => !s.isArchived)
+            .toList();
+        final archivedServers = provider.servers
+            .where((s) => s.isArchived)
+            .toList();
 
         if (provider.servers.isEmpty) {
           return _buildEmptyState();
@@ -427,7 +465,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       'Servers',
-                      style: theme.textTheme.h2.copyWith(fontWeight: FontWeight.bold),
+                      style: theme.textTheme.h2.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       '${activeServers.length} servers available',
@@ -447,30 +487,42 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            ...activeServers.map((server) => ServerCard(
-                  server: server,
-                  provider: provider,
-                  isConnecting: _connectingServerId == server.id,
-                  onConnect: (s) => _connectToServer(Provider.of<MumbleService>(context, listen: false), s),
-                  onEdit: (s) => _showAddServerDialog(context, server: s),
-                )),
+            ...activeServers.map(
+              (server) => ServerCard(
+                server: server,
+                provider: provider,
+                isConnecting: _connectingServerId == server.id,
+                onConnect: (s) => _connectToServer(
+                  Provider.of<MumbleService>(context, listen: false),
+                  s,
+                ),
+                onEdit: (s) => _showAddServerDialog(context, server: s),
+              ),
+            ),
             if (archivedServers.isNotEmpty) ...[
               const SizedBox(height: 48),
               Text(
                 'Archived',
-                style: theme.textTheme.h4.copyWith(color: theme.colorScheme.mutedForeground),
+                style: theme.textTheme.h4.copyWith(
+                  color: theme.colorScheme.mutedForeground,
+                ),
               ),
               const SizedBox(height: 16),
-              ...archivedServers.map((server) => Opacity(
-                    opacity: 0.6,
-                    child: ServerCard(
-                      server: server,
-                      provider: provider,
-                      isConnecting: _connectingServerId == server.id,
-                      onConnect: (s) => _connectToServer(Provider.of<MumbleService>(context, listen: false), s),
-                      onEdit: (s) => _showAddServerDialog(context, server: s),
+              ...archivedServers.map(
+                (server) => Opacity(
+                  opacity: 0.6,
+                  child: ServerCard(
+                    server: server,
+                    provider: provider,
+                    isConnecting: _connectingServerId == server.id,
+                    onConnect: (s) => _connectToServer(
+                      Provider.of<MumbleService>(context, listen: false),
+                      s,
                     ),
-                  )),
+                    onEdit: (s) => _showAddServerDialog(context, server: s),
+                  ),
+                ),
+              ),
             ],
           ],
         );
@@ -490,7 +542,11 @@ class _HomeScreenState extends State<HomeScreen> {
               color: theme.colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(LucideIcons.radio, size: 64, color: theme.colorScheme.primary),
+            child: Icon(
+              LucideIcons.radio,
+              size: 64,
+              color: theme.colorScheme.primary,
+            ),
           ),
           const SizedBox(height: 32),
           Text('Welcome to Rumble', style: theme.textTheme.h2),
@@ -522,7 +578,11 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.background,
-        border: Border(top: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5))),
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.border.withValues(alpha: 0.5),
+          ),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
@@ -566,9 +626,11 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 2 + (8 * volume).clamp(0, 8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isMuted || isDeafened) 
+                color: (isMuted || isDeafened)
                     ? theme.colorScheme.mutedForeground.withValues(alpha: 0.3)
-                    : kBrandGreen.withValues(alpha: (0.4 + (volume * 0.6)).clamp(0, 1.0)),
+                    : kBrandGreen.withValues(
+                        alpha: (0.4 + (volume * 0.6)).clamp(0, 1.0),
+                      ),
                 boxShadow: [
                   if (!isMuted && !isDeafened && volume > 0.1)
                     BoxShadow(
@@ -582,13 +644,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         ShadIconButton.ghost(
-          icon: Icon(isMuted ? LucideIcons.micOff : LucideIcons.mic, 
-            color: isMuted ? theme.colorScheme.destructive : theme.colorScheme.primary),
+          icon: Icon(
+            isMuted ? LucideIcons.micOff : LucideIcons.mic,
+            color: isMuted
+                ? theme.colorScheme.destructive
+                : theme.colorScheme.primary,
+          ),
           onPressed: () => service.toggleMute(),
         ),
         ShadIconButton.ghost(
-          icon: Icon(isDeafened ? LucideIcons.headphoneOff : LucideIcons.headphones, 
-            color: isDeafened ? theme.colorScheme.destructive : theme.colorScheme.primary),
+          icon: Icon(
+            isDeafened ? LucideIcons.headphoneOff : LucideIcons.headphones,
+            color: isDeafened
+                ? theme.colorScheme.destructive
+                : theme.colorScheme.primary,
+          ),
           onPressed: () => service.toggleDeafen(),
         ),
       ],
@@ -602,9 +672,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final settings = Provider.of<SettingsService>(context);
 
     String label = 'HOLD TO TALK';
-    if (isSuppressed) label = 'SUPPRESSED';
-    else if (isMuted) label = 'MUTED';
-    else if (isTalking) label = 'TALKING...';
+    if (isSuppressed)
+      label = 'SUPPRESSED';
+    else if (isMuted)
+      label = 'MUTED';
+    else if (isTalking)
+      label = 'TALKING...';
     else if (settings.pttKey != PttKey.none) {
       label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
     }
@@ -622,14 +695,27 @@ class _HomeScreenState extends State<HomeScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: (isSuppressed || isMuted)
-              ? LinearGradient(colors: [theme.colorScheme.destructive.withValues(alpha: 0.1), theme.colorScheme.destructive.withValues(alpha: 0.2)])
+              ? LinearGradient(
+                  colors: [
+                    theme.colorScheme.destructive.withValues(alpha: 0.1),
+                    theme.colorScheme.destructive.withValues(alpha: 0.2),
+                  ],
+                )
               : isTalking
-                  ? const LinearGradient(colors: [Colors.blueAccent, Color(0xFF448AFF)])
-                  : LinearGradient(colors: [kBrandGreen, kBrandGreen.withValues(alpha: 0.8)]),
+              ? const LinearGradient(
+                  colors: [Colors.blueAccent, Color(0xFF448AFF)],
+                )
+              : LinearGradient(
+                  colors: [kBrandGreen, kBrandGreen.withValues(alpha: 0.8)],
+                ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: (isSuppressed || isMuted) ? Colors.transparent : isTalking ? Colors.blueAccent.withValues(alpha: 0.4) : kBrandGreen.withValues(alpha: 0.2),
+              color: (isSuppressed || isMuted)
+                  ? Colors.transparent
+                  : isTalking
+                  ? Colors.blueAccent.withValues(alpha: 0.4)
+                  : kBrandGreen.withValues(alpha: 0.2),
               blurRadius: isTalking ? 20 : 10,
               offset: const Offset(0, 4),
             ),
@@ -638,7 +724,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Text(
           label,
           style: TextStyle(
-            color: isTalking ? Colors.white : ((isSuppressed || isMuted) ? theme.colorScheme.destructive : Colors.black),
+            color: isTalking
+                ? Colors.white
+                : ((isSuppressed || isMuted)
+                      ? theme.colorScheme.destructive
+                      : Colors.black),
             fontWeight: FontWeight.bold,
             letterSpacing: 1.2,
           ),

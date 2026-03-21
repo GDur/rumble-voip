@@ -67,7 +67,9 @@ class _PermissionBannerState extends State<PermissionBanner> {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          color: ShadTheme.of(context).colorScheme.destructive.withValues(alpha: 0.1),
+          color: ShadTheme.of(
+            context,
+          ).colorScheme.destructive.withValues(alpha: 0.1),
           child: Row(
             children: [
               Icon(
@@ -86,7 +88,9 @@ class _PermissionBannerState extends State<PermissionBanner> {
                   ShadToaster.of(context).show(
                     const ShadToast(
                       title: Text('Banner hidden'),
-                      description: Text('You can re-enable this check in General Settings.'),
+                      description: Text(
+                        'You can re-enable this check in General Settings.',
+                      ),
                     ),
                   );
                 },
@@ -109,7 +113,9 @@ class _PermissionBannerState extends State<PermissionBanner> {
                           'App Path: $path',
                           style: TextStyle(
                             fontSize: 10,
-                            color: ShadTheme.of(context).colorScheme.mutedForeground,
+                            color: ShadTheme.of(
+                              context,
+                            ).colorScheme.mutedForeground,
                             fontFamily: 'monospace',
                           ),
                         );
@@ -133,15 +139,22 @@ class _PermissionBannerState extends State<PermissionBanner> {
                 onPressed: () async {
                   await hotkeyService.checkPermission();
                   if (context.mounted) {
-                    final granted = hotkeyService.hasAccessibilityPermission.value;
+                    final granted =
+                        hotkeyService.hasAccessibilityPermission.value;
                     if (granted) setState(() => _showSuccessBanner = true);
-                    
+
                     ShadToaster.of(context).show(
                       ShadToast(
-                        title: Text(granted ? 'Permission Granted' : 'Status: Permission Required'),
-                        description: Text(granted 
-                          ? 'Rumble now has full control over hotkeys.' 
-                          : 'Check if Rumble is enabled in System Settings.'),
+                        title: Text(
+                          granted
+                              ? 'Permission Granted'
+                              : 'Status: Permission Required',
+                        ),
+                        description: Text(
+                          granted
+                              ? 'Rumble now has full control over hotkeys.'
+                              : 'Check if Rumble is enabled in System Settings.',
+                        ),
                       ),
                     );
                   }
@@ -157,7 +170,9 @@ class _PermissionBannerState extends State<PermissionBanner> {
                   ShadToaster.of(context).show(
                     const ShadToast(
                       title: Text('Banner hidden'),
-                      description: Text('You can re-enable this check in General Settings.'),
+                      description: Text(
+                        'You can re-enable this check in General Settings.',
+                      ),
                     ),
                   );
                 },
