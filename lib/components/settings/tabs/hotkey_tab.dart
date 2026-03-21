@@ -18,6 +18,11 @@ class HotkeyTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = Theme.of(context).platform == TargetPlatform.windows ||
+        Theme.of(context).platform == TargetPlatform.linux ||
+        Theme.of(context).platform == TargetPlatform.macOS;
+    final theme = ShadTheme.of(context);
+
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -28,49 +33,78 @@ class HotkeyTab extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 320),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ShadSelect<PttKey>(
-                    placeholder: const Text('Select a key'),
-                    initialValue: settings.pttKey,
-                    onChanged: (value) {
-                      if (value != null) {
-                        settings.setPttKey(value);
-                        onUpdate(() {});
-                      }
-                    },
-                    options: [
-                      ...PttKey.values.map((k) {
-                        String label = k.name.toUpperCase();
-                        if (k == PttKey.none) label = 'DISABLED';
-                        return ShadOption(value: k, child: Text(label));
-                      }),
-                    ],
-                    selectedOptionBuilder: (context, value) {
-                      if (value == PttKey.none &&
-                          settings.customHotkey != null) {
-                        return Text(
-                          'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
-                        );
-                      }
-                      return Text(value.name.toUpperCase());
-                    },
+          if (!isDesktop) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.muted.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.info, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Global hotkeys are currently only available on desktop devices with keyboards.',
+                      style: theme.textTheme.muted,
+                    ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          Opacity(
+            opacity: isDesktop ? 1.0 : 0.5,
+            child: AbsorbPointer(
+              absorbing: !isDesktop,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ShadSelect<PttKey>(
+                        placeholder: const Text('Select a key'),
+                        initialValue: settings.pttKey,
+                        onChanged: (value) {
+                          if (value != null) {
+                            settings.setPttKey(value);
+                            onUpdate(() {});
+                          }
+                        },
+                        options: [
+                          ...PttKey.values.map((k) {
+                            String label = k.name.toUpperCase();
+                            if (k == PttKey.none) label = 'DISABLED';
+                            return ShadOption(value: k, child: Text(label));
+                          }),
+                        ],
+                        selectedOptionBuilder: (context, value) {
+                          if (value == PttKey.none &&
+                              settings.customHotkey != null) {
+                            return Text(
+                              'CUSTOM: ${settings.customHotkey!['label'] ?? 'Unknown'}',
+                            );
+                          }
+                          return Text(value.name.toUpperCase());
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ShadButton.outline(
+                      onPressed: () => onShowHotkeyRecorder(context, settings),
+                      child: const Text('Record...'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                ShadButton.outline(
-                  onPressed: () => onShowHotkeyRecorder(context, settings),
-                  child: const Text('Record...'),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          if (settings.pttKey != PttKey.none ||
-              settings.customHotkey != null) ...[
+          if (isDesktop && (settings.pttKey != PttKey.none ||
+              settings.customHotkey != null)) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

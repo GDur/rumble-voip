@@ -792,6 +792,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isMuted = service.isMuted;
     final settings = Provider.of<SettingsService>(context);
 
+    final isDesktop = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS);
+
     String label = 'HOLD TO TALK';
     if (isSuppressed) {
       label = 'SUPPRESSED';
@@ -799,8 +804,8 @@ class _HomeScreenState extends State<HomeScreen> {
       label = 'MUTED';
     } else if (isTalking) {
       label = 'TALKING...';
-    } else if (settings.pttKey != PttKey.none) {
-      label = 'HOLD ${settings.pttKey.name.toUpperCase()}';
+    } else if (isDesktop && settings.pttKey != PttKey.none) {
+      label = 'HOLD [${settings.pttKey.name.toUpperCase()}]';
     }
 
     final theme = ShadTheme.of(context);
