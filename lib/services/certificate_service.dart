@@ -220,8 +220,9 @@ class CertificateService extends ChangeNotifier {
     String? password,
   ) async {
     if (kIsWeb) return null;
-    if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows))
+    if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows)) {
       return null;
+    }
 
     try {
       final tempDir = await getTemporaryDirectory();

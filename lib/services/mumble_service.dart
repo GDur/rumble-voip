@@ -390,7 +390,7 @@ class MumbleService extends ChangeNotifier
       if (welcomeMessage != null && welcomeMessage.isNotEmpty) {
         _addSystemMessage(welcomeMessage, senderName: 'Welcome message');
       }
-      
+
       notifyListeners();
 
       // Ensure hardware audio resources are active and warm on connect

@@ -113,122 +113,122 @@ class _AddServerDialogState extends State<AddServerDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: ShadInputFormField(
-                  id: 'host',
-                  label: _buildLabelWithTooltip(
-                    'Server Address (Host)',
-                    'The hostname or IP of the Mumble server.',
-                  ),
-                  placeholder: const Text('mumble.example.com'),
-                  controller: _hostController,
-                  autofocus: true,
-                  onChanged: (val) {
-                    if (_isAutoName) {
-                      setState(() => _nameController.text = val);
-                    }
-                  },
-                  validator: (v) {
-                    if (v.isEmpty) return 'Host address is required';
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: ShadInputFormField(
-                  id: 'name',
-                  label: _buildLabelWithTooltip(
-                    'Display Name',
-                    'How this server appears in your list.',
-                  ),
-                  placeholder: const Text('My Awesome Server'),
-                  controller: _nameController,
-                  onChanged: (val) => setState(() => _isAutoName = false),
-                  validator: (v) {
-                    if (v.isEmpty) return 'Display name is required';
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 150),
-                      child: ShadInputFormField(
-                        id: 'port',
-                        label: const Text('Port'),
-                        placeholder: const Text('64738'),
-                        controller: _portController,
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          if (int.tryParse(v) == null) return 'Invalid port';
-                          return null;
-                        },
-                      ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ShadInputFormField(
+                    id: 'host',
+                    label: _buildLabelWithTooltip(
+                      'Server Address (Host)',
+                      'The hostname or IP of the Mumble server.',
                     ),
+                    placeholder: const Text('mumble.example.com'),
+                    controller: _hostController,
+                    autofocus: true,
+                    onChanged: (val) {
+                      if (_isAutoName) {
+                        setState(() => _nameController.text = val);
+                      }
+                    },
+                    validator: (v) {
+                      if (v.isEmpty) return 'Host address is required';
+                      return null;
+                    },
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 250),
-                      child: ShadInputFormField(
-                        id: 'username',
-                        label: _buildLabelWithTooltip(
-                          'Username',
-                          'Public display name on server.',
+                ),
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ShadInputFormField(
+                    id: 'name',
+                    label: _buildLabelWithTooltip(
+                      'Display Name',
+                      'How this server appears in your list.',
+                    ),
+                    placeholder: const Text('My Awesome Server'),
+                    controller: _nameController,
+                    onChanged: (val) => setState(() => _isAutoName = false),
+                    validator: (v) {
+                      if (v.isEmpty) return 'Display name is required';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 150),
+                        child: ShadInputFormField(
+                          id: 'port',
+                          label: const Text('Port'),
+                          placeholder: const Text('64738'),
+                          controller: _portController,
+                          keyboardType: TextInputType.number,
+                          validator: (v) {
+                            if (int.tryParse(v) == null) return 'Invalid port';
+                            return null;
+                          },
                         ),
-                        placeholder: const Text('Your Nickname'),
-                        controller: _usernameController,
-                        validator: (v) {
-                          if (v.length < 2) return 'Username too short';
-                          return null;
-                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 3,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 250),
+                        child: ShadInputFormField(
+                          id: 'username',
+                          label: _buildLabelWithTooltip(
+                            'Username',
+                            'Public display name on server.',
+                          ),
+                          placeholder: const Text('Your Nickname'),
+                          controller: _usernameController,
+                          validator: (v) {
+                            if (v.length < 2) return 'Username too short';
+                            return null;
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: ShadInputFormField(
+                    id: 'password',
+                    label: const Text('Password (Optional)'),
+                    placeholder: const Text('Secret Password'),
+                    controller: _passwordController,
+                    obscureText: _passwordObscure,
+                    leading: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(LucideIcons.lock, size: 16),
+                    ),
+                    trailing: ShadIconButton.ghost(
+                      width: 24,
+                      height: 24,
+                      padding: EdgeInsets.zero,
+                      onPressed: () =>
+                          setState(() => _passwordObscure = !_passwordObscure),
+                      icon: Icon(
+                        _passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                        size: 16,
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: ShadInputFormField(
-                  id: 'password',
-                  label: const Text('Password (Optional)'),
-                  placeholder: const Text('Secret Password'),
-                  controller: _passwordController,
-                  obscureText: _passwordObscure,
-                  leading: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Icon(LucideIcons.lock, size: 16),
-                  ),
-                  trailing: ShadIconButton.ghost(
-                    width: 24,
-                    height: 24,
-                    padding: EdgeInsets.zero,
-                    onPressed: () =>
-                        setState(() => _passwordObscure = !_passwordObscure),
-                    icon: Icon(
-                      _passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff,
-                      size: 16,
-                    ),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildLabelWithTooltip(String text, String tooltip) {
     return Row(

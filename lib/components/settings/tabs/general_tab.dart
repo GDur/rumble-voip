@@ -7,11 +7,7 @@ class GeneralTab extends StatelessWidget {
   final SettingsService settings;
   final StateSetter onUpdate;
 
-  const GeneralTab({
-    super.key,
-    required this.settings,
-    required this.onUpdate,
-  });
+  const GeneralTab({super.key, required this.settings, required this.onUpdate});
 
   @override
   Widget build(BuildContext context) {

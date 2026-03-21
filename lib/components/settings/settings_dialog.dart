@@ -132,10 +132,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                 item.label,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  fontWeight:
-                                      isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -196,7 +195,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       trailing: Icon(
                         LucideIcons.chevronRight,
                         size: 16,
-                        color: ShadTheme.of(context).colorScheme.mutedForeground,
+                        color: ShadTheme.of(
+                          context,
+                        ).colorScheme.mutedForeground,
                       ),
                       child: Container(
                         alignment: Alignment.centerLeft,
@@ -225,9 +226,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Expanded(
-              child: _buildTabContent(effectiveTab),
-            ),
+            Expanded(child: _buildTabContent(effectiveTab)),
             const SizedBox(height: 16),
             ShadButton.outline(
               onPressed: () => setState(() => _currentTab = null),
@@ -249,10 +248,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           onUpdate: setState,
         );
       case 'general':
-        return GeneralTab(
-          settings: widget.settings,
-          onUpdate: setState,
-        );
+        return GeneralTab(settings: widget.settings, onUpdate: setState);
       case 'hotkeys':
         return HotkeyTab(
           settings: widget.settings,

@@ -1,18 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
-import 'package:dumble/dumble.dart';
-import 'package:record/record.dart';
-
-@GenerateNiceMocks([
-  MockSpec<MumbleClient>(),
-  MockSpec<AudioRecorder>(),
-  MockSpec<AudioClient>(),
-])
-import 'mumble_service_test.mocks.dart';
 
 void main() {
   testWidgets('MumbleService initialization', (WidgetTester tester) async {

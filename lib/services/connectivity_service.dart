@@ -25,7 +25,7 @@ class ConnectivityService extends ChangeNotifier {
   void _updateState(List<ConnectivityResult> results) {
     // If results contains none, we are offline
     final bool currentlyOnline = !results.contains(ConnectivityResult.none);
-    
+
     if (_isOnline != currentlyOnline) {
       _isOnline = currentlyOnline;
       notifyListeners();
