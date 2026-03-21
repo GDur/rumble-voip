@@ -14,6 +14,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _focusNode = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -33,6 +34,7 @@ class _ChatViewState extends State<ChatView> {
     } catch (_) {}
     _controller.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -49,6 +51,7 @@ class _ChatViewState extends State<ChatView> {
       _controller.clear();
       _scrollToBottom();
     }
+    _focusNode.requestFocus();
   }
 
   void _scrollToBottom() {
@@ -113,6 +116,29 @@ class _ChatViewState extends State<ChatView> {
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final msg = messages[index];
+                if (msg.isSystem) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            '[${DateFormat('HH:mm:ss').format(msg.timestamp)}]',
+                            style: theme.textTheme.muted.copyWith(fontSize: 10),
+                          ),
+                          const SizedBox(height: 4),
+                          HtmlWidget(
+                            msg.content,
+                            textStyle: theme.textTheme.muted.copyWith(
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
@@ -195,6 +221,7 @@ class _ChatViewState extends State<ChatView> {
                 Expanded(
                   child: ShadInput(
                     controller: _controller,
+                    focusNode: _focusNode,
                     placeholder: const Text('Type a message...'),
                     onSubmitted: (_) => _sendMessage(),
                   ),

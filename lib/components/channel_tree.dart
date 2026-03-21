@@ -103,7 +103,15 @@ class _ChannelTreeState extends State<ChannelTree> {
   }
 
   void _showSetNoticeDialog(BuildContext context, dumble.Self self) {
-    final controller = TextEditingController(text: self.comment ?? '');
+    final initialText = self.comment ?? '';
+    final controller = TextEditingController(text: initialText);
+    if (initialText.isNotEmpty) {
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: initialText.length,
+      );
+    }
+
     showShadDialog(
       context: context,
       builder: (context) => ShadDialog(
@@ -132,6 +140,7 @@ class _ChannelTreeState extends State<ChannelTree> {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: ShadInput(
                 controller: controller,
+                autofocus: true,
                 placeholder: const Text('Enter your notice here...'),
                 maxLines: 3,
               ),

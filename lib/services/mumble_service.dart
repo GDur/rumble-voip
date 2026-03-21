@@ -138,6 +138,18 @@ class MumbleService extends ChangeNotifier
     }
   }
 
+  void _addSystemMessage(String text) {
+    _messages.add(
+      ChatMessage(
+        senderName: 'System',
+        content: text,
+        timestamp: DateTime.now(),
+        isSystem: true,
+      ),
+    );
+    notifyListeners();
+  }
+
   void requestUserStats(User user) {
     user.requestUserStats();
   }
@@ -336,6 +348,9 @@ class MumbleService extends ChangeNotifier
     _talkingUsers.clear();
     notifyListeners();
 
+    _addSystemMessage('Welcome to Rumble.');
+    _addSystemMessage('Connecting to server ${server.host}:${server.port}.');
+
     try {
       debugPrint(
         '[MumbleService] Connecting to ${server.host}:${server.port}...',
@@ -368,6 +383,14 @@ class MumbleService extends ChangeNotifier
       _updateChannelsInternal();
 
       _isConnected = true;
+      _addSystemMessage('Connected.');
+      
+      // Display server welcome message (MOTD) if available
+      final welcomeText = _client?.serverInfo.config?.welcomeText;
+      if (welcomeText != null && welcomeText.isNotEmpty) {
+        _addSystemMessage('Welcome message: \n\n$welcomeText');
+      }
+      
       notifyListeners();
 
       // Ensure hardware audio resources are active and warm on connect
@@ -748,6 +771,7 @@ class MumbleService extends ChangeNotifier
     );
     notifyListeners();
   }
+
   @override
   void onBanListReceived(List<BanEntry> bans) {}
   @override

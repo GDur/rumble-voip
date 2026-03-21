@@ -5,6 +5,7 @@ class ChatMessage {
   final String content;
   final DateTime timestamp;
   final bool isSelf;
+  final bool isSystem;
   final User? sender;
 
   ChatMessage({
@@ -12,6 +13,7 @@ class ChatMessage {
     required this.content,
     required this.timestamp,
     this.isSelf = false,
+    this.isSystem = false,
     this.sender,
   });
 }
