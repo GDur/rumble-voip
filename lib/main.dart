@@ -351,30 +351,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
-      body: Column(
-        children: [
-          _buildHeader(mumbleService),
-          const PermissionBanner(),
-          Expanded(
-            child: ListenableBuilder(
-              listenable: mumbleService,
-              builder: (context, _) {
-                if (mumbleService.isConnected) {
-                  return ChannelTree(
-                    channels: mumbleService.channels,
-                    users: mumbleService.users,
-                    talkingUsers: mumbleService.talkingUsers,
-                    self: mumbleService.self,
-                    hasMicPermission: mumbleService.hasMicPermission,
-                    onChannelTap: (c) => mumbleService.joinChannel(c),
-                  );
-                }
-                return _buildServerList();
-              },
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(mumbleService),
+            const PermissionBanner(),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: mumbleService,
+                builder: (context, _) {
+                  if (mumbleService.isConnected) {
+                    return ChannelTree(
+                      channels: mumbleService.channels,
+                      users: mumbleService.users,
+                      talkingUsers: mumbleService.talkingUsers,
+                      self: mumbleService.self,
+                      hasMicPermission: mumbleService.hasMicPermission,
+                      onChannelTap: (c) => mumbleService.joinChannel(c),
+                    );
+                  }
+                  return _buildServerList();
+                },
+              ),
             ),
-          ),
-          if (mumbleService.isConnected) _buildBottomBar(mumbleService),
-        ],
+            if (mumbleService.isConnected) _buildBottomBar(mumbleService),
+          ],
+        ),
       ),
     );
   }

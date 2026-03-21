@@ -80,83 +80,87 @@ class _SettingsDialogState extends State<SettingsDialog> {
     return ShadDialog(
       padding: EdgeInsets.zero,
       title: title,
-      child: SizedBox(
-        width: isMobile ? MediaQuery.of(context).size.width * 0.95 : 700,
-        height: isMobile ? MediaQuery.of(context).size.height * 0.7 : 550,
-        child: isMobile
-            ? _buildMobileContent(effectiveTab, sideBarItems)
-            : Row(
-                children: [
-                  // Sidebar
-                  Container(
-                    width: 180,
-                    decoration: BoxDecoration(
-                      border: Border(
-                        right: BorderSide(
-                          color: ShadTheme.of(context).colorScheme.border,
+      child: SafeArea(
+        top: isMobile,
+        bottom: isMobile,
+        child: SizedBox(
+          width: isMobile ? MediaQuery.of(context).size.width * 0.95 : 700,
+          height: isMobile ? MediaQuery.of(context).size.height * 0.7 : 550,
+          child: isMobile
+              ? _buildMobileContent(effectiveTab, sideBarItems)
+              : Row(
+                  children: [
+                    // Sidebar
+                    Container(
+                      width: 180,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: BorderSide(
+                            color: ShadTheme.of(context).colorScheme.border,
+                          ),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: sideBarItems.map((item) {
+                          final isSelected = effectiveTab == item.id;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: ShadButton.ghost(
+                              onPressed: () =>
+                                  setState(() => _currentTab = item.id),
+                              width: double.infinity,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              backgroundColor: isSelected
+                                  ? ShadTheme.of(context).colorScheme.accent
+                                  : Colors.transparent,
+                              pressedBackgroundColor: ShadTheme.of(
+                                context,
+                              ).colorScheme.accent,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(item.icon, size: 16),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    item.label,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    // Content
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildTabContent(effectiveTab!)),
+                            const SizedBox(height: 16),
+                            Align(
+                              alignment: Alignment.bottomRight,
+                              child: ShadButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Done'),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: sideBarItems.map((item) {
-                        final isSelected = effectiveTab == item.id;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: ShadButton.ghost(
-                            onPressed: () =>
-                                setState(() => _currentTab = item.id),
-                            width: double.infinity,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            backgroundColor: isSelected
-                                ? ShadTheme.of(context).colorScheme.accent
-                                : Colors.transparent,
-                            pressedBackgroundColor: ShadTheme.of(
-                              context,
-                            ).colorScheme.accent,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(item.icon, size: 16),
-                                const SizedBox(width: 12),
-                                Text(
-                                  item.label,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // Content
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _buildTabContent(effectiveTab!)),
-                          const SizedBox(height: 16),
-                          Align(
-                            alignment: Alignment.bottomRight,
-                            child: ShadButton(
-                              onPressed: () => Navigator.of(context).pop(),
-                              child: const Text('Done'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }
@@ -180,6 +184,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       onPressed: () => setState(() => _currentTab = item.id),
                       size: ShadButtonSize.lg,
                       width: MediaQuery.of(context).size.width * 0.85,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       child: Row(
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,

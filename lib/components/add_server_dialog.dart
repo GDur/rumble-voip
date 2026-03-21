@@ -52,6 +52,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return ShadDialog(
       title: Text(widget.server == null ? 'Add New Server' : 'Edit Server'),
       actions: [
@@ -89,15 +90,18 @@ class _AddServerDialogState extends State<AddServerDialog> {
           },
         ),
       ],
-      child: ShadForm(
-        key: _formKey,
-        child: Container(
-          width: 440,
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: SafeArea(
+        top: isMobile,
+        bottom: isMobile,
+        child: ShadForm(
+          key: _formKey,
+          child: Container(
+            width: isMobile ? MediaQuery.of(context).size.width * 0.9 : 440,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
                 child: ShadInputFormField(
@@ -210,8 +214,9 @@ class _AddServerDialogState extends State<AddServerDialog> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildLabelWithTooltip(String text, String tooltip) {
     return Row(
