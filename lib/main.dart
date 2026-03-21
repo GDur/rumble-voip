@@ -335,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: ClipRRect(
             borderRadius: theme.radius,
             child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 1, sigmaY: 1),
+              filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
               child: const ChatView(),
             ),
           ),
