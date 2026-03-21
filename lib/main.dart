@@ -314,27 +314,25 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         final theme = ShadTheme.of(context);
         return ShadSheet(
+          backgroundColor: theme.colorScheme.background.withValues(alpha: 0.6),
+          padding: EdgeInsets.zero,
+          scrollable: false,
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.9,
           ),
-          title: const Text('Chat'),
-          description: const Text('Text messages and conversation'),
+          title: Padding(
+            padding: const EdgeInsets.only(left: 16, top: 16),
+            child: const Text('Chat'),
+          ),
+          description: Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: const Text('Text messages and conversation'),
+          ),
           child: ClipRRect(
             borderRadius: theme.radius,
             child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.85,
-                margin: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.background.withValues(alpha: 0.8),
-                  borderRadius: theme.radius,
-                  border: Border.all(
-                    color: theme.colorScheme.border.withValues(alpha: 0.1),
-                  ),
-                ),
-                child: const ChatView(),
-              ),
+              filter: ui.ImageFilter.blur(sigmaX: 1, sigmaY: 1),
+              child: const ChatView(),
             ),
           ),
         );
@@ -416,7 +414,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 listenable: mumbleService,
                 builder: (context, _) {
                   if (mumbleService.isConnected) {
-                    final platformDesktop = !kIsWeb &&
+                    final platformDesktop =
+                        !kIsWeb &&
                         (defaultTargetPlatform == TargetPlatform.windows ||
                             defaultTargetPlatform == TargetPlatform.linux ||
                             defaultTargetPlatform == TargetPlatform.macOS);
@@ -454,7 +453,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             id: 1,
                             defaultSize: .7,
                             minSize: .3,
-                            child: const ChatView(),
+                            child: ColoredBox(
+                              color: theme.colorScheme.background,
+                              child: const ChatView(),
+                            ),
                           ),
                         ],
                       );
@@ -482,7 +484,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(MumbleService mumbleService) {
     final theme = ShadTheme.of(context);
-    final isSlimDesktop = mumbleService.isConnected &&
+    final isSlimDesktop =
+        mumbleService.isConnected &&
         !kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.linux ||

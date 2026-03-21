@@ -73,7 +73,6 @@ class _ChatViewState extends State<ChatView> {
     final currentChannelName = self?.channel.name ?? 'Chat';
 
     return Container(
-      decoration: BoxDecoration(color: theme.colorScheme.background),
       child: Column(
         children: [
           Container(
