@@ -21,6 +21,7 @@ import 'package:rumble/components/settings/settings_dialog.dart';
 import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
 import 'package:rumble/components/chat_view.dart';
+import 'package:rumble/services/connectivity_service.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -68,6 +69,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
         ChangeNotifierProvider(
           create: (_) => MumbleService()
             ..initialize(
@@ -405,6 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final mumbleService = Provider.of<MumbleService>(context);
+    final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
 
     return Scaffold(
@@ -412,6 +415,34 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            if (!connectivityService.isOnline)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                color: Colors.blue.withValues(alpha: 0.9),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'No internet connection. Waiting to reconnect...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             _buildHeader(mumbleService),
             const PermissionBanner(),
             Expanded(

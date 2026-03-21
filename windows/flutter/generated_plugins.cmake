@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  connectivity_plus
   hotkey_manager_windows
   permission_handler_windows
   record_windows

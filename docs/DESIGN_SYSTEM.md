@@ -69,3 +69,9 @@ To streamline user interaction, especially on desktop:
       );
     }
     ```
+
+## 6. Banner & Notification Colors
+To maintain a premium, non-alarmist feel:
+*   **Informational Banners**: Use **Blue** (e.g., `Colors.blue`) or **Yellow** for status updates (e.g., "No internet connection" or "Waiting to reconnect").
+*   **Color Restriction**: NEVER use Red for persistent status bars or informational layouts. Red is reserved strictly for destructive actions (Delete, Disconnect) or critical one-time errors (Toasts).
+*   **Visual Style**: Keep these bars slim (vertical padding 6-8px) and use small icons (14-16px) for a subtle "status" look rather than a loud "error" look.

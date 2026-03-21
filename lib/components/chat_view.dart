@@ -123,8 +123,11 @@ class _ChatViewState extends State<ChatView> {
                       child: Column(
                         children: [
                           Text(
-                            '[${DateFormat('HH:mm:ss').format(msg.timestamp)}]',
-                            style: theme.textTheme.muted.copyWith(fontSize: 10),
+                            '[${DateFormat('HH:mm:ss').format(msg.timestamp)}] ${msg.senderName}:',
+                            style: theme.textTheme.muted.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           HtmlWidget(

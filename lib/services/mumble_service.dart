@@ -138,10 +138,10 @@ class MumbleService extends ChangeNotifier
     }
   }
 
-  void _addSystemMessage(String text) {
+  void _addSystemMessage(String text, {String senderName = 'System'}) {
     _messages.add(
       ChatMessage(
-        senderName: 'System',
+        senderName: senderName,
         content: text,
         timestamp: DateTime.now(),
         isSystem: true,
@@ -384,11 +384,11 @@ class MumbleService extends ChangeNotifier
 
       _isConnected = true;
       _addSystemMessage('Connected.');
-      
+
       // Display server welcome message (MOTD) if available
-      final welcomeText = _client?.serverInfo.config?.welcomeText;
-      if (welcomeText != null && welcomeText.isNotEmpty) {
-        _addSystemMessage('Welcome message: \n\n$welcomeText');
+      final welcomeMessage = _client?.serverInfo.config?.welcomeText;
+      if (welcomeMessage != null && welcomeMessage.isNotEmpty) {
+        _addSystemMessage(welcomeMessage, senderName: 'Welcome message');
       }
       
       notifyListeners();
