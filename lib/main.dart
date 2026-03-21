@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +20,7 @@ import 'package:rumble/components/add_server_dialog.dart';
 import 'package:rumble/components/settings/settings_dialog.dart';
 import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
+import 'package:rumble/components/chat_view.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -287,6 +289,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showChatSheet(BuildContext context, MumbleService mumbleService) {
+    showShadSheet(
+      side: ShadSheetSide.right,
+      context: context,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withValues(alpha: 0.3),
+      animateIn: [
+        SlideEffect(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        ),
+      ],
+      animateOut: [
+        SlideEffect(
+          begin: Offset.zero,
+          end: const Offset(1, 0),
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInCubic,
+        ),
+      ],
+      builder: (context) {
+        final theme = ShadTheme.of(context);
+        return ShadSheet(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+          ),
+          title: const Text('Chat'),
+          description: const Text('Text messages and conversation'),
+          child: ClipRRect(
+            borderRadius: theme.radius,
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                margin: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.background.withValues(alpha: 0.8),
+                  borderRadius: theme.radius,
+                  border: Border.all(
+                    color: theme.colorScheme.border.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: const ChatView(),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _connectToServer(
     MumbleService service,
     MumbleServer server,
@@ -361,14 +416,58 @@ class _HomeScreenState extends State<HomeScreen> {
                 listenable: mumbleService,
                 builder: (context, _) {
                   if (mumbleService.isConnected) {
-                    return ChannelTree(
-                      channels: mumbleService.channels,
-                      users: mumbleService.users,
-                      talkingUsers: mumbleService.talkingUsers,
-                      self: mumbleService.self,
-                      hasMicPermission: mumbleService.hasMicPermission,
-                      onChannelTap: (c) => mumbleService.joinChannel(c),
-                    );
+                    final platformDesktop = !kIsWeb &&
+                        (defaultTargetPlatform == TargetPlatform.windows ||
+                            defaultTargetPlatform == TargetPlatform.linux ||
+                            defaultTargetPlatform == TargetPlatform.macOS);
+
+                    final isSlim = MediaQuery.of(context).size.width < 900;
+
+                    if (platformDesktop) {
+                      if (isSlim) {
+                        return ChannelTree(
+                          channels: mumbleService.channels,
+                          users: mumbleService.users,
+                          talkingUsers: mumbleService.talkingUsers,
+                          self: mumbleService.self,
+                          hasMicPermission: mumbleService.hasMicPermission,
+                          onChannelTap: (c) => mumbleService.joinChannel(c),
+                        );
+                      }
+                      return ShadResizablePanelGroup(
+                        showHandle: true,
+                        children: [
+                          ShadResizablePanel(
+                            id: 0,
+                            defaultSize: .3,
+                            minSize: .2,
+                            child: ChannelTree(
+                              channels: mumbleService.channels,
+                              users: mumbleService.users,
+                              talkingUsers: mumbleService.talkingUsers,
+                              self: mumbleService.self,
+                              hasMicPermission: mumbleService.hasMicPermission,
+                              onChannelTap: (c) => mumbleService.joinChannel(c),
+                            ),
+                          ),
+                          ShadResizablePanel(
+                            id: 1,
+                            defaultSize: .7,
+                            minSize: .3,
+                            child: const ChatView(),
+                          ),
+                        ],
+                      );
+                    } else {
+                      return ChannelTree(
+                        channels: mumbleService.channels,
+                        users: mumbleService.users,
+                        talkingUsers: mumbleService.talkingUsers,
+                        self: mumbleService.self,
+                        hasMicPermission: mumbleService.hasMicPermission,
+                        onChannelTap: (c) => mumbleService.joinChannel(c),
+                      );
+                    }
                   }
                   return _buildServerList();
                 },
@@ -383,6 +482,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader(MumbleService mumbleService) {
     final theme = ShadTheme.of(context);
+    final isSlimDesktop = mumbleService.isConnected &&
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS) &&
+        MediaQuery.of(context).size.width < 900;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
@@ -418,6 +524,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
+          if (isSlimDesktop)
+            ShadIconButton.ghost(
+              icon: const Icon(LucideIcons.messageSquare, size: 20),
+              onPressed: () => _showChatSheet(context, mumbleService),
+            ),
           if (mumbleService.isConnected)
             ShadIconButton.ghost(
               icon: Icon(

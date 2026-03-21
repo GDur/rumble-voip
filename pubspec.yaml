@@ -55,6 +55,7 @@ dependencies:
   audio_session: ^0.1.21
   flutter_widget_from_html: ^0.17.1
   url_launcher: ^6.3.2
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,7 @@ import 'package:dumble/dumble.dart';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:rumble/models/certificate.dart';
+import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/audio_playback_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
@@ -26,6 +27,9 @@ class MumbleService extends ChangeNotifier
 
   // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
+
+  // Chat messages
+  final List<ChatMessage> _messages = [];
 
   // Audio recording and encoding (Outgoing)
   late final AudioRecorder _recorder;
@@ -78,6 +82,7 @@ class MumbleService extends ChangeNotifier
   List<dynamic> get inputDevices => _inputDevices;
   List<dynamic> get outputDevices => _outputDevices;
   String? get pttErrorMessage => _pttErrorMessage;
+  List<ChatMessage> get messages => List.unmodifiable(_messages);
 
   void clearPttErrorMessage() {
     if (_pttErrorMessage != null) {
@@ -107,6 +112,28 @@ class MumbleService extends ChangeNotifier
   Future<void> joinChannel(Channel channel) async {
     if (_client != null) {
       _client!.self.moveToChannel(channel: channel);
+      notifyListeners();
+    }
+  }
+
+  void sendMessage(String text) {
+    if (_client != null && text.isNotEmpty) {
+      final message = OutgoingTextMessage(
+        message: text,
+        channels: [_client!.self.channel],
+      );
+      _client!.sendMessage(message: message);
+
+      // Add to our own list since we don't get an onTextMessage for our own messages
+      _messages.add(
+        ChatMessage(
+          senderName: _client!.self.name ?? 'Me',
+          content: text,
+          timestamp: DateTime.now(),
+          isSelf: true,
+          sender: _client!.self,
+        ),
+      );
       notifyListeners();
     }
   }
@@ -561,6 +588,7 @@ class MumbleService extends ChangeNotifier
     _client = null;
     _isConnected = false;
     _channels = [];
+    _messages.clear();
     _talkingUsers.clear();
     for (final d in _decoders.values) {
       d.dispose();
@@ -708,7 +736,18 @@ class MumbleService extends ChangeNotifier
 
   // --- Implement missing mixin methods to fix lint errors ---
   @override
-  void onTextMessage(IncomingTextMessage message) {}
+  void onTextMessage(IncomingTextMessage message) {
+    _messages.add(
+      ChatMessage(
+        senderName: message.actor?.name ?? 'Unknown',
+        content: message.message,
+        timestamp: DateTime.now(),
+        isSelf: message.actor?.session == _client?.self.session,
+        sender: message.actor,
+      ),
+    );
+    notifyListeners();
+  }
   @override
   void onBanListReceived(List<BanEntry> bans) {}
   @override
