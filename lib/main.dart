@@ -320,6 +320,10 @@ class _HomeScreenState extends State<HomeScreen> {
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.9,
           ),
+          radius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+          ),
           title: Padding(
             padding: const EdgeInsets.only(left: 16, top: 16),
             child: const Text('Chat'),

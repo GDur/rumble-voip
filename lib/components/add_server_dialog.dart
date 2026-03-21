@@ -54,6 +54,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
     return ShadDialog(
+      radius: const BorderRadius.all(Radius.circular(16)),
       title: Text(widget.server == null ? 'Add New Server' : 'Edit Server'),
       actions: [
         ShadButton.outline(
