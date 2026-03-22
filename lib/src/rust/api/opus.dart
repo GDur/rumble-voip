@@ -8,7 +8,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustOpusDecoder>>
 abstract class RustOpusDecoder implements RustOpaqueInterface {
-  Int16List decode({required List<int> opusData, required int frameSize});
+  /// ZERO-COPY DECODE
+  /// Reads from opus_ptr and writes directly to output_ptr.
+  /// Both pointers are managed by Dart (FFI malloc).
+  int decodeRaw({
+    required BigInt opusPtr,
+    required int opusLen,
+    required BigInt outputPtr,
+    required int frameSize,
+  });
 
   factory RustOpusDecoder({required int sampleRate, required int channels}) =>
       RustLib.instance.api.crateApiOpusRustOpusDecoderNew(
@@ -19,7 +27,15 @@ abstract class RustOpusDecoder implements RustOpaqueInterface {
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustOpusEncoder>>
 abstract class RustOpusEncoder implements RustOpaqueInterface {
-  Uint8List encode({required List<int> pcm, required int frameSize});
+  /// ZERO-COPY ENCODE
+  /// Reads from pcm_ptr and writes directly to output_ptr.
+  /// Both pointers are managed by Dart (FFI malloc).
+  int encodeRaw({
+    required BigInt pcmPtr,
+    required int pcmLen,
+    required BigInt outputPtr,
+    required int outputCapacity,
+  });
 
   factory RustOpusEncoder({
     required int sampleRate,
@@ -32,4 +48,12 @@ abstract class RustOpusEncoder implements RustOpaqueInterface {
   );
 
   void setBitrate({required int bitrateBps});
+
+  void setComplexity({required int complexity});
+
+  void setInbandFec({required bool enabled});
+
+  void setPacketLossPerc({required int percentage});
+
+  void setVbr({required bool vbr});
 }

@@ -141,19 +141,29 @@ class AudioPlaybackService {
     // In this singleton, we'll apply it to future calls and the global Soloud volume.
   }
 
+  // Pre-allocated buffer for volume scaling
+  final Int16List _volumeBuffer = Int16List(960 * 10); // 200ms max
+
   void feed(int sessionId, Int16List samples) {
     if (!_initialized) return;
 
     // Apply volume manually for pcm_sound platforms (and temporarily for SoLoud if needed)
-    Int16List processedSamples = samples;
+    Int16List processedSamples;
     if (_outputVolume != 1.0) {
-      processedSamples = Int16List(samples.length);
+      if (samples.length > _volumeBuffer.length) {
+        processedSamples = Int16List(samples.length);
+      } else {
+        processedSamples = _volumeBuffer.buffer.asInt16List(_volumeBuffer.offsetInBytes, samples.length);
+      }
+      
       for (int i = 0; i < samples.length; i++) {
         processedSamples[i] = (samples[i] * _outputVolume).round().clamp(
           -32768,
           32767,
         );
       }
+    } else {
+      processedSamples = samples;
     }
 
     if (Platform.isAndroid || Platform.isIOS) {

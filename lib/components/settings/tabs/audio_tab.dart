@@ -36,7 +36,7 @@ class AudioTab extends StatelessWidget {
               final inputDeviceId = settings.inputDeviceId;
               final hasCurrent =
                   inputDeviceId == null ||
-                  devices.any((d) => d.id.toString() == inputDeviceId);
+                  devices.any((d) => d.name == inputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
@@ -57,18 +57,18 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d.id.toString(),
-                      child: Text(d.label.toString()),
+                      value: d.name,
+                      child: Text(d.name),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Input');
                   final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.id.toString() == value,
+                    (d) => d.name == value,
                     orElse: () => null,
                   );
-                  return Text(dev?.label?.toString() ?? 'Current Device');
+                  return Text(dev?.name ?? 'Current Device');
                 },
               );
             },
@@ -86,7 +86,7 @@ class AudioTab extends StatelessWidget {
               final outputDeviceId = settings.outputDeviceId;
               final hasCurrent =
                   outputDeviceId == null ||
-                  devices.any((d) => d.id.toString() == outputDeviceId);
+                  devices.any((d) => d.toString() == outputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Output'),
@@ -110,18 +110,14 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d.id.toString(),
-                      child: Text(d.name.toString()),
+                      value: d.toString(),
+                      child: Text(d.toString()),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Output');
-                  final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.id.toString() == value,
-                    orElse: () => null,
-                  );
-                  return Text(dev?.name?.toString() ?? 'Current Device');
+                  return Text(value);
                 },
               );
             },

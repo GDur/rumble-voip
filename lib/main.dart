@@ -77,10 +77,10 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => MumbleService()
             ..initialize(
-              settingsService.inputGain,
-              settingsService.outputVolume,
-              settingsService.inputDeviceId,
-              settingsService.outputDeviceId,
+              inputGain: settingsService.inputGain,
+              outputVolume: settingsService.outputVolume,
+              inputDeviceId: settingsService.inputDeviceId,
+              outputDeviceId: settingsService.outputDeviceId,
             ),
         ),
         ChangeNotifierProvider(create: (_) => ServerProvider()),

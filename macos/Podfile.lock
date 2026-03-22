@@ -23,8 +23,6 @@ PODS:
     - FlutterMacOS
   - package_info_plus (0.0.1):
     - FlutterMacOS
-  - record_macos (1.2.0):
-    - FlutterMacOS
   - rust_lib_rumble (0.0.1):
     - FlutterMacOS
   - screen_retriever_macos (0.0.1):
@@ -60,7 +58,6 @@ DEPENDENCIES:
   - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
   - just_audio (from `Flutter/ephemeral/.symlinks/plugins/just_audio/darwin`)
   - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
-  - record_macos (from `Flutter/ephemeral/.symlinks/plugins/record_macos/macos`)
   - rust_lib_rumble (from `Flutter/ephemeral/.symlinks/plugins/rust_lib_rumble/macos`)
   - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -98,8 +95,6 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/just_audio/darwin
   package_info_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
-  record_macos:
-    :path: Flutter/ephemeral/.symlinks/plugins/record_macos/macos
   rust_lib_rumble:
     :path: Flutter/ephemeral/.symlinks/plugins/rust_lib_rumble/macos
   screen_retriever_macos:
@@ -132,7 +127,6 @@ SPEC CHECKSUMS:
   hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
   just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
   package_info_plus: f0052d280d17aa382b932f399edf32507174e870
-  record_macos: 7f227161b93c49e7e34fe681c5891c8622c8cc8b
   rust_lib_rumble: 3a7e497cec4da98f4ee203f218856c1d66af4fce
   screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
@@ -143,6 +137,6 @@ SPEC CHECKSUMS:
   webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
   window_manager: b729e31d38fb04905235df9ea896128991cad99e
 
-PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
+PODFILE CHECKSUM: 9974773e28c85d3dc66e49901b9ce9e2aae713a1
 
 COCOAPODS: 1.16.2

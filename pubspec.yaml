@@ -40,7 +40,6 @@ dependencies:
   path_provider: ^2.1.5
   device_info_plus: ^12.3.0
   flutter_macos_permissions: ^2.0.8
-  record: ^6.2.0
   dumble: ^0.8.9
   flutter_pcm_sound: ^3.3.3
   flutter_soloud: ^3.0.0
