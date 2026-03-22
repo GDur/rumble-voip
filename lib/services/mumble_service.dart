@@ -254,7 +254,7 @@ class MumbleService extends ChangeNotifier
     }
 
     if (restartMic) {
-      await _startMicStream();
+      await _startMicStream(forceRestart: true);
     }
     if (restartPlayer) {
       // Re-initialize player with new device
@@ -424,7 +424,7 @@ class MumbleService extends ChangeNotifier
     }
   }
 
-  Future<void> _startMicStream() async {
+  Future<void> _startMicStream({bool forceRestart = false}) async {
     debugPrint('[MumbleService] Ensuring mic stream is active...');
     if (!await _recorder.hasPermission()) {
       _hasMicPermission = false;
@@ -434,6 +434,13 @@ class MumbleService extends ChangeNotifier
     }
     _hasMicPermission = true;
     notifyListeners();
+
+    // If already recording and subscription is active, don't restart unless forced.
+    // This supports the "warm hardware" approach the user requested.
+    if (!forceRestart && await _recorder.isRecording() && _micSubscription != null) {
+      debugPrint('[MumbleService] Mic stream already active and warm.');
+      return;
+    }
 
     // Clean up old state if any
     await _micSubscription?.cancel();
@@ -486,13 +493,11 @@ class MumbleService extends ChangeNotifier
       onError: (e) => debugPrint('[MumbleService] Mic stream error: $e'),
     );
 
+    // Drains the buffer regardless of connection to keep volume monitoring updated
+    // and prevent buffer build-up while disconnected.
     _processingTimer = Timer.periodic(const Duration(milliseconds: 20), (
       timer,
     ) {
-      if (!_isConnected || _client == null) {
-        timer.cancel();
-        return;
-      }
       _processPcmBuffer();
     });
   }
@@ -621,13 +626,14 @@ class MumbleService extends ChangeNotifier
 
   Future<void> disconnect() async {
     stopPushToTalk();
-    _micSubscription?.cancel();
-    _micSubscription = null;
-    await _recorder.stop();
-    _volumeTimer?.cancel();
+    
+    // We do NOT stop the mic stream or volume monitoring here to keep it "warm" 
+    // for the next session or for local level monitoring.
+    // This aligns with "initialize once at start" philosophy.
 
     await _client?.close();
     _client = null;
+    _audioSink = null; // Ensure sink is nulled so it's recreated on next connect/startPtt
     _isConnected = false;
     _channels = [];
     _messages.clear();
