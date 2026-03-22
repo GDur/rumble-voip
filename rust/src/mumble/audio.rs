@@ -9,6 +9,8 @@ use std::sync::Arc;
 use rubato::{Resampler, Async, FixedAsync, Indexing, SincInterpolationType, SincInterpolationParameters, WindowFunction, calculate_cutoff};
 use audioadapter_buffers::direct::InterleavedSlice;
 
+const MUMBLE_SAMPLE_RATE: u32 = 48000;
+
 pub struct SendStream(pub cpal::Stream);
 unsafe impl Send for SendStream {}
 
@@ -39,12 +41,12 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     println!("Input device: {} ({} Hz)", input_device.name().unwrap_or_default(), input_rate);
     println!("Output device: {} ({} Hz)", output_device.name().unwrap_or_default(), output_rate);
 
-    // Ringbuffers: Always 48kHz for Mumble compatibility
-    let rb_in = Arc::new(HeapRb::<i16>::new(48000));
+    // Ringbuffers: Always MUMBLE_SAMPLE_RATE Hz for Mumble compatibility
+    let rb_in = Arc::new(HeapRb::<i16>::new(MUMBLE_SAMPLE_RATE as usize));
     let (producer_in, consumer_in) = rb_in.split();
 
-    // Setup rubato resampler for input: [Native -> 48000]
-    let resample_ratio = 48000.0 / input_rate as f64;
+    // Setup rubato resampler for input: [Native -> MUMBLE_SAMPLE_RATE]
+    let resample_ratio = MUMBLE_SAMPLE_RATE as f64 / input_rate as f64;
     
     let sinc_len = 128;
     let window = WindowFunction::BlackmanHarris2;
@@ -57,7 +59,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
         window,
     };
 
-    let mut resampler_in: Option<Async<f32>> = if input_rate != 48000 {
+    let mut resampler_in: Option<Async<f32>> = if input_rate != MUMBLE_SAMPLE_RATE {
         Some(Async::<f32>::new_sinc(
             resample_ratio,
             1.1,
@@ -103,7 +105,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         
                         if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
                             for &s in &out_buf[..out_len] {
-                                let s_i16 = (s * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                                let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                 let _ = prod_in.try_push(s_i16);
                             }
                         }
@@ -111,7 +113,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 } else {
                     for s in mono_f32 {
-                        let s_i16 = (s * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                        let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
@@ -124,7 +126,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
             move |data: &[i16], _| {
                 let mut mono_f32 = Vec::with_capacity(data.len() / input_channels);
                 for frame in data.chunks(input_channels) {
-                    mono_f32.push(frame[0] as f32 / 32768.0);
+                    // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
+                    mono_f32.push(frame[0] as f32 / -(i16::MIN as f32));
                 }
 
                 if let Some(resampler) = &mut resampler_in {
@@ -147,7 +150,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         
                         if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
                             for &s in &out_buf[..out_len] {
-                                let s_i16 = (s * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                                let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                 let _ = prod_in.try_push(s_i16);
                             }
                         }
@@ -155,7 +158,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 } else {
                     for s in mono_f32 {
-                        let s_i16 = (s * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                        let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
@@ -166,11 +169,11 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
         _ => return Err(anyhow::anyhow!("Unsupported input sample format")),
     };
 
-    let rb_out = Arc::new(HeapRb::<i16>::new(48000));
+    let rb_out = Arc::new(HeapRb::<i16>::new(MUMBLE_SAMPLE_RATE as usize));
     let (producer_out, consumer_out) = rb_out.split();
 
-    // Setup rubato resampler for output: [48000 -> Native]
-    let resample_ratio_out = output_rate as f64 / 48000.0;
+    // Setup rubato resampler for output: [MUMBLE_SAMPLE_RATE -> Native]
+    let resample_ratio_out = output_rate as f64 / MUMBLE_SAMPLE_RATE as f64;
     
     let params_out = SincInterpolationParameters {
         sinc_len,
@@ -180,7 +183,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
         window,
     };
 
-    let mut resampler_out: Option<Async<f32>> = if output_rate != 48000 {
+    let mut resampler_out: Option<Async<f32>> = if output_rate != MUMBLE_SAMPLE_RATE {
         Some(Async::<f32>::new_sinc(
             resample_ratio_out,
             1.1,
@@ -208,7 +211,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         let needed_in = resampler.input_frames_next();
                         let mut chunk_in = vec![0.0f32; needed_in];
                         for i in 0..needed_in {
-                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / 32768.0;
+                            // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
+                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
                         }
                         let input_adapter = InterleavedSlice::new(&chunk_in, 1, needed_in).unwrap();
                         
@@ -237,7 +241,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                 } else {
                     for frame in data.chunks_mut(output_channels) {
                         let s_i16 = cons_out.try_pop().unwrap_or(0);
-                        let s_f32 = s_i16 as f32 / 32768.0;
+                        // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
+                        let s_f32 = s_i16 as f32 / -(i16::MIN as f32);
                         for out_sample in frame {
                             *out_sample = s_f32;
                         }
@@ -257,7 +262,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         let needed_in = resampler.input_frames_next();
                         let mut chunk_in = vec![0.0f32; needed_in];
                         for i in 0..needed_in {
-                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / 32768.0;
+                            // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
+                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
                         }
                         let input_adapter = InterleavedSlice::new(&chunk_in, 1, needed_in).unwrap();
                         
@@ -279,7 +285,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     
                     let out_chunk: Vec<f32> = output_buffer_f32.drain(..frames_needed).collect();
                     for (i, frame) in data.chunks_mut(output_channels).enumerate() {
-                        let s_i16 = (out_chunk[i] * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                        let s_i16 = (out_chunk[i] * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                         for out_sample in frame {
                             *out_sample = s_i16;
                         }

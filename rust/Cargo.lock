@@ -260,15 +260,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmake"
-version = "0.1.57"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75443c44cd6b379beb8c5b45d85d0773baf31cce901fe7bb252f4eff3008ef7d"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1030,21 +1021,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "opusic-c"
-version = "1.5.5"
+name = "opus-rs"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9486eb5a1a735bf56430b5b44e21157be30ac9fcc17999ba309981b8bd90d2ff"
+checksum = "ea632914bf0cffdb2095b9d9eb0fe9d65002581204d156d23f4ed596d9d0b55f"
 dependencies = [
- "opusic-sys",
-]
-
-[[package]]
-name = "opusic-sys"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc3280fe5b6f97ac1a35a0ac003e2fb0b92f8e4bdf2b2057e1bf9b87acca5696"
-dependencies = [
- "cmake",
+ "num-complex",
+ "once_cell",
+ "rustfft",
 ]
 
 [[package]]
@@ -1290,7 +1274,7 @@ dependencies = [
  "mumble-protocol-2x",
  "once_cell",
  "openssl",
- "opusic-c",
+ "opus-rs",
  "parking_lot",
  "protobuf",
  "ringbuf",

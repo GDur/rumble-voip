@@ -3,7 +3,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio::net::UdpSocket;
 use mumble_protocol_2x::crypt::CryptState;
 use mumble_protocol_2x::voice::{Serverbound, Clientbound, VoicePacket, VoicePacketPayload};
-use opusic_c::{Application, Channels, Decoder as OpusDecoder, Encoder as OpusEncoder, SampleRate};
+use opus_rs::{Application, OpusDecoder, OpusEncoder};
 use crate::mumble::audio::setup_audio;
 use crate::mumble::MumbleCommand;
 use crate::api::client::MumbleEvent;
@@ -15,6 +15,13 @@ use bytes::{Bytes, BytesMut};
 pub struct VoiceHandler;
 
 impl VoiceHandler {
+    const SAMPLE_RATE: usize = 48000;
+    const CHANNELS: usize = 1;
+    const FRAME_MS: usize = 20;
+    const FRAME_SIZE: usize = Self::SAMPLE_RATE * Self::FRAME_MS / 1000;
+    const BITRATE: usize = 72000;
+    const COMPLEXITY: u32 = 0;
+
     pub async fn run(
         server_addr_str: String,
         mut crypt_state: CryptState<Serverbound, Clientbound>,
@@ -35,15 +42,18 @@ impl VoiceHandler {
         socket.connect(server_addr).await?;
         println!("--- RUST: UDP socket connected ---");
 
-        let mut encoder = OpusEncoder::new(Channels::Mono, SampleRate::Hz48000, Application::Voip)
-            .map_err(|e| anyhow::anyhow!("Opus encoder error: {:?}", e))?;
+        let mut encoder = OpusEncoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS, Application::Voip)
+            .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
+        encoder.use_cbr = true;
+        encoder.bitrate_bps = Self::BITRATE as i32;
+        encoder.complexity = Self::COMPLEXITY as i32;
         
         let mut decoders: HashMap<u32, (OpusDecoder, bool, std::time::Instant, Vec<f32>)> = HashMap::new();
         
         let ptt_active = Arc::new(Mutex::new(false));
 
-        let mut pcm_frame = vec![0i16; 960];
-        let mut f32_frame = vec![0.0f32; 960];
+        let mut pcm_frame = vec![0i16; Self::FRAME_SIZE];
+        let mut f32_frame = vec![0.0f32; Self::FRAME_SIZE];
         let mut opus_buf = vec![0u8; 1024];
         let mut udp_recv_buf = [0u8; 2048];
         
@@ -85,20 +95,21 @@ impl VoiceHandler {
 
                     let is_ptt = *ptt_active.lock().await;
                     
-                    while audio.input_consumer.occupied_len() >= 960 {
+                    while audio.input_consumer.occupied_len() >= Self::FRAME_SIZE {
                         let read = audio.input_consumer.pop_slice(&mut pcm_frame);
-                        if read == 960 {
+                        if read == Self::FRAME_SIZE {
                             let mut sum_sq = 0.0;
                             for (i, &sample) in pcm_frame.iter().enumerate() {
-                                let f = sample as f32 / 32768.0;
+                                // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
+                                let f = sample as f32 / -(i16::MIN as f32);
                                 f32_frame[i] = f;
                                 sum_sq += f * f;
                             }
-                            let rms = (sum_sq / 960.0).sqrt();
+                            let rms = (sum_sq / Self::FRAME_SIZE as f32).sqrt();
                             let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
 
                             if is_ptt {
-                                match encoder.encode_float_to_slice(&f32_frame[..960], &mut opus_buf) {
+                                match encoder.encode(&f32_frame[..Self::FRAME_SIZE], Self::FRAME_SIZE, &mut opus_buf) {
                                     Ok(len) => {
                                         let packet = VoicePacket::Audio {
                                             _dst: std::marker::PhantomData,
@@ -172,10 +183,10 @@ impl VoiceHandler {
                                                 let entry = decoders.entry(sid_u32).or_insert_with(|| {
                                                     println!("--- RUST: New talking user detected: {} ---", sid_u32);
                                                     (
-                                                        OpusDecoder::new(Channels::Mono, SampleRate::Hz48000).expect("Failed to create Opus decoder"), 
+                                                        OpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS).expect("Failed to create Opus decoder"), 
                                                         false, 
                                                         std::time::Instant::now(),
-                                                        vec![0.0f32; 960 * 6]
+                                                        vec![0.0f32; Self::FRAME_SIZE * 6]
                                                     )
                                                 });
                                                 
@@ -187,11 +198,12 @@ impl VoiceHandler {
                                                 }
 
                                                 if !data.is_empty() {
-                                                    match entry.0.decode_float_to_slice(&data, &mut entry.3[..], false) {
+                                                    match entry.0.decode(&data, Self::FRAME_SIZE, &mut entry.3[..]) {
                                                         Ok(samples) => {
                                                             let mut decoded_i16 = vec![0i16; samples];
                                                             for i in 0..samples {
-                                                                decoded_i16[i] = (entry.3[i] * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                                                                decoded_i16[i] = (entry.3[i] * i16::MAX as f32)
+                                                                    .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                                             }
                                                             
                                                             // Basic jitter buffering: if buffer is too empty, it might cause static
@@ -202,7 +214,7 @@ impl VoiceHandler {
                                                                 eprintln!("Output buffer full, dropping frame for user {}", sid_u32);
                                                             }
                                                         }
-                                                        Err(e) => eprintln!("Opus decode error: {:?}", e),
+                                                        Err(e) => eprintln!("Opus decode error: {}", e),
                                                     }
                                                 }
                                             }
