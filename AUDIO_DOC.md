@@ -47,15 +47,15 @@ Incoming `AudioFrame` streams are buffered per user. We use a **960-sample thres
 
 ---
 
-## 🛠 Native FFI Details
+## 🛠 Native Rust Details
+Rumble uses a custom Rust library (`rust_lib_rumble`) for Opus processing to ensure high performance and cross-platform compatibility.
 
-On Apple platforms, the Opus library is often already linked. We look it up directly:
-```dart
-DynamicLibrary.process(); // Loads symbols from the current executable
-```
+We use `flutter_rust_bridge` to call the Rust methods:
+- **Encoder**: Using `opus-rs` to encode PCM 16-bit directly.
+- **Decoder**: Using `opus-rs` to decode Opus to PCM 16-bit directly.
 
-We use `opus_encoder_ctl` to configure the stream:
-- `OPUS_SET_BITRATE`
-- `OPUS_SET_COMPLEXITY`
-- `OPUS_SET_INBAND_FEC`
-- `OPUS_SET_VBR`
+We configure the stream in Rust:
+- `set_bitrate`: Dynamically updates the bitrate.
+- **Truncation**: The decoder output is truncated to the actual number of samples returned by `opus_decode` to prevent "choppy" stuttering caused by silence padding.
+
+---

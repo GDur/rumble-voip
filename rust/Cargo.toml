@@ -8,4 +8,4 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.11.1"
-opus-rs = "0.1"
+audiopus = "0.2"

@@ -483,9 +483,6 @@ class MumbleService extends ChangeNotifier
 
     debugPrint('[MumbleService] Initializing server-specific audio sink...');
 
-    // Reset sequence number so a new server doesn't get a huge number
-    AudioClient.resetSequenceNumber();
-
     // CRITICAL: Clear any leftover audio from the previous server/session
     _pcmBuffer.clear();
 
@@ -496,7 +493,7 @@ class MumbleService extends ChangeNotifier
   }
 
   void _processPcmBuffer() {
-    const frameSize = 480;
+    const frameSize = 960; // 20ms frame size
     while (_pcmBuffer.length >= frameSize) {
       final sub = _pcmBuffer.sublist(0, frameSize);
       _pcmBuffer.removeRange(0, frameSize);
@@ -515,10 +512,13 @@ class MumbleService extends ChangeNotifier
       if (_isTalking && _opusEncoder != null && _audioSink != null) {
         try {
           final encoded = _opusEncoder!.encode(frameSamples, frameSize);
+          debugPrint('[MumbleService] Encoded ${frameSamples.length} PCM -> ${encoded.length} bytes opus');
           _audioSink!.add(AudioFrame.outgoing(frame: encoded));
         } catch (e) {
           debugPrint('[MumbleService] Error sending audio frame: $e');
         }
+      } else if (_isTalking) {
+        debugPrint('[MumbleService] PTT active but encoder=${_opusEncoder != null}, sink=${_audioSink != null}');
       }
     }
   }
@@ -577,8 +577,8 @@ class MumbleService extends ChangeNotifier
       _talkingUsers[_client!.self.session] = false;
     }
 
-    // We do NOT close the sink or dispose the encoder here to maintain a persistent stream.
-    // This solves the issue where subsequent PTT presses are ignored by the server.
+    _audioSink?.close();
+    _audioSink = null;
 
     notifyListeners();
   }
@@ -626,7 +626,7 @@ class MumbleService extends ChangeNotifier
   final Map<int, List<int>> _userBuffers = {};
   final Map<int, bool> _userPlaying = {};
   // Lowered threshold to 60ms (3 * 20ms frames) for better responsiveness
-  static const int _bufferThreshold = 960 * 3;
+  static const int _bufferThreshold = 960 * 4;
 
   // Volume monitoring
   @override
@@ -650,6 +650,8 @@ class MumbleService extends ChangeNotifier
       voiceData.listen(
         (AudioFrame frame) {
           final frameData = frame.frame;
+          if (frameData.isEmpty) return;
+
           // Decode Opus frame to PCM samples (Int16List)
           // Mumble frames are typically 20ms (960 samples)
           final pcm = decoder.decode(frameData, 5760);
@@ -681,7 +683,7 @@ class MumbleService extends ChangeNotifier
 
           // Drain what's left in the buffer so we don't have "tail" audio
           // playing at the start of the next talk burst.
-          _drainUserBuffer(sessionId, buffer);
+          _drainUserBuffer(sessionId, buffer, isEnd: true);
 
           AudioPlaybackService().stopSession(sessionId);
           notifyListeners();
@@ -697,20 +699,18 @@ class MumbleService extends ChangeNotifier
   }
 
   /// Helper to feed the audio playback service in standard chunks.
-  void _drainUserBuffer(int sessionId, List<int> buffer) {
+  void _drainUserBuffer(int sessionId, List<int> buffer, {bool isEnd = false}) {
     if (!_audioPlayerInitialized) return;
 
-    // Process everything we have in 20ms chunks (960 samples)
+    // Process complete 20ms chunks (960 samples)
     while (buffer.length >= 960) {
       final chunk = buffer.sublist(0, 960);
       buffer.removeRange(0, 960);
       AudioPlaybackService().feed(sessionId, Int16List.fromList(chunk));
     }
 
-    // If we're catching up or ending, we might have a small remainder.
-    // For Mumble, we can usually just wait for more or discard.
-    // But if it's the end of a burst, we should probably send it too if it's large enough.
-    if (buffer.isNotEmpty && !_talkingUsers[sessionId]!) {
+    // If this is the end of the voice burst, drain any remaining partial frame
+    if (isEnd && buffer.isNotEmpty) {
       AudioPlaybackService().feed(sessionId, Int16List.fromList(buffer));
       buffer.clear();
     }

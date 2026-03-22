@@ -72,7 +72,7 @@ class AudioPlaybackService {
         // Initializing with smaller buffer size for low latency
         await SoLoud.instance.init(
           device: targetDevice,
-          bufferSize: 512, // ~10ms at 48kHz
+          bufferSize: 2048, // ~40ms - safer for varied macOS hardware
         );
 
         _initialized = true;
@@ -100,7 +100,7 @@ class AudioPlaybackService {
         channels: _channels == 1 ? Channels.mono : Channels.stereo,
         format: BufferType.s16le,
         bufferingType: BufferingType.released,
-        bufferingTimeNeeds: 0.05, // Drastically reduce latency
+        bufferingTimeNeeds: 0.08, // 80ms buffer to handle jitter comfortably
       );
       _soloudSources[sessionId] = source;
       _soloudPlaying[sessionId] = false;
@@ -178,12 +178,11 @@ class AudioPlaybackService {
   void stopSession(int sessionId) {
     if (!_initialized) return;
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      final source = _soloudSources.remove(sessionId);
-      _soloudPlaying.remove(sessionId);
+      final source = _soloudSources[sessionId];
       if (source != null) {
-        // Signal that the stream data is ended for this burst.
-        // With BufferingType.released, the source will automatically dispose when it finishes playing.
+        // Signal that the current burst is ended, but keep the source alive for next burst
         SoLoud.instance.setDataIsEnded(source);
+        _soloudPlaying[sessionId] = false;
       }
     }
   }

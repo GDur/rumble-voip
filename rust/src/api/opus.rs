@@ -1,5 +1,6 @@
 use flutter_rust_bridge::frb;
-use opus_rs::{Application, OpusDecoder, OpusEncoder};
+use audiopus::coder::{Encoder as AudiopusEncoder, Decoder as AudiopusDecoder};
+use audiopus::{Application, Channels, SampleRate, Bitrate};
 
 #[frb(init)]
 pub fn init_app() {
@@ -7,7 +8,7 @@ pub fn init_app() {
 }
 
 pub struct RustOpusEncoder {
-    inner: OpusEncoder,
+    inner: AudiopusEncoder,
     channels: i32,
 }
 
@@ -17,10 +18,21 @@ impl RustOpusEncoder {
         let app = match application {
             2048 => Application::Voip,
             2049 => Application::Audio,
-            // LowDelay is not in opus-rs 0.1
+            2051 => Application::LowDelay,
             _ => Application::Voip,
         };
-        let encoder = OpusEncoder::new(sample_rate, channels as usize, app).map_err(|e| format!("{:?}", e))?;
+        let sr = match sample_rate {
+            8000 => SampleRate::Hz8000,
+            12000 => SampleRate::Hz12000,
+            16000 => SampleRate::Hz16000,
+            24000 => SampleRate::Hz24000,
+            48000 => SampleRate::Hz48000,
+            _ => SampleRate::Hz48000,
+        };
+        let ch = if channels == 2 { Channels::Stereo } else { Channels::Mono };
+
+        let encoder = AudiopusEncoder::new(sr, ch, app)
+            .map_err(|e| format!("{:?}", e))?;
         Ok(Self {
             inner: encoder,
             channels,
@@ -28,13 +40,12 @@ impl RustOpusEncoder {
     }
 
     #[frb(sync)]
-    pub fn encode(&mut self, pcm: Vec<i16>, frame_size: i32) -> Result<Vec<u8>, String> {
+    pub fn encode(&self, pcm: Vec<i16>, frame_size: i32) -> Result<Vec<u8>, String> {
+        // Output buffer: max Opus packet is ~4000 bytes
         let mut output = vec![0u8; 4000];
-        let f32_pcm: Vec<f32> = pcm.iter().map(|&x| x as f32 / 32768.0).collect();
-
         let len = self
             .inner
-            .encode(&f32_pcm, frame_size as usize, &mut output)
+            .encode(&pcm[..frame_size as usize * self.channels as usize], &mut output)
             .map_err(|e| format!("{:?}", e))?;
         output.truncate(len);
         Ok(output)
@@ -42,19 +53,30 @@ impl RustOpusEncoder {
 
     #[frb(sync)]
     pub fn set_bitrate(&mut self, bitrate_bps: i32) {
-        self.inner.bitrate_bps = bitrate_bps;
+        let _ = self.inner.set_bitrate(Bitrate::BitsPerSecond(bitrate_bps));
     }
 }
 
 pub struct RustOpusDecoder {
-    inner: OpusDecoder,
+    inner: AudiopusDecoder,
     channels: i32,
 }
 
 impl RustOpusDecoder {
     #[frb(sync)]
     pub fn new(sample_rate: i32, channels: i32) -> Result<Self, String> {
-        let decoder = OpusDecoder::new(sample_rate, channels as usize).map_err(|e| format!("{:?}", e))?;
+        let sr = match sample_rate {
+            8000 => SampleRate::Hz8000,
+            12000 => SampleRate::Hz12000,
+            16000 => SampleRate::Hz16000,
+            24000 => SampleRate::Hz24000,
+            48000 => SampleRate::Hz48000,
+            _ => SampleRate::Hz48000,
+        };
+        let ch = if channels == 2 { Channels::Stereo } else { Channels::Mono };
+
+        let decoder = AudiopusDecoder::new(sr, ch)
+            .map_err(|e| format!("{:?}", e))?;
         Ok(Self {
             inner: decoder,
             channels,
@@ -63,16 +85,18 @@ impl RustOpusDecoder {
 
     #[frb(sync)]
     pub fn decode(&mut self, opus_data: Vec<u8>, frame_size: i32) -> Result<Vec<i16>, String> {
-        let mut output_f32 = vec![0.0f32; (frame_size * self.channels) as usize];
-        let _samples = self
+        if opus_data.is_empty() {
+            return Ok(Vec::new());
+        }
+        let max_samples = frame_size as usize * self.channels as usize;
+        let mut output = vec![0i16; max_samples];
+        let samples = self
             .inner
-            .decode(&opus_data, frame_size as usize, &mut output_f32)
+            .decode(Some(&opus_data[..]), &mut output[..], false)
             .map_err(|e| format!("{:?}", e))?;
 
-        let i16_pcm: Vec<i16> = output_f32
-            .iter()
-            .map(|&x| (x * 32767.0).clamp(-32768.0, 32767.0) as i16)
-            .collect();
-        Ok(i16_pcm)
+        // Truncate to actual decoded samples
+        output.truncate(samples * self.channels as usize);
+        Ok(output)
     }
 }
