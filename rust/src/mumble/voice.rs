@@ -75,8 +75,8 @@ impl VoiceHandler {
                 _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
                     let now = std::time::Instant::now();
                     
-                    // UDP Ping every 5 seconds
-                    if now.duration_since(last_ping) > std::time::Duration::from_secs(5) {
+                    // UDP Ping every 1 second
+                    if now.duration_since(last_ping) > std::time::Duration::from_secs(1) {
                         let packet = VoicePacket::Ping { timestamp: 0 };
                         let mut bytes = BytesMut::new();
                         crypt_state.encrypt(packet, &mut bytes);
@@ -89,6 +89,7 @@ impl VoiceHandler {
                         if audio.input_consumer.occupied_len() >= 960 {
                             let read = audio.input_consumer.pop_slice(&mut pcm_frame);
                             if read == 960 {
+                                println!("--- RUST: Recorded 960 samples from mic ---");
                                 let mut sum_sq = 0.0;
                                 for (i, &sample) in pcm_frame.iter().enumerate() {
                                     let f = sample as f32 / 32768.0;
@@ -194,7 +195,14 @@ impl VoiceHandler {
                                                             for i in 0..samples {
                                                                 decoded_i16[i] = (entry.3[i] * 32767.0).clamp(-32768.0, 32767.0) as i16;
                                                             }
-                                                            let _ = audio.output_producer.push_slice(&decoded_i16);
+                                                            
+                                                            // Basic jitter buffering: if buffer is too empty, it might cause static
+                                                            // cpal will pop 0s if we are empty.
+                                                            if audio.output_producer.vacant_len() >= samples {
+                                                                let _ = audio.output_producer.push_slice(&decoded_i16);
+                                                            } else {
+                                                                log::warn!("Output buffer full, dropping frame for user {}", sid_u32);
+                                                            }
                                                         }
                                                         Err(e) => log::error!("Opus decode error: {}", e),
                                                     }

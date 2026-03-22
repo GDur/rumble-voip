@@ -102,6 +102,9 @@ pub async fn run_loop(
                         users.remove(&ur.session());
                         let _ = event_sink.add(MumbleEvent::UserRemoved(ur.session()));
                     }
+                    Some(Ok(ControlPacket::Ping(ping))) => {
+                        framed.send(ControlPacket::Ping(ping)).await?;
+                    }
                     Some(Ok(ControlPacket::TextMessage(tm))) => {
                         let sender_name = users.get(&tm.actor()).map(|u| u.name.clone()).unwrap_or_else(|| "Unknown".to_string());
                         let _ = event_sink.add(MumbleEvent::TextMessage(MumbleTextMessage {
