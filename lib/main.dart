@@ -23,7 +23,6 @@ import 'package:rumble/components/hotkey_recorder.dart';
 import 'package:rumble/components/chat_view.dart';
 import 'package:rumble/services/connectivity_service.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
-import 'package:rumble/src/rust/api/simple.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -35,7 +34,6 @@ void main() async {
   
   // Initialize Rust
   await RustLib.init();
-  debugPrint('Rust says: ${helloRust()}');
 
   final prefs = await SharedPreferences.getInstance();
   final settingsService = SettingsService(prefs);

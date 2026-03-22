@@ -440,13 +440,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.7"
-  flutter_opus:
-    dependency: "direct main"
-    description:
-      path: "plugins/flutter_opus"
-      relative: true
-    source: path
-    version: "1.0.4"
   flutter_pcm_sound:
     dependency: "direct main"
     description:
