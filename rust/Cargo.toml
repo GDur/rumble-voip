@@ -24,12 +24,8 @@ tokio-openssl = "0.6"
 protobuf = "3.7"
 bytes = "1.11"
 parking_lot = "0.12"
-log = "0.4"
-oslog = "0.2"
-env_logger = "0.11"
 anyhow = "1.0"
 byteorder = "1.5"
-hound = "3.5"
 opusic-c = "1.5.5"
 
 [profile.dev]

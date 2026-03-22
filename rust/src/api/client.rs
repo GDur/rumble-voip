@@ -9,13 +9,7 @@ use crate::mumble::audio::{list_input_devices as list_in, list_output_devices as
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
     
-    // Always use env_logger for visible output in flutter run
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .parse_default_env()
-        .try_init();
-    
-    log::info!("Rust initialised");
+    println!("Rust initialised");
     println!("--- RUST: initialised ---");
 }
 
@@ -94,7 +88,7 @@ impl RustMumbleClient {
                     *internal = Some(client);
                 }
                 Err(e) => {
-                    log::error!("Failed to start mumble client: {}", e);
+                    eprintln!("Failed to start mumble client: {}", e);
                 }
             }
         });

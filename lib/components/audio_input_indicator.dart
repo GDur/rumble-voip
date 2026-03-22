@@ -97,7 +97,7 @@ class AudioInputIndicator extends StatelessWidget {
                       // Level bar
                       FractionallySizedBox(
                         alignment: Alignment.centerLeft,
-                        widthFactor: volume.clamp(
+                        widthFactor: (volume * 5.0).clamp(
                           0.01,
                           1.0,
                         ), // Always show a tiny bit if connected

@@ -226,6 +226,15 @@ class MumbleService extends ChangeNotifier {
 
   void sendMessage(String text) {
     _client.sendTextMessage(message: text);
+    _messages.add(
+      ChatMessage(
+        senderName: self?.name ?? 'Me',
+        content: text,
+        timestamp: DateTime.now(),
+        isSelf: true,
+      ),
+    );
+    notifyListeners();
   }
 
   void toggleMute() {

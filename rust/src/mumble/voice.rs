@@ -119,7 +119,7 @@ impl VoiceHandler {
                                             }
                                         }
                                     }
-                                    Err(e) => log::error!("Opus encode error: {:?}", e),
+                                    Err(e) => eprintln!("Opus encode error: {:?}", e),
                                 }
                             }
                         }
@@ -199,10 +199,10 @@ impl VoiceHandler {
                                                             if audio.output_producer.vacant_len() >= samples {
                                                                 let _ = audio.output_producer.push_slice(&decoded_i16);
                                                             } else {
-                                                                log::warn!("Output buffer full, dropping frame for user {}", sid_u32);
+                                                                eprintln!("Output buffer full, dropping frame for user {}", sid_u32);
                                                             }
                                                         }
-                                                        Err(e) => log::error!("Opus decode error: {:?}", e),
+                                                        Err(e) => eprintln!("Opus decode error: {:?}", e),
                                                     }
                                                 }
                                             }
@@ -217,7 +217,7 @@ impl VoiceHandler {
                                 }
                             }
                         }
-                        Err(e) => log::error!("UDP recv error: {}", e),
+                        Err(e) => eprintln!("UDP recv error: {}", e),
                     }
                 }
             }

@@ -34,7 +34,7 @@ impl InternalMumbleClient {
             if let Err(e) = crate::mumble::control::run_loop(
                 host, port, username, password, cmd_rx, event_sink
             ).await {
-                log::error!("Mumble client loop error: {}", e);
+                eprintln!("Mumble client loop error: {}", e);
             }
         });
 

@@ -22,7 +22,7 @@ pub async fn run_loop(
     mut cmd_rx: mpsc::Receiver<MumbleCommand>,
     event_sink: StreamSink<MumbleEvent>,
 ) -> anyhow::Result<()> {
-    log::info!("Starting control loop for {}:{}", host, port);
+    println!("Starting control loop for {}:{}", host, port);
     println!("--- RUST: control loop starting for {}:{} ---", host, port);
     
     // 1. Setup TLS with OpenSSL
@@ -31,14 +31,14 @@ pub async fn run_loop(
 
     let connector = builder.build();
     let tcp_stream = TcpStream::connect(format!("{}:{}", host, port)).await?;
-    log::info!("TCP connected to {}:{}", host, port);
+    println!("TCP connected to {}:{}", host, port);
     
     let ssl = connector.configure()?.into_ssl(&host)?;
     let mut tls_stream = SslStream::new(ssl, tcp_stream)?;
     
     Pin::new(&mut tls_stream).connect().await
         .map_err(|e| anyhow::anyhow!("TLS connection failed: {}", e))?;
-    log::info!("TLS handshake successful");
+    println!("TLS handshake successful");
 
     let mut framed = Framed::new(tls_stream, ControlCodec::<Serverbound, Clientbound>::new());
 
@@ -50,7 +50,7 @@ pub async fn run_loop(
     }
     auth.set_opus(true);
     framed.send(ControlPacket::Authenticate(Box::new(auth))).await?;
-    log::info!("Authentication packet sent");
+    println!("Authentication packet sent");
 
     let mut channels: HashMap<u32, MumbleChannel> = HashMap::new();
     let mut users: HashMap<u32, MumbleUser> = HashMap::new();
@@ -71,14 +71,14 @@ pub async fn run_loop(
                     .as_millis() as u64;
                 ping.set_timestamp(timestamp);
                 if let Err(e) = framed.send(ControlPacket::Ping(Box::new(ping))).await {
-                    log::error!("Failed to send TCP Ping: {}", e);
+                    eprintln!("Failed to send TCP Ping: {}", e);
                 }
             }
             packet = framed.next() => {
                 match packet {
                     Some(Ok(ControlPacket::ServerSync(ss))) => {
                         session_id = ss.session();
-                        log::info!("ServerSync received. Session ID: {}", session_id);
+                        println!("ServerSync received. Session ID: {}", session_id);
                         println!("--- RUST: connected as session {} ---", session_id);
                         let _ = event_sink.add(MumbleEvent::Connected(session_id));
                     }
@@ -128,7 +128,7 @@ pub async fn run_loop(
                         }));
                     }
                     Some(Ok(ControlPacket::CryptSetup(cs))) => {
-                         log::info!("CryptSetup received, starting VoiceHandler");
+                         println!("CryptSetup received, starting VoiceHandler");
                          println!("--- RUST: CryptSetup received, starting VoiceHandler ---");
 
                          // Stop old voice handler if any
@@ -169,18 +169,18 @@ pub async fn run_loop(
                                  v_rx,
                                  event_sink_clone,
                              ).await {
-                                 log::error!("Voice handler error: {}", e);
+                                 eprintln!("Voice handler error: {}", e);
                                  println!("--- RUST: Voice handler error: {} ---", e);
                              }
                          });
                     }
                     Some(Err(e)) => {
-                        log::error!("Protocol error: {}", e);
+                        eprintln!("Protocol error: {}", e);
                         let _ = event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));
                         break;
                     }
                     None => {
-                        log::info!("Server closed connection");
+                        println!("Server closed connection");
                         let _ = event_sink.add(MumbleEvent::Disconnected("Server closed connection".to_string()));
                         break;
                     }

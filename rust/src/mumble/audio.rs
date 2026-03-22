@@ -36,8 +36,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     let input_rate = input_config.sample_rate().0;
     let output_rate = output_config.sample_rate().0;
 
-    log::info!("Input device: {} ({} Hz)", input_device.name().unwrap_or_default(), input_rate);
-    log::info!("Output device: {} ({} Hz)", output_device.name().unwrap_or_default(), output_rate);
+    println!("Input device: {} ({} Hz)", input_device.name().unwrap_or_default(), input_rate);
+    println!("Output device: {} ({} Hz)", output_device.name().unwrap_or_default(), output_rate);
 
     // Ringbuffers: Always 48kHz for Mumble compatibility
     let rb_in = Arc::new(HeapRb::<i16>::new(48000));
@@ -116,7 +116,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 }
             },
-            |e| log::error!("Input stream error: {}", e),
+            |e| eprintln!("Input stream error: {}", e),
             None,
         )?,
         cpal::SampleFormat::I16 => input_device.build_input_stream(
@@ -160,7 +160,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 }
             },
-            |e| log::error!("Input stream error: {}", e),
+            |e| eprintln!("Input stream error: {}", e),
             None,
         )?,
         _ => return Err(anyhow::anyhow!("Unsupported input sample format")),
@@ -244,7 +244,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 }
             },
-            |e| log::error!("Output stream error: {}", e),
+            |e| eprintln!("Output stream error: {}", e),
             None,
         )?,
         cpal::SampleFormat::I16 => output_device.build_output_stream(
@@ -293,7 +293,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 }
             },
-            |e| log::error!("Output stream error: {}", e),
+            |e| eprintln!("Output stream error: {}", e),
             None,
         )?,
         _ => return Err(anyhow::anyhow!("Unsupported output sample format")),
