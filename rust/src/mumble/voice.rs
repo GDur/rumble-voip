@@ -180,7 +180,7 @@ impl VoiceHandler {
                                 Ok(Ok(packet)) => {
                                     match packet {
                                         VoicePacket::Audio { session_id, payload, .. } => {
-                                            if let VoicePacketPayload::Opus(data, _) = payload {
+                                            if let VoicePacketPayload::Opus(data, last) = payload {
                                                 let sid_u32 = session_id as u32;
                                                 let entry = decoders.entry(sid_u32).or_insert_with(|| {
                                                     println!("--- RUST: New talking user detected: {} ---", sid_u32);
@@ -188,7 +188,7 @@ impl VoiceHandler {
                                                         OpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS).expect("Failed to create Opus decoder"), 
                                                         false, 
                                                         std::time::Instant::now(),
-                                                        vec![0.0f32; Self::FRAME_SIZE * 6]
+                                                        vec![0.0f32; Self::FRAME_SIZE]
                                                     )
                                                 });
                                                 entry.2 = std::time::Instant::now();
@@ -196,6 +196,11 @@ impl VoiceHandler {
                                                     entry.1 = true;
                                                     println!("--- RUST: User {} started talking ---", sid_u32);
                                                     let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, true));
+                                                }
+
+                                                if last {
+                                                    entry.1 = false;
+                                                    let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, false));
                                                 }
 
                                                 if !data.is_empty() {
@@ -207,8 +212,6 @@ impl VoiceHandler {
                                                                     .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                                             }
                                                             
-                                                            // Basic jitter buffering: if buffer is too empty, it might cause static
-                                                            // cpal will pop 0s if we are empty.
                                                             if audio.output_producer.vacant_len() >= samples {
                                                                 let _ = audio.output_producer.push_slice(&decoded_i16);
                                                             } else {
