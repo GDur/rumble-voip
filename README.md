@@ -11,9 +11,15 @@ The goal is to create a seamless experience across all platforms—Mobile, Table
 - **Interoperable**: Rumble works in tandem with original Mumble clients. You can switch to Rumble without forcing your friends or community to change anything.
 - **AI-Assisted Development**: This project is developed by a human programmer with significant assistance from AI to speed up boilerplate and implementation.
 
-## Project Status
-
 Rumble is currently in active development.
+
+## Development Requirements
+
+### Android
+- **JDK 17** is required. The Android Gradle Plugin (AGP 8.11+) mandates JDK 17 for the build daemon. Ensure your `JAVA_HOME` or IDE settings are configured to use JDK 17.
+
+### macOS
+- Accessibility permissions are required for global hotkeys (standard for macOS chat apps).
 
 
 ## Platform Support Matrix

@@ -120,28 +120,28 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
 SPEC CHECKSUMS:
-  audio_session: eaca2512cf2b39212d724f35d11f46180ad3a33e
-  connectivity_plus: 4adf20a405e25b42b9c9f87feff8f4b6fde18a4e
-  device_info_plus: 4fb280989f669696856f8b129e4a5e3cd6c48f76
-  file_picker: 7584aae6fa07a041af2b36a2655122d42f578c1a
-  flutter_macos_permissions: 8dd293e7d4bc0c493347cd290d3161e1ebb4268b
-  flutter_pcm_sound: 66c15658e17150e5578b5fc1bcd7db97b2644711
-  flutter_soloud: 93c20641a100d25bfbc84a8b86e867f350ef29ac
+  audio_session: 728ae3823d914f809c485d390274861a24b0904e
+  connectivity_plus: 0a976dfd033b59192912fa3c6c7b54aab5093802
+  device_info_plus: 1b14eed9bf95428983aed283a8d51cce3d8c4215
+  file_picker: e716a70a9fe5fd9e09ebc922d7541464289443af
+  flutter_macos_permissions: ec12b9e8b22da91abcbd572582b59e4278f97d4b
+  flutter_pcm_sound: 4d212fcd1b3524b0891da25d77912672b66c97fb
+  flutter_soloud: 1b9bde781de22ebd2ae8b2c213ec84ab3b531f16
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
-  hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
-  just_audio: 4e391f57b79cad2b0674030a00453ca5ce817eed
-  package_info_plus: f0052d280d17aa382b932f399edf32507174e870
-  record_macos: 7f227161b93c49e7e34fe681c5891c8622c8cc8b
-  rust_lib_rumble: 3a7e497cec4da98f4ee203f218856c1d66af4fce
-  screen_retriever_macos: 452e51764a9e1cdb74b3c541238795849f21557f
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
-  url_launcher_macos: f87a979182d112f911de6820aefddaf56ee9fbfd
-  video_player_avfoundation: dd410b52df6d2466a42d28550e33e4146928280a
-  wakelock_plus: 917609be14d812ddd9e9528876538b2263aaa03b
-  webview_flutter_wkwebview: 8ebf4fded22593026f7dbff1fbff31ea98573c8d
-  window_manager: b729e31d38fb04905235df9ea896128991cad99e
+  hotkey_manager_macos: 1e2edb0c7ae4fe67108af44a9d3445de41404160
+  just_audio: a42c63806f16995daf5b219ae1d679deb76e6a79
+  package_info_plus: 12f1c5c2cfe8727ca46cbd0b26677728972d9a5b
+  record_macos: 4680f37daeebf52162e715efb7ff682f0a5ce4fd
+  rust_lib_rumble: 080279189e41067ef59c92e6845b309853c5f873
+  screen_retriever_macos: 776e0fa5d42c6163d2bf772d22478df4b302b161
+  shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+  sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
+  url_launcher_macos: 175a54c831f4375a6cf895875f716ee5af3888ce
+  video_player_avfoundation: 7993f492ae0bd77edaea24d9dc051d8bb2cd7c86
+  wakelock_plus: 9d63063ffb7af1c215209769067c57103bde719d
+  webview_flutter_wkwebview: 29eb20d43355b48fe7d07113835b9128f84e3af4
+  window_manager: e25faf20d88283a0d46e7b1a759d07261ca27575
 
 PODFILE CHECKSUM: 54d867c82ac51cbd61b565781b9fada492027009
 
