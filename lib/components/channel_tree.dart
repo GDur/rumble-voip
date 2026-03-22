@@ -416,25 +416,18 @@ class _ChannelTreeState extends State<ChannelTree> {
                   if (channel.description != null &&
                       channel.description!.isNotEmpty) ...[
                     const SizedBox(width: 4),
-                    ShadButton.ghost(
-                      padding: EdgeInsets.zero,
-                      width: 20,
-                      height: 20,
-                      onPressed: () {},
-                      child: ShadPopover(
-                        controller: ShadPopoverController(),
-                        popover: (context) => Container(
-                          width: 300,
-                          padding: const EdgeInsets.all(12),
-                          child: HtmlWidget(
-                            channel.description!,
-                            onTapUrl: (url) => launchUrl(Uri.parse(url)),
-                            textStyle: theme.textTheme.small,
-                          ),
+                    _PopoverButton(
+                      popoverContent: Container(
+                        width: 300,
+                        padding: const EdgeInsets.all(12),
+                        child: HtmlWidget(
+                          channel.description!,
+                          onTapUrl: (url) => launchUrl(Uri.parse(url)),
+                          textStyle: theme.textTheme.small,
                         ),
-                        child: Icon(LucideIcons.info,
-                            size: 14, color: theme.colorScheme.mutedForeground),
                       ),
+                      icon: Icon(LucideIcons.info,
+                          size: 14, color: theme.colorScheme.mutedForeground),
                     ),
                   ],
                 ],
@@ -540,25 +533,18 @@ class _ChannelTreeState extends State<ChannelTree> {
               ),
               if (u.comment != null && u.comment!.isNotEmpty) ...[
                 const SizedBox(width: 4),
-                ShadButton.ghost(
-                  padding: EdgeInsets.zero,
-                  width: 20,
-                  height: 20,
-                  onPressed: () {},
-                  child: ShadPopover(
-                    controller: ShadPopoverController(),
-                    popover: (context) => Container(
-                      width: 300,
-                      padding: const EdgeInsets.all(12),
-                      child: HtmlWidget(
-                        u.comment!,
-                        onTapUrl: (url) => launchUrl(Uri.parse(url)),
-                        textStyle: theme.textTheme.small,
-                      ),
+                _PopoverButton(
+                  popoverContent: Container(
+                    width: 300,
+                    padding: const EdgeInsets.all(12),
+                    child: HtmlWidget(
+                      u.comment!,
+                      onTapUrl: (url) => launchUrl(Uri.parse(url)),
+                      textStyle: theme.textTheme.small,
                     ),
-                    child: Icon(LucideIcons.messageSquare,
-                        size: 14, color: theme.colorScheme.mutedForeground),
                   ),
+                  icon: Icon(LucideIcons.messageSquare,
+                      size: 14, color: theme.colorScheme.mutedForeground),
                 ),
               ],
               if (isMuted || isSuppressed) ...[
@@ -598,3 +584,42 @@ class _ArrowIntent extends Intent {
 class _EnterIntent extends Intent {
   const _EnterIntent();
 }
+
+class _PopoverButton extends StatefulWidget {
+  final Widget icon;
+  final Widget popoverContent;
+
+  const _PopoverButton({
+    required this.icon,
+    required this.popoverContent,
+  });
+
+  @override
+  State<_PopoverButton> createState() => _PopoverButtonState();
+}
+
+class _PopoverButtonState extends State<_PopoverButton> {
+  final _controller = ShadPopoverController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ShadPopover(
+      controller: _controller,
+      popover: (context) => widget.popoverContent,
+      child: ShadButton.ghost(
+        padding: EdgeInsets.zero,
+        width: 20,
+        height: 20,
+        onPressed: _controller.toggle,
+        child: widget.icon,
+      ),
+    );
+  }
+}
+
