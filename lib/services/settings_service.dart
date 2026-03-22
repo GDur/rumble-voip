@@ -19,6 +19,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kInputGain = 'input_gain';
   static const String _kOutputVolume = 'output_volume';
   static const String _kIgnoreAccessibility = 'ignore_accessibility';
+  static const String _kUserVolumes = 'user_volumes';
 
   final SharedPreferences _prefs;
 
@@ -33,6 +34,7 @@ class SettingsService extends ChangeNotifier {
   double _inputGain;
   double _outputVolume;
   bool _ignoreAccessibility;
+  Map<String, double> _userVolumes;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -44,7 +46,23 @@ class SettingsService extends ChangeNotifier {
       _outputDeviceId = _prefs.getString(_kOutputDeviceId),
       _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
       _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
-      _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false {
+      _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false,
+      _userVolumes = {} {
+    // Load user volumes
+    final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
+    if (userVols != null) {
+      for (final s in userVols) {
+        final parts = s.split(':');
+        if (parts.length == 2) {
+          final name = parts[0];
+          final vol = double.tryParse(parts[1]);
+          if (vol != null) {
+            _userVolumes[name] = vol;
+          }
+        }
+      }
+    }
+
     final String? customJson = _prefs.getString(_kCustomHotkey);
     if (customJson != null) {
       try {
@@ -66,6 +84,7 @@ class SettingsService extends ChangeNotifier {
   double get inputGain => _inputGain;
   double get outputVolume => _outputVolume;
   bool get ignoreAccessibility => _ignoreAccessibility;
+  Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
   double? get windowHeight => _prefs.getDouble(_kWindowHeight);
@@ -173,5 +192,17 @@ class SettingsService extends ChangeNotifier {
     _ignoreAccessibility = value;
     await _prefs.setBool(_kIgnoreAccessibility, value);
     notifyListeners();
+  }
+
+  Future<void> setUserVolume(String name, double volume) async {
+    _userVolumes[name] = volume;
+    final List<String> userVols =
+        _userVolumes.entries.map((e) => '${e.key}:${e.value}').toList();
+    await _prefs.setStringList(_kUserVolumes, userVols);
+    notifyListeners();
+  }
+
+  double getUserVolume(String name) {
+    return _userVolumes[name] ?? 1.0;
   }
 }

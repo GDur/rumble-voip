@@ -10,6 +10,7 @@ import 'package:rumble/models/certificate.dart';
 import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/audio_playback_service.dart';
+import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/utils/mumble_audio.dart';
 
 class MumbleService extends ChangeNotifier
@@ -24,6 +25,7 @@ class MumbleService extends ChangeNotifier
   String? _inputDeviceId;
   String? _outputDeviceId;
   String? _pttErrorMessage;
+  SettingsService? _settings;
 
   // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
@@ -156,11 +158,13 @@ class MumbleService extends ChangeNotifier
 
   // Called from main.dart after settings are ready
   Future<void> initialize(
+    SettingsService settings,
     double inputGain,
     double outputVolume,
     String? inputId,
     String? outputId,
   ) async {
+    _settings = settings;
     _inputGain = inputGain;
     _inputDeviceId = inputId;
     _outputDeviceId = outputId;
@@ -171,6 +175,21 @@ class MumbleService extends ChangeNotifier
     // Refresh device lists so they are available in the settings UI
     await refreshInputDevices();
     await refreshOutputDevices();
+  }
+
+  Future<void> setUserVolume(User user, double volume) async {
+    if (_settings != null && user.name != null) {
+      await _settings!.setUserVolume(user.name!, volume);
+      AudioPlaybackService().setSessionVolume(user.session, volume);
+      notifyListeners();
+    }
+  }
+
+  double getUserVolume(User user) {
+    if (_settings != null && user.name != null) {
+      return _settings!.getUserVolume(user.name!);
+    }
+    return 1.0;
   }
 
   Future<void> _initGlobalAudioResources() async {
@@ -640,6 +659,12 @@ class MumbleService extends ChangeNotifier
       final sessionId = user.session;
       _talkingUsers[sessionId] = true;
       notifyListeners();
+
+      // Apply initial user volume
+      if (_settings != null && user.name != null) {
+        final vol = _settings!.getUserVolume(user.name!);
+        AudioPlaybackService().setSessionVolume(sessionId, vol);
+      }
 
       final decoder = _decoders.putIfAbsent(
         sessionId,

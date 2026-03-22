@@ -73,6 +73,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => MumbleService()
             ..initialize(
+              settingsService,
               settingsService.inputGain,
               settingsService.outputVolume,
               settingsService.inputDeviceId,
@@ -202,6 +203,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? _connectingServerId;
+  final _volumePopoverController = ShadPopoverController();
 
   @override
   void initState() {
@@ -746,6 +748,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          _buildVolumeControl(service),
+          const SizedBox(width: 8),
           _buildMicStatus(service),
           const SizedBox(width: 16),
           _buildPTTButton(service),
@@ -814,6 +818,60 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => service.toggleDeafen(),
         ),
       ],
+    );
+  }
+
+  Widget _buildVolumeControl(MumbleService service) {
+    final theme = ShadTheme.of(context);
+    final settings = Provider.of<SettingsService>(context);
+
+    return ShadPopover(
+      controller: _volumePopoverController,
+      popover: (context) => SizedBox(
+        width: 250,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Master Volume', style: theme.textTheme.small),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ShadSlider(
+                      initialValue: settings.outputVolume,
+                      min: 0.0,
+                      max: 2.0,
+                      onChanged: (v) {
+                        settings.setOutputVolume(v);
+                        service.updateAudioSettings(outputVolume: v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${(settings.outputVolume * 100).round()}%',
+                    style: theme.textTheme.muted.copyWith(fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      child: ShadIconButton.ghost(
+        onPressed: () => _volumePopoverController.toggle(),
+        icon: Icon(
+          settings.outputVolume == 0
+              ? LucideIcons.volumeX
+              : settings.outputVolume < 0.5
+                  ? LucideIcons.volume1
+                  : LucideIcons.volume2,
+          color: theme.colorScheme.primary,
+        ),
+      ),
     );
   }
 

@@ -151,6 +151,56 @@ class _ChannelTreeState extends State<ChannelTree> {
     );
   }
 
+  void _showUserVolumeDialog(BuildContext context, dumble.User user) {
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    double volume = mumbleService.getUserVolume(user);
+
+    showShadDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final theme = ShadTheme.of(context);
+          return ShadDialog(
+            title: Text('Volume for ${user.name}'),
+            description: const Text(
+              'Adjust the playback volume for this user individually.',
+            ),
+            actions: [
+              ShadButton(
+                child: const Text('Close'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ShadSlider(
+                      initialValue: volume,
+                      min: 0.0,
+                      max: 2.0,
+                      onChanged: (v) {
+                        setState(() => volume = v);
+                        mumbleService.setUserVolume(user, v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    '${(volume * 100).round()}%',
+                    style: theme.textTheme.muted,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.channels.isEmpty) return const SizedBox.shrink();
@@ -733,35 +783,51 @@ class _ChannelTreeState extends State<ChannelTree> {
       ),
     );
 
+    final List<Widget> contextMenuItems = [];
+
     if (isMe && widget.self != null) {
+      contextMenuItems.addAll([
+        ShadContextMenuItem(
+          onPressed: () => _showSetNoticeDialog(context, widget.self!),
+          leading: const Icon(LucideIcons.filePenLine, size: 16),
+          child: const Text('Set Self Notice'),
+        ),
+        const Divider(height: 1),
+        ShadContextMenuItem(
+          onPressed: () => mumbleService.toggleMute(),
+          leading: Icon(
+            mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff,
+            size: 16,
+          ),
+          child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
+        ),
+        ShadContextMenuItem(
+          onPressed: () => mumbleService.toggleDeafen(),
+          leading: Icon(
+            mumbleService.isDeafened
+                ? LucideIcons.headphones
+                : LucideIcons.headphoneOff,
+            size: 16,
+          ),
+          child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
+        ),
+      ]);
+    }
+
+    if (!isMe) {
+      contextMenuItems.add(
+        ShadContextMenuItem(
+          onPressed: () => _showUserVolumeDialog(context, u),
+          leading: const Icon(LucideIcons.volume2, size: 16),
+          child: const Text('Adjust User Volume'),
+        ),
+      );
+    }
+
+    if (contextMenuItems.isNotEmpty) {
       content = ShadContextMenuRegion(
         longPressEnabled: true,
-        items: [
-          ShadContextMenuItem(
-            onPressed: () => _showSetNoticeDialog(context, widget.self!),
-            leading: const Icon(LucideIcons.filePenLine, size: 16),
-            child: const Text('Set Self Notice'),
-          ),
-          const Divider(height: 1),
-          ShadContextMenuItem(
-            onPressed: () => mumbleService.toggleMute(),
-            leading: Icon(
-              mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff,
-              size: 16,
-            ),
-            child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
-          ),
-          ShadContextMenuItem(
-            onPressed: () => mumbleService.toggleDeafen(),
-            leading: Icon(
-              mumbleService.isDeafened
-                  ? LucideIcons.headphones
-                  : LucideIcons.headphoneOff,
-              size: 16,
-            ),
-            child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
-          ),
-        ],
+        items: contextMenuItems,
         child: content,
       );
     }

@@ -22,6 +22,7 @@ class AudioPlaybackService {
   // Multi-stream support for Desktop (SoLoud)
   final Map<int, AudioSource> _soloudSources = {};
   final Map<int, bool> _soloudPlaying = {};
+  final Map<int, double> _sessionVolumes = {};
 
   double _outputVolume = 1.0;
   int _sampleRate = 48000;
@@ -126,12 +127,19 @@ class AudioPlaybackService {
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final source = _getOrCreateSource(sessionId);
       if (source != null && !(_soloudPlaying[sessionId] ?? false)) {
-        SoLoud.instance.play(source, volume: _outputVolume);
+        final volume = (_sessionVolumes[sessionId] ?? 1.0) * _outputVolume;
+        SoLoud.instance.play(source, volume: volume);
         _soloudPlaying[sessionId] = true;
       }
     } else {
       start();
     }
+  }
+
+  void setSessionVolume(int sessionId, double volume) {
+    _sessionVolumes[sessionId] = volume;
+    // If it's already playing, we should ideally update the volume of the active voice.
+    // For now, it will apply to the next burst or next feed.
   }
 
   void setOutputVolume(double volume) {
@@ -145,11 +153,14 @@ class AudioPlaybackService {
     if (!_initialized) return;
 
     // Apply volume manually for pcm_sound platforms (and temporarily for SoLoud if needed)
+    final sessionVolume = _sessionVolumes[sessionId] ?? 1.0;
+    final totalVolume = sessionVolume * _outputVolume;
+
     Int16List processedSamples = samples;
-    if (_outputVolume != 1.0) {
+    if (totalVolume != 1.0) {
       processedSamples = Int16List(samples.length);
       for (int i = 0; i < samples.length; i++) {
-        processedSamples[i] = (samples[i] * _outputVolume).round().clamp(
+        processedSamples[i] = (samples[i] * totalVolume).round().clamp(
           -32768,
           32767,
         );
