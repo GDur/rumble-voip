@@ -3,7 +3,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio::net::UdpSocket;
 use mumble_protocol_2x::crypt::CryptState;
 use mumble_protocol_2x::voice::{Serverbound, Clientbound, VoicePacket, VoicePacketPayload};
-use opus_rs::{Application, OpusDecoder, OpusEncoder};
+use opus_head_sys::*;
 use crate::mumble::audio::setup_audio;
 use crate::mumble::MumbleCommand;
 use crate::api::client::MumbleEvent;
@@ -11,6 +11,79 @@ use crate::frb_generated::StreamSink;
 use ringbuf::traits::{Consumer, Producer, Observer};
 use std::collections::HashMap;
 use bytes::{Bytes, BytesMut};
+
+struct SafeOpusEncoder(*mut OpusEncoder);
+impl SafeOpusEncoder {
+    fn new(sample_rate: i32, channels: i32, application: i32) -> anyhow::Result<Self> {
+        let mut err = 0;
+        let ptr = unsafe { opus_encoder_create(sample_rate, channels, application, &mut err) };
+        if err != OPUS_OK as i32 {
+            return Err(anyhow::anyhow!("Opus encoder creation error: {}", err));
+        }
+        Ok(Self(ptr))
+    }
+
+    fn ctl(&self, request: i32, value: i32) -> i32 {
+        unsafe { opus_encoder_ctl(self.0, request, value) }
+    }
+
+    fn encode(&self, pcm: &[f32], frame_size: usize, data: &mut [u8]) -> anyhow::Result<usize> {
+        let ret = unsafe {
+            opus_encode_float(
+                self.0,
+                pcm.as_ptr(),
+                frame_size as i32,
+                data.as_mut_ptr(),
+                data.len() as i32,
+            )
+        };
+        if ret < 0 {
+            return Err(anyhow::anyhow!("Opus encode error: {}", ret));
+        }
+        Ok(ret as usize)
+    }
+}
+impl Drop for SafeOpusEncoder {
+    fn drop(&mut self) {
+        unsafe { opus_encoder_destroy(self.0) };
+    }
+}
+unsafe impl Send for SafeOpusEncoder {}
+
+struct SafeOpusDecoder(*mut OpusDecoder);
+impl SafeOpusDecoder {
+    fn new(sample_rate: i32, channels: i32) -> anyhow::Result<Self> {
+        let mut err = 0;
+        let ptr = unsafe { opus_decoder_create(sample_rate, channels, &mut err) };
+        if err != OPUS_OK as i32 {
+            return Err(anyhow::anyhow!("Opus decoder creation error: {}", err));
+        }
+        Ok(Self(ptr))
+    }
+
+    fn decode(&self, data: &[u8], frame_size: usize, pcm: &mut [f32]) -> anyhow::Result<usize> {
+        let ret = unsafe {
+            opus_decode_float(
+                self.0,
+                data.as_ptr(),
+                data.len() as i32,
+                pcm.as_mut_ptr(),
+                frame_size as i32,
+                0, // decode_fec
+            )
+        };
+        if ret < 0 {
+            return Err(anyhow::anyhow!("Opus decode error: {}", ret));
+        }
+        Ok(ret as usize)
+    }
+}
+impl Drop for SafeOpusDecoder {
+    fn drop(&mut self) {
+        unsafe { opus_decoder_destroy(self.0) };
+    }
+}
+unsafe impl Send for SafeOpusDecoder {}
 
 pub struct VoiceHandler;
 
@@ -42,15 +115,15 @@ impl VoiceHandler {
         socket.connect(server_addr).await?;
         println!("--- RUST: UDP socket connected ---");
 
-        let mut encoder = OpusEncoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS, Application::Voip)
+        let encoder = SafeOpusEncoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32, OPUS_APPLICATION_VOIP as i32)
             .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
-        encoder.use_cbr = false;
-        encoder.use_inband_fec = true;
-        encoder.packet_loss_perc = 10; // Could be dynamically updated based on udp packet loss
-        encoder.bitrate_bps = Self::BITRATE as i32;
-        encoder.complexity = Self::COMPLEXITY as i32;
+        encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1); // use_cbr = false -> VBR = true
+        encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
+        encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
+        encoder.ctl(OPUS_SET_BITRATE_REQUEST as i32, Self::BITRATE as i32);
+        encoder.ctl(OPUS_SET_COMPLEXITY_REQUEST as i32, Self::COMPLEXITY as i32);
         
-        let mut decoders: HashMap<u32, (OpusDecoder, bool, std::time::Instant, Vec<f32>)> = HashMap::new();
+        let mut decoders: HashMap<u32, (SafeOpusDecoder, bool, std::time::Instant, Vec<f32>)> = HashMap::new();
         
         let ptt_active = Arc::new(Mutex::new(false));
 
@@ -185,7 +258,7 @@ impl VoiceHandler {
                                                 let entry = decoders.entry(sid_u32).or_insert_with(|| {
                                                     println!("--- RUST: New talking user detected: {} ---", sid_u32);
                                                     (
-                                                        OpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS).expect("Failed to create Opus decoder"), 
+                                                        SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"), 
                                                         false, 
                                                         std::time::Instant::now(),
                                                         vec![0.0f32; Self::FRAME_SIZE]
