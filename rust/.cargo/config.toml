@@ -12,3 +12,6 @@ rustflags = ["-C", "target-cpu=native"]
 
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-cpu=x86-64-v3"]
+
+[env]
+IPHONEOS_DEPLOYMENT_TARGET = "18.0"
