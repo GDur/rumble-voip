@@ -3,7 +3,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio::net::{UdpSocket, ToSocketAddrs};
 use mumble_protocol_2x::crypt::CryptState;
 use mumble_protocol_2x::voice::{Serverbound, Clientbound, VoicePacket, VoicePacketPayload};
-use opus_rs::{Application, OpusDecoder, OpusEncoder};
+use opusic_c::{Application, Channels, Decoder as OpusDecoder, Encoder as OpusEncoder, SampleRate};
 use crate::mumble::audio::setup_audio;
 use crate::mumble::MumbleCommand;
 use crate::api::client::{MumbleEvent, MumbleUser};
@@ -36,8 +36,8 @@ impl VoiceHandler {
         socket.connect(server_addr).await?;
         println!("--- RUST: UDP socket connected ---");
 
-        let mut encoder = OpusEncoder::new(48000, 1, Application::Voip)
-            .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
+        let mut encoder = OpusEncoder::new(Channels::Mono, SampleRate::Hz48000, Application::Voip)
+            .map_err(|e| anyhow::anyhow!("Opus encoder error: {:?}", e))?;
         
         let mut decoders: HashMap<u32, (OpusDecoder, bool, std::time::Instant, Vec<f32>)> = HashMap::new();
         
@@ -99,7 +99,7 @@ impl VoiceHandler {
                                 let rms = (sum_sq / 960.0).sqrt();
                                 let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
 
-                                match encoder.encode(&f32_frame, 960, &mut opus_buf) {
+                                match encoder.encode_float_to_slice(&f32_frame[..960], &mut opus_buf) {
                                     Ok(len) => {
                                         let packet = VoicePacket::Audio {
                                             _dst: std::marker::PhantomData,
@@ -120,7 +120,7 @@ impl VoiceHandler {
                                             }
                                         }
                                     }
-                                    Err(e) => log::error!("Opus encode error: {}", e),
+                                    Err(e) => log::error!("Opus encode error: {:?}", e),
                                 }
                             }
                         }
@@ -174,7 +174,7 @@ impl VoiceHandler {
                                                 let entry = decoders.entry(sid_u32).or_insert_with(|| {
                                                     println!("--- RUST: New talking user detected: {} ---", sid_u32);
                                                     (
-                                                        OpusDecoder::new(48000, 1).expect("Failed to create Opus decoder"), 
+                                                        OpusDecoder::new(Channels::Mono, SampleRate::Hz48000).expect("Failed to create Opus decoder"), 
                                                         false, 
                                                         std::time::Instant::now(),
                                                         vec![0.0f32; 960 * 6]
@@ -189,7 +189,7 @@ impl VoiceHandler {
                                                 }
 
                                                 if !data.is_empty() {
-                                                    match entry.0.decode(&data, 5760, &mut entry.3) {
+                                                    match entry.0.decode_float_to_slice(&data, &mut entry.3[..], false) {
                                                         Ok(samples) => {
                                                             let mut decoded_i16 = vec![0i16; samples];
                                                             for i in 0..samples {
@@ -204,7 +204,7 @@ impl VoiceHandler {
                                                                 log::warn!("Output buffer full, dropping frame for user {}", sid_u32);
                                                             }
                                                         }
-                                                        Err(e) => log::error!("Opus decode error: {}", e),
+                                                        Err(e) => log::error!("Opus decode error: {:?}", e),
                                                     }
                                                 }
                                             }
