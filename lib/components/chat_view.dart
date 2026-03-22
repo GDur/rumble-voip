@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:intl/intl.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -72,9 +73,6 @@ class _ChatViewState extends State<ChatView> {
     final mumbleService = context.watch<MumbleService>();
     final messages = mumbleService.messages;
 
-    final self = mumbleService.self;
-    final currentChannelName = self?.channel.name ?? 'Chat';
-
     return Container(
       child: Column(
         children: [
@@ -96,7 +94,7 @@ class _ChatViewState extends State<ChatView> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  currentChannelName,
+                  mumbleService.currentChannelName,
                   style: theme.textTheme.small.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

@@ -1,4 +1,4 @@
-import 'package:dumble/dumble.dart';
+import 'package:rumble/src/rust/api/client.dart';
 
 class ChatMessage {
   final String senderName;
@@ -6,13 +6,13 @@ class ChatMessage {
   final DateTime timestamp;
   final bool isSelf;
   final bool isSystem;
-  final User? sender;
+  final MumbleUser? sender;
 
   ChatMessage({
     required this.senderName,
     required this.content,
     required this.timestamp,
-    this.isSelf = false,
+    required this.isSelf,
     this.isSystem = false,
     this.sender,
   });

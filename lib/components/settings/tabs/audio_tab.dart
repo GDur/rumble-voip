@@ -36,7 +36,7 @@ class AudioTab extends StatelessWidget {
               final inputDeviceId = settings.inputDeviceId;
               final hasCurrent =
                   inputDeviceId == null ||
-                  devices.any((d) => d.name == inputDeviceId);
+                  devices.any((d) => d == inputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
@@ -57,18 +57,14 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d.name,
-                      child: Text(d.name),
+                      value: d,
+                      child: Text(d),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Input');
-                  final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.name == value,
-                    orElse: () => null,
-                  );
-                  return Text(dev?.name ?? 'Current Device');
+                  return Text(value);
                 },
               );
             },
@@ -86,7 +82,7 @@ class AudioTab extends StatelessWidget {
               final outputDeviceId = settings.outputDeviceId;
               final hasCurrent =
                   outputDeviceId == null ||
-                  devices.any((d) => d.toString() == outputDeviceId);
+                  devices.any((d) => d == outputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Output'),
@@ -110,8 +106,8 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d.toString(),
-                      child: Text(d.toString()),
+                      value: d,
+                      child: Text(d),
                     ),
                   ),
                 ],

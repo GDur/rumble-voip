@@ -3,8 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'api/audio.dart';
-import 'api/opus.dart';
+import 'api/client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -56,8 +55,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
   @override
   Future<void> executeRustInitializers() async {
-    await api.crateApiAudioInitApp();
-    await api.crateApiOpusInitApp();
+    await api.crateApiClientInitApp();
   }
 
   @override
@@ -68,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1932656099;
+  int get rustContentHash => 1154604481;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -79,99 +77,59 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  RustAudioRecorder crateApiAudioRustAudioRecorderNew();
-
-  Stream<Uint8List> crateApiAudioRustAudioRecorderStart({
-    required RustAudioRecorder that,
-    String? deviceName,
+  Stream<MumbleEvent> crateApiClientRustMumbleClientConnect({
+    required RustMumbleClient that,
+    required String host,
+    required int port,
+    required String username,
+    String? password,
   });
 
-  void crateApiAudioRustAudioRecorderStop({required RustAudioRecorder that});
-
-  int crateApiOpusRustOpusDecoderDecodeRaw({
-    required RustOpusDecoder that,
-    required BigInt opusPtr,
-    required int opusLen,
-    required BigInt outputPtr,
-    required int frameSize,
+  void crateApiClientRustMumbleClientDisconnect({
+    required RustMumbleClient that,
   });
 
-  RustOpusDecoder crateApiOpusRustOpusDecoderNew({
-    required int sampleRate,
-    required int channels,
+  Future<void> crateApiClientRustMumbleClientJoinChannel({
+    required RustMumbleClient that,
+    required int channelId,
   });
 
-  int crateApiOpusRustOpusEncoderEncodeRaw({
-    required RustOpusEncoder that,
-    required BigInt pcmPtr,
-    required int pcmLen,
-    required BigInt outputPtr,
-    required int outputCapacity,
+  RustMumbleClient crateApiClientRustMumbleClientNew();
+
+  Future<void> crateApiClientRustMumbleClientSendTextMessage({
+    required RustMumbleClient that,
+    required String message,
   });
 
-  RustOpusEncoder crateApiOpusRustOpusEncoderNew({
-    required int sampleRate,
-    required int channels,
-    required int application,
+  Future<void> crateApiClientRustMumbleClientSetDeafen({
+    required RustMumbleClient that,
+    required bool deafen,
   });
 
-  void crateApiOpusRustOpusEncoderSetBitrate({
-    required RustOpusEncoder that,
-    required int bitrateBps,
+  Future<void> crateApiClientRustMumbleClientSetMute({
+    required RustMumbleClient that,
+    required bool mute,
   });
 
-  void crateApiOpusRustOpusEncoderSetComplexity({
-    required RustOpusEncoder that,
-    required int complexity,
+  Future<void> crateApiClientRustMumbleClientSetPtt({
+    required RustMumbleClient that,
+    required bool active,
   });
 
-  void crateApiOpusRustOpusEncoderSetInbandFec({
-    required RustOpusEncoder that,
-    required bool enabled,
-  });
+  Future<void> crateApiClientInitApp();
 
-  void crateApiOpusRustOpusEncoderSetPacketLossPerc({
-    required RustOpusEncoder that,
-    required int percentage,
-  });
+  Future<List<String>> crateApiClientListAudioInputDevices();
 
-  void crateApiOpusRustOpusEncoderSetVbr({
-    required RustOpusEncoder that,
-    required bool vbr,
-  });
-
-  Future<void> crateApiAudioInitApp();
-
-  Future<void> crateApiOpusInitApp();
-
-  Future<List<AudioDevice>> crateApiAudioListInputDevices();
+  Future<List<String>> crateApiClientListAudioOutputDevices();
 
   RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustAudioRecorder;
+  get rust_arc_increment_strong_count_RustMumbleClient;
 
   RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustAudioRecorder;
+  get rust_arc_decrement_strong_count_RustMumbleClient;
 
   CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_RustAudioRecorderPtr;
-
-  RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustOpusDecoder;
-
-  RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustOpusDecoder;
-
-  CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_RustOpusDecoderPtr;
-
-  RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustOpusEncoder;
-
-  RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustOpusEncoder;
-
-  CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_RustOpusEncoderPtr;
+  get rust_arc_decrement_strong_count_RustMumbleClientPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -183,49 +141,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  RustAudioRecorder crateApiAudioRustAudioRecorderNew() {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData:
-              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiAudioRustAudioRecorderNewConstMeta,
-        argValues: [],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiAudioRustAudioRecorderNewConstMeta =>
-      const TaskConstMeta(debugName: "RustAudioRecorder_new", argNames: []);
-
-  @override
-  Stream<Uint8List> crateApiAudioRustAudioRecorderStart({
-    required RustAudioRecorder that,
-    String? deviceName,
+  Stream<MumbleEvent> crateApiClientRustMumbleClientConnect({
+    required RustMumbleClient that,
+    required String host,
+    required int port,
+    required String username,
+    String? password,
   }) {
-    final sink = RustStreamSink<Uint8List>();
+    final eventSink = RustStreamSink<MumbleEvent>();
     unawaited(
       handler.executeNormal(
         NormalTask(
           callFfi: (port_) {
             final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
               that,
               serializer,
             );
-            sse_encode_opt_String(deviceName, serializer);
-            sse_encode_StreamSink_list_prim_u_8_strict_Sse(sink, serializer);
+            sse_encode_String(host, serializer);
+            sse_encode_u_16(port, serializer);
+            sse_encode_String(username, serializer);
+            sse_encode_opt_String(password, serializer);
+            sse_encode_StreamSink_mumble_event_Sse(eventSink, serializer);
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 2,
+              funcId: 1,
               port: port_,
             );
           },
@@ -233,367 +174,131 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             decodeSuccessData: sse_decode_unit,
             decodeErrorData: sse_decode_String,
           ),
-          constMeta: kCrateApiAudioRustAudioRecorderStartConstMeta,
-          argValues: [that, deviceName, sink],
+          constMeta: kCrateApiClientRustMumbleClientConnectConstMeta,
+          argValues: [that, host, port, username, password, eventSink],
           apiImpl: this,
         ),
       ),
     );
-    return sink.stream;
+    return eventSink.stream;
   }
 
-  TaskConstMeta get kCrateApiAudioRustAudioRecorderStartConstMeta =>
+  TaskConstMeta get kCrateApiClientRustMumbleClientConnectConstMeta =>
       const TaskConstMeta(
-        debugName: "RustAudioRecorder_start",
-        argNames: ["that", "deviceName", "sink"],
+        debugName: "RustMumbleClient_connect",
+        argNames: ["that", "host", "port", "username", "password", "eventSink"],
       );
 
   @override
-  void crateApiAudioRustAudioRecorderStop({required RustAudioRecorder that}) {
+  void crateApiClientRustMumbleClientDisconnect({
+    required RustMumbleClient that,
+  }) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiAudioRustAudioRecorderStopConstMeta,
+        constMeta: kCrateApiClientRustMumbleClientDisconnectConstMeta,
         argValues: [that],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAudioRustAudioRecorderStopConstMeta =>
+  TaskConstMeta get kCrateApiClientRustMumbleClientDisconnectConstMeta =>
       const TaskConstMeta(
-        debugName: "RustAudioRecorder_stop",
+        debugName: "RustMumbleClient_disconnect",
         argNames: ["that"],
       );
 
   @override
-  int crateApiOpusRustOpusDecoderDecodeRaw({
-    required RustOpusDecoder that,
-    required BigInt opusPtr,
-    required int opusLen,
-    required BigInt outputPtr,
-    required int frameSize,
+  Future<void> crateApiClientRustMumbleClientJoinChannel({
+    required RustMumbleClient that,
+    required int channelId,
   }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(channelId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientJoinChannelConstMeta,
+        argValues: [that, channelId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientJoinChannelConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_join_channel",
+        argNames: ["that", "channelId"],
+      );
+
+  @override
+  RustMumbleClient crateApiClientRustMumbleClientNew() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-            that,
-            serializer,
-          );
-          sse_encode_u_64(opusPtr, serializer);
-          sse_encode_i_32(opusLen, serializer);
-          sse_encode_u_64(outputPtr, serializer);
-          sse_encode_i_32(frameSize, serializer);
           return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_i_32,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusDecoderDecodeRawConstMeta,
-        argValues: [that, opusPtr, opusLen, outputPtr, frameSize],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusDecoderDecodeRawConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusDecoder_decode_raw",
-        argNames: ["that", "opusPtr", "opusLen", "outputPtr", "frameSize"],
-      );
-
-  @override
-  RustOpusDecoder crateApiOpusRustOpusDecoderNew({
-    required int sampleRate,
-    required int channels,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_i_32(sampleRate, serializer);
-          sse_encode_i_32(channels, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
-        },
-        codec: SseCodec(
           decodeSuccessData:
-              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder,
-          decodeErrorData: sse_decode_String,
-        ),
-        constMeta: kCrateApiOpusRustOpusDecoderNewConstMeta,
-        argValues: [sampleRate, channels],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusDecoderNewConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusDecoder_new",
-        argNames: ["sampleRate", "channels"],
-      );
-
-  @override
-  int crateApiOpusRustOpusEncoderEncodeRaw({
-    required RustOpusEncoder that,
-    required BigInt pcmPtr,
-    required int pcmLen,
-    required BigInt outputPtr,
-    required int outputCapacity,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_u_64(pcmPtr, serializer);
-          sse_encode_i_32(pcmLen, serializer);
-          sse_encode_u_64(outputPtr, serializer);
-          sse_encode_i_32(outputCapacity, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_i_32,
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiOpusRustOpusEncoderEncodeRawConstMeta,
-        argValues: [that, pcmPtr, pcmLen, outputPtr, outputCapacity],
+        constMeta: kCrateApiClientRustMumbleClientNewConstMeta,
+        argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderEncodeRawConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_encode_raw",
-        argNames: ["that", "pcmPtr", "pcmLen", "outputPtr", "outputCapacity"],
-      );
+  TaskConstMeta get kCrateApiClientRustMumbleClientNewConstMeta =>
+      const TaskConstMeta(debugName: "RustMumbleClient_new", argNames: []);
 
   @override
-  RustOpusEncoder crateApiOpusRustOpusEncoderNew({
-    required int sampleRate,
-    required int channels,
-    required int application,
+  Future<void> crateApiClientRustMumbleClientSendTextMessage({
+    required RustMumbleClient that,
+    required String message,
   }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_i_32(sampleRate, serializer);
-          sse_encode_i_32(channels, serializer);
-          sse_encode_i_32(application, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData:
-              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder,
-          decodeErrorData: sse_decode_String,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderNewConstMeta,
-        argValues: [sampleRate, channels, application],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderNewConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_new",
-        argNames: ["sampleRate", "channels", "application"],
-      );
-
-  @override
-  void crateApiOpusRustOpusEncoderSetBitrate({
-    required RustOpusEncoder that,
-    required int bitrateBps,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_i_32(bitrateBps, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderSetBitrateConstMeta,
-        argValues: [that, bitrateBps],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderSetBitrateConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_set_bitrate",
-        argNames: ["that", "bitrateBps"],
-      );
-
-  @override
-  void crateApiOpusRustOpusEncoderSetComplexity({
-    required RustOpusEncoder that,
-    required int complexity,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_i_32(complexity, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderSetComplexityConstMeta,
-        argValues: [that, complexity],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderSetComplexityConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_set_complexity",
-        argNames: ["that", "complexity"],
-      );
-
-  @override
-  void crateApiOpusRustOpusEncoderSetInbandFec({
-    required RustOpusEncoder that,
-    required bool enabled,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_bool(enabled, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderSetInbandFecConstMeta,
-        argValues: [that, enabled],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderSetInbandFecConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_set_inband_fec",
-        argNames: ["that", "enabled"],
-      );
-
-  @override
-  void crateApiOpusRustOpusEncoderSetPacketLossPerc({
-    required RustOpusEncoder that,
-    required int percentage,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_i_32(percentage, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderSetPacketLossPercConstMeta,
-        argValues: [that, percentage],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderSetPacketLossPercConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_set_packet_loss_perc",
-        argNames: ["that", "percentage"],
-      );
-
-  @override
-  void crateApiOpusRustOpusEncoderSetVbr({
-    required RustOpusEncoder that,
-    required bool vbr,
-  }) {
-    return handler.executeSync(
-      SyncTask(
-        callFfi: () {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-            that,
-            serializer,
-          );
-          sse_encode_bool(vbr, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: null,
-        ),
-        constMeta: kCrateApiOpusRustOpusEncoderSetVbrConstMeta,
-        argValues: [that, vbr],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiOpusRustOpusEncoderSetVbrConstMeta =>
-      const TaskConstMeta(
-        debugName: "RustOpusEncoder_set_vbr",
-        argNames: ["that", "vbr"],
-      );
-
-  @override
-  Future<void> crateApiAudioInitApp() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_String(message, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 5,
             port: port_,
           );
         },
@@ -601,18 +306,162 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiAudioInitAppConstMeta,
+        constMeta: kCrateApiClientRustMumbleClientSendTextMessageConstMeta,
+        argValues: [that, message],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSendTextMessageConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_send_text_message",
+        argNames: ["that", "message"],
+      );
+
+  @override
+  Future<void> crateApiClientRustMumbleClientSetDeafen({
+    required RustMumbleClient that,
+    required bool deafen,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_bool(deafen, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetDeafenConstMeta,
+        argValues: [that, deafen],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetDeafenConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_deafen",
+        argNames: ["that", "deafen"],
+      );
+
+  @override
+  Future<void> crateApiClientRustMumbleClientSetMute({
+    required RustMumbleClient that,
+    required bool mute,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_bool(mute, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetMuteConstMeta,
+        argValues: [that, mute],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetMuteConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_mute",
+        argNames: ["that", "mute"],
+      );
+
+  @override
+  Future<void> crateApiClientRustMumbleClientSetPtt({
+    required RustMumbleClient that,
+    required bool active,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_bool(active, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetPttConstMeta,
+        argValues: [that, active],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetPttConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_ptt",
+        argNames: ["that", "active"],
+      );
+
+  @override
+  Future<void> crateApiClientInitApp() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientInitAppConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAudioInitAppConstMeta =>
+  TaskConstMeta get kCrateApiClientInitAppConstMeta =>
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Future<void> crateApiOpusInitApp() {
+  Future<List<String>> crateApiClientListAudioInputDevices() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -620,26 +469,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 10,
             port: port_,
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_unit,
+          decodeSuccessData: sse_decode_list_String,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiOpusInitAppConstMeta,
+        constMeta: kCrateApiClientListAudioInputDevicesConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiOpusInitAppConstMeta =>
-      const TaskConstMeta(debugName: "init_app", argNames: []);
+  TaskConstMeta get kCrateApiClientListAudioInputDevicesConstMeta =>
+      const TaskConstMeta(debugName: "list_audio_input_devices", argNames: []);
 
   @override
-  Future<List<AudioDevice>> crateApiAudioListInputDevices() {
+  Future<List<String>> crateApiClientListAudioOutputDevices() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -647,47 +496,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 11,
             port: port_,
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_audio_device,
+          decodeSuccessData: sse_decode_list_String,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiAudioListInputDevicesConstMeta,
+        constMeta: kCrateApiClientListAudioOutputDevicesConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiAudioListInputDevicesConstMeta =>
-      const TaskConstMeta(debugName: "list_input_devices", argNames: []);
+  TaskConstMeta get kCrateApiClientListAudioOutputDevicesConstMeta =>
+      const TaskConstMeta(debugName: "list_audio_output_devices", argNames: []);
 
   RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustAudioRecorder => wire
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder;
+  get rust_arc_increment_strong_count_RustMumbleClient => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient;
 
   RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustAudioRecorder => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder;
-
-  RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustOpusDecoder => wire
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder;
-
-  RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustOpusDecoder => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder;
-
-  RustArcIncrementStrongCountFnType
-  get rust_arc_increment_strong_count_RustOpusEncoder => wire
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder;
-
-  RustArcDecrementStrongCountFnType
-  get rust_arc_decrement_strong_count_RustOpusEncoder => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder;
+  get rust_arc_decrement_strong_count_RustMumbleClient => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
@@ -696,88 +529,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  RustAudioRecorder
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
+  RustMumbleClient
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return RustMumbleClientImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
-  RustOpusDecoder
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
+  RustMumbleClient
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return RustMumbleClientImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
-  RustOpusEncoder
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
+  RustMumbleClient
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
+    return RustMumbleClientImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
-  RustOpusDecoder
-  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustOpusEncoder
-  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustAudioRecorder
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustAudioRecorder
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustOpusDecoder
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustOpusEncoder
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    dynamic raw,
-  ) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalDcoDecode(raw as List<dynamic>);
-  }
-
-  @protected
-  RustStreamSink<Uint8List> dco_decode_StreamSink_list_prim_u_8_strict_Sse(
+  RustStreamSink<MumbleEvent> dco_decode_StreamSink_mumble_event_Sse(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -791,21 +570,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  AudioDevice dco_decode_audio_device(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return AudioDevice(
-      name: dco_decode_String(arr[0]),
-      isDefault: dco_decode_bool(arr[1]),
-    );
-  }
-
-  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  MumbleChannel dco_decode_box_autoadd_mumble_channel(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mumble_channel(raw);
+  }
+
+  @protected
+  MumbleTextMessage dco_decode_box_autoadd_mumble_text_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mumble_text_message(raw);
+  }
+
+  @protected
+  MumbleUser dco_decode_box_autoadd_mumble_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mumble_user(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
   }
 
   @protected
@@ -815,9 +612,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<AudioDevice> dco_decode_list_audio_device(dynamic raw) {
+  List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_audio_device).toList();
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
   }
 
   @protected
@@ -827,15 +624,102 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  MumbleChannel dco_decode_mumble_channel(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return MumbleChannel(
+      id: dco_decode_u_32(arr[0]),
+      name: dco_decode_String(arr[1]),
+      parentId: dco_decode_opt_box_autoadd_u_32(arr[2]),
+      position: dco_decode_i_32(arr[3]),
+      description: dco_decode_opt_String(arr[4]),
+      isEnterRestricted: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  MumbleEvent dco_decode_mumble_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return MumbleEvent_Connected(dco_decode_u_32(raw[1]));
+      case 1:
+        return MumbleEvent_Disconnected(dco_decode_String(raw[1]));
+      case 2:
+        return MumbleEvent_ChannelUpdate(
+          dco_decode_box_autoadd_mumble_channel(raw[1]),
+        );
+      case 3:
+        return MumbleEvent_UserUpdate(
+          dco_decode_box_autoadd_mumble_user(raw[1]),
+        );
+      case 4:
+        return MumbleEvent_UserRemoved(dco_decode_u_32(raw[1]));
+      case 5:
+        return MumbleEvent_TextMessage(
+          dco_decode_box_autoadd_mumble_text_message(raw[1]),
+        );
+      case 6:
+        return MumbleEvent_AudioVolume(dco_decode_f_32(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  MumbleTextMessage dco_decode_mumble_text_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return MumbleTextMessage(
+      senderName: dco_decode_String(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  MumbleUser dco_decode_mumble_user(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return MumbleUser(
+      session: dco_decode_u_32(arr[0]),
+      name: dco_decode_String(arr[1]),
+      channelId: dco_decode_u_32(arr[2]),
+      isTalking: dco_decode_bool(arr[3]),
+      isMuted: dco_decode_bool(arr[4]),
+      isDeafened: dco_decode_bool(arr[5]),
+      isSuppressed: dco_decode_bool(arr[6]),
+      comment: dco_decode_opt_String(arr[7]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
   }
 
   @protected
-  BigInt dco_decode_u_64(dynamic raw) {
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return dcoDecodeU64(raw);
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
   }
 
   @protected
@@ -864,115 +748,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  RustAudioRecorder
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
+  RustMumbleClient
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalSseDecode(
+    return RustMumbleClientImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
   }
 
   @protected
-  RustOpusDecoder
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
+  RustMumbleClient
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalSseDecode(
+    return RustMumbleClientImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
   }
 
   @protected
-  RustOpusEncoder
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
+  RustMumbleClient
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalSseDecode(
+    return RustMumbleClientImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
   }
 
   @protected
-  RustOpusDecoder
-  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustOpusEncoder
-  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustAudioRecorder
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustAudioRecorder
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustAudioRecorderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustOpusDecoder
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusDecoderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustOpusEncoder
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    SseDeserializer deserializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return RustOpusEncoderImpl.frbInternalSseDecode(
-      sse_decode_usize(deserializer),
-      sse_decode_i_32(deserializer),
-    );
-  }
-
-  @protected
-  RustStreamSink<Uint8List> sse_decode_StreamSink_list_prim_u_8_strict_Sse(
+  RustStreamSink<MumbleEvent> sse_decode_StreamSink_mumble_event_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -987,17 +799,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  AudioDevice sse_decode_audio_device(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_name = sse_decode_String(deserializer);
-    var var_isDefault = sse_decode_bool(deserializer);
-    return AudioDevice(name: var_name, isDefault: var_isDefault);
-  }
-
-  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  MumbleChannel sse_decode_box_autoadd_mumble_channel(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mumble_channel(deserializer));
+  }
+
+  @protected
+  MumbleTextMessage sse_decode_box_autoadd_mumble_text_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mumble_text_message(deserializer));
+  }
+
+  @protected
+  MumbleUser sse_decode_box_autoadd_mumble_user(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mumble_user(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
   }
 
   @protected
@@ -1007,13 +845,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<AudioDevice> sse_decode_list_audio_device(SseDeserializer deserializer) {
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <AudioDevice>[];
+    var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_audio_device(deserializer));
+      ans_.add(sse_decode_String(deserializer));
     }
     return ans_;
   }
@@ -1023,6 +861,92 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  MumbleChannel sse_decode_mumble_channel(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_u_32(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_parentId = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_position = sse_decode_i_32(deserializer);
+    var var_description = sse_decode_opt_String(deserializer);
+    var var_isEnterRestricted = sse_decode_bool(deserializer);
+    return MumbleChannel(
+      id: var_id,
+      name: var_name,
+      parentId: var_parentId,
+      position: var_position,
+      description: var_description,
+      isEnterRestricted: var_isEnterRestricted,
+    );
+  }
+
+  @protected
+  MumbleEvent sse_decode_mumble_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_field0 = sse_decode_u_32(deserializer);
+        return MumbleEvent_Connected(var_field0);
+      case 1:
+        var var_field0 = sse_decode_String(deserializer);
+        return MumbleEvent_Disconnected(var_field0);
+      case 2:
+        var var_field0 = sse_decode_box_autoadd_mumble_channel(deserializer);
+        return MumbleEvent_ChannelUpdate(var_field0);
+      case 3:
+        var var_field0 = sse_decode_box_autoadd_mumble_user(deserializer);
+        return MumbleEvent_UserUpdate(var_field0);
+      case 4:
+        var var_field0 = sse_decode_u_32(deserializer);
+        return MumbleEvent_UserRemoved(var_field0);
+      case 5:
+        var var_field0 = sse_decode_box_autoadd_mumble_text_message(
+          deserializer,
+        );
+        return MumbleEvent_TextMessage(var_field0);
+      case 6:
+        var var_field0 = sse_decode_f_32(deserializer);
+        return MumbleEvent_AudioVolume(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  MumbleTextMessage sse_decode_mumble_text_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_senderName = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return MumbleTextMessage(senderName: var_senderName, message: var_message);
+  }
+
+  @protected
+  MumbleUser sse_decode_mumble_user(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_session = sse_decode_u_32(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_channelId = sse_decode_u_32(deserializer);
+    var var_isTalking = sse_decode_bool(deserializer);
+    var var_isMuted = sse_decode_bool(deserializer);
+    var var_isDeafened = sse_decode_bool(deserializer);
+    var var_isSuppressed = sse_decode_bool(deserializer);
+    var var_comment = sse_decode_opt_String(deserializer);
+    return MumbleUser(
+      session: var_session,
+      name: var_name,
+      channelId: var_channelId,
+      isTalking: var_isTalking,
+      isMuted: var_isMuted,
+      isDeafened: var_isDeafened,
+      isSuppressed: var_isSuppressed,
+      comment: var_comment,
+    );
   }
 
   @protected
@@ -1037,9 +961,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getBigUint64();
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
   }
 
   @protected
@@ -1070,131 +1011,53 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    RustAudioRecorder self,
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+    RustMumbleClient self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as RustAudioRecorderImpl).frbInternalSseEncode(move: true),
+      (self as RustMumbleClientImpl).frbInternalSseEncode(move: true),
       serializer,
     );
   }
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    RustOpusDecoder self,
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+    RustMumbleClient self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as RustOpusDecoderImpl).frbInternalSseEncode(move: true),
+      (self as RustMumbleClientImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    RustOpusEncoder self,
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+    RustMumbleClient self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
-      (self as RustOpusEncoderImpl).frbInternalSseEncode(move: true),
+      (self as RustMumbleClientImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
 
   @protected
-  void
-  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    RustOpusDecoder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustOpusDecoderImpl).frbInternalSseEncode(move: false),
-      serializer,
-    );
-  }
-
-  @protected
-  void
-  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    RustOpusEncoder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustOpusEncoderImpl).frbInternalSseEncode(move: false),
-      serializer,
-    );
-  }
-
-  @protected
-  void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    RustAudioRecorder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustAudioRecorderImpl).frbInternalSseEncode(move: false),
-      serializer,
-    );
-  }
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioRecorder(
-    RustAudioRecorder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustAudioRecorderImpl).frbInternalSseEncode(move: null),
-      serializer,
-    );
-  }
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusDecoder(
-    RustOpusDecoder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustOpusDecoderImpl).frbInternalSseEncode(move: null),
-      serializer,
-    );
-  }
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustOpusEncoder(
-    RustOpusEncoder self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_usize(
-      (self as RustOpusEncoderImpl).frbInternalSseEncode(move: null),
-      serializer,
-    );
-  }
-
-  @protected
-  void sse_encode_StreamSink_list_prim_u_8_strict_Sse(
-    RustStreamSink<Uint8List> self,
+  void sse_encode_StreamSink_mumble_event_Sse(
+    RustStreamSink<MumbleEvent> self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(
       self.setupAndSerialize(
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeSuccessData: sse_decode_mumble_event,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
@@ -1209,16 +1072,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_audio_device(AudioDevice self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.name, serializer);
-    sse_encode_bool(self.isDefault, serializer);
-  }
-
-  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_mumble_channel(
+    MumbleChannel self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mumble_channel(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_mumble_text_message(
+    MumbleTextMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mumble_text_message(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_mumble_user(
+    MumbleUser self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mumble_user(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
   }
 
   @protected
@@ -1228,14 +1123,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_list_audio_device(
-    List<AudioDevice> self,
-    SseSerializer serializer,
-  ) {
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
-      sse_encode_audio_device(item, serializer);
+      sse_encode_String(item, serializer);
     }
   }
 
@@ -1250,6 +1142,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_mumble_channel(MumbleChannel self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.parentId, serializer);
+    sse_encode_i_32(self.position, serializer);
+    sse_encode_opt_String(self.description, serializer);
+    sse_encode_bool(self.isEnterRestricted, serializer);
+  }
+
+  @protected
+  void sse_encode_mumble_event(MumbleEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case MumbleEvent_Connected(field0: final field0):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(field0, serializer);
+      case MumbleEvent_Disconnected(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(field0, serializer);
+      case MumbleEvent_ChannelUpdate(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_box_autoadd_mumble_channel(field0, serializer);
+      case MumbleEvent_UserUpdate(field0: final field0):
+        sse_encode_i_32(3, serializer);
+        sse_encode_box_autoadd_mumble_user(field0, serializer);
+      case MumbleEvent_UserRemoved(field0: final field0):
+        sse_encode_i_32(4, serializer);
+        sse_encode_u_32(field0, serializer);
+      case MumbleEvent_TextMessage(field0: final field0):
+        sse_encode_i_32(5, serializer);
+        sse_encode_box_autoadd_mumble_text_message(field0, serializer);
+      case MumbleEvent_AudioVolume(field0: final field0):
+        sse_encode_i_32(6, serializer);
+        sse_encode_f_32(field0, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_mumble_text_message(
+    MumbleTextMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.senderName, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_mumble_user(MumbleUser self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.session, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_u_32(self.channelId, serializer);
+    sse_encode_bool(self.isTalking, serializer);
+    sse_encode_bool(self.isMuted, serializer);
+    sse_encode_bool(self.isDeafened, serializer);
+    sse_encode_bool(self.isSuppressed, serializer);
+    sse_encode_opt_String(self.comment, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1260,9 +1214,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putBigUint64(self);
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
   }
 
   @protected
@@ -1284,127 +1254,62 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 }
 
 @sealed
-class RustAudioRecorderImpl extends RustOpaque implements RustAudioRecorder {
+class RustMumbleClientImpl extends RustOpaque implements RustMumbleClient {
   // Not to be used by end users
-  RustAudioRecorderImpl.frbInternalDcoDecode(List<dynamic> wire)
+  RustMumbleClientImpl.frbInternalDcoDecode(List<dynamic> wire)
     : super.frbInternalDcoDecode(wire, _kStaticData);
 
   // Not to be used by end users
-  RustAudioRecorderImpl.frbInternalSseDecode(
+  RustMumbleClientImpl.frbInternalSseDecode(
     BigInt ptr,
     int externalSizeOnNative,
   ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
 
   static final _kStaticData = RustArcStaticData(
     rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_RustAudioRecorder,
+        RustLib.instance.api.rust_arc_increment_strong_count_RustMumbleClient,
     rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_RustAudioRecorder,
+        RustLib.instance.api.rust_arc_decrement_strong_count_RustMumbleClient,
     rustArcDecrementStrongCountPtr: RustLib
         .instance
         .api
-        .rust_arc_decrement_strong_count_RustAudioRecorderPtr,
+        .rust_arc_decrement_strong_count_RustMumbleClientPtr,
   );
 
-  Stream<Uint8List> start({String? deviceName}) => RustLib.instance.api
-      .crateApiAudioRustAudioRecorderStart(that: this, deviceName: deviceName);
-
-  void stop() =>
-      RustLib.instance.api.crateApiAudioRustAudioRecorderStop(that: this);
-}
-
-@sealed
-class RustOpusDecoderImpl extends RustOpaque implements RustOpusDecoder {
-  // Not to be used by end users
-  RustOpusDecoderImpl.frbInternalDcoDecode(List<dynamic> wire)
-    : super.frbInternalDcoDecode(wire, _kStaticData);
-
-  // Not to be used by end users
-  RustOpusDecoderImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
-    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-  static final _kStaticData = RustArcStaticData(
-    rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_RustOpusDecoder,
-    rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_RustOpusDecoder,
-    rustArcDecrementStrongCountPtr:
-        RustLib.instance.api.rust_arc_decrement_strong_count_RustOpusDecoderPtr,
-  );
-
-  /// ZERO-COPY DECODE
-  /// Reads from opus_ptr and writes directly to output_ptr.
-  /// Both pointers are managed by Dart (FFI malloc).
-  int decodeRaw({
-    required BigInt opusPtr,
-    required int opusLen,
-    required BigInt outputPtr,
-    required int frameSize,
-  }) => RustLib.instance.api.crateApiOpusRustOpusDecoderDecodeRaw(
+  Stream<MumbleEvent> connect({
+    required String host,
+    required int port,
+    required String username,
+    String? password,
+  }) => RustLib.instance.api.crateApiClientRustMumbleClientConnect(
     that: this,
-    opusPtr: opusPtr,
-    opusLen: opusLen,
-    outputPtr: outputPtr,
-    frameSize: frameSize,
-  );
-}
-
-@sealed
-class RustOpusEncoderImpl extends RustOpaque implements RustOpusEncoder {
-  // Not to be used by end users
-  RustOpusEncoderImpl.frbInternalDcoDecode(List<dynamic> wire)
-    : super.frbInternalDcoDecode(wire, _kStaticData);
-
-  // Not to be used by end users
-  RustOpusEncoderImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
-    : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-  static final _kStaticData = RustArcStaticData(
-    rustArcIncrementStrongCount:
-        RustLib.instance.api.rust_arc_increment_strong_count_RustOpusEncoder,
-    rustArcDecrementStrongCount:
-        RustLib.instance.api.rust_arc_decrement_strong_count_RustOpusEncoder,
-    rustArcDecrementStrongCountPtr:
-        RustLib.instance.api.rust_arc_decrement_strong_count_RustOpusEncoderPtr,
+    host: host,
+    port: port,
+    username: username,
+    password: password,
   );
 
-  /// ZERO-COPY ENCODE
-  /// Reads from pcm_ptr and writes directly to output_ptr.
-  /// Both pointers are managed by Dart (FFI malloc).
-  int encodeRaw({
-    required BigInt pcmPtr,
-    required int pcmLen,
-    required BigInt outputPtr,
-    required int outputCapacity,
-  }) => RustLib.instance.api.crateApiOpusRustOpusEncoderEncodeRaw(
-    that: this,
-    pcmPtr: pcmPtr,
-    pcmLen: pcmLen,
-    outputPtr: outputPtr,
-    outputCapacity: outputCapacity,
-  );
+  void disconnect() =>
+      RustLib.instance.api.crateApiClientRustMumbleClientDisconnect(that: this);
 
-  void setBitrate({required int bitrateBps}) =>
-      RustLib.instance.api.crateApiOpusRustOpusEncoderSetBitrate(
+  Future<void> joinChannel({required int channelId}) =>
+      RustLib.instance.api.crateApiClientRustMumbleClientJoinChannel(
         that: this,
-        bitrateBps: bitrateBps,
+        channelId: channelId,
       );
 
-  void setComplexity({required int complexity}) =>
-      RustLib.instance.api.crateApiOpusRustOpusEncoderSetComplexity(
+  Future<void> sendTextMessage({required String message}) =>
+      RustLib.instance.api.crateApiClientRustMumbleClientSendTextMessage(
         that: this,
-        complexity: complexity,
+        message: message,
       );
 
-  void setInbandFec({required bool enabled}) => RustLib.instance.api
-      .crateApiOpusRustOpusEncoderSetInbandFec(that: this, enabled: enabled);
+  Future<void> setDeafen({required bool deafen}) => RustLib.instance.api
+      .crateApiClientRustMumbleClientSetDeafen(that: this, deafen: deafen);
 
-  void setPacketLossPerc({required int percentage}) =>
-      RustLib.instance.api.crateApiOpusRustOpusEncoderSetPacketLossPerc(
-        that: this,
-        percentage: percentage,
-      );
+  Future<void> setMute({required bool mute}) => RustLib.instance.api
+      .crateApiClientRustMumbleClientSetMute(that: this, mute: mute);
 
-  void setVbr({required bool vbr}) => RustLib.instance.api
-      .crateApiOpusRustOpusEncoderSetVbr(that: this, vbr: vbr);
+  Future<void> setPtt({required bool active}) => RustLib.instance.api
+      .crateApiClientRustMumbleClientSetPtt(that: this, active: active);
 }
