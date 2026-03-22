@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use tokio::sync::mpsc;
 use futures_util::{StreamExt, SinkExt};
 use tokio_util::codec::Framed;
@@ -59,9 +58,22 @@ pub async fn run_loop(
 
     // 3. Main Loop
     let mut session_id = 0;
+    let mut my_channel_id = 0;
+    let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(15));
 
     loop {
         tokio::select! {
+            _ = ping_interval.tick() => {
+                let mut ping = msgs::Ping::new();
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as u64;
+                ping.set_timestamp(timestamp);
+                if let Err(e) = framed.send(ControlPacket::Ping(Box::new(ping))).await {
+                    log::error!("Failed to send TCP Ping: {}", e);
+                }
+            }
             packet = framed.next() => {
                 match packet {
                     Some(Ok(ControlPacket::ServerSync(ss))) => {
@@ -85,6 +97,9 @@ pub async fn run_loop(
                     }
                     Some(Ok(ControlPacket::UserState(us))) => {
                         let session = us.session();
+                        if session == session_id {
+                            my_channel_id = us.channel_id();
+                        }
                         let user = MumbleUser {
                             session,
                             name: us.name().to_string(),
@@ -120,8 +135,6 @@ pub async fn run_loop(
                          if let Some(v_tx) = voice_cmd_tx.take() {
                              let _ = v_tx.send(MumbleCommand::Disconnect).await;
                          }
-
-                         use std::convert::TryInto;
 
                          let mut key = [0u8; 16];
                          let mut encrypt_nonce = [0u8; 16];
@@ -185,7 +198,8 @@ pub async fn run_loop(
                     Some(MumbleCommand::SendTextMessage(msg)) => {
                         let mut tm = msgs::TextMessage::new();
                         tm.set_message(msg);
-                        framed.send(ControlPacket::TextMessage(Box::new(tm))).await?;
+                        tm.channel_id.push(my_channel_id);
+                        let _ = framed.send(ControlPacket::TextMessage(Box::new(tm))).await;
                     }
                     Some(MumbleCommand::SetMute(mute)) => {
                         let mut us = msgs::UserState::new();

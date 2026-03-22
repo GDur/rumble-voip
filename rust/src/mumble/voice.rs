@@ -1,17 +1,16 @@
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
-use tokio::net::{UdpSocket, ToSocketAddrs};
+use tokio::net::UdpSocket;
 use mumble_protocol_2x::crypt::CryptState;
 use mumble_protocol_2x::voice::{Serverbound, Clientbound, VoicePacket, VoicePacketPayload};
 use opusic_c::{Application, Channels, Decoder as OpusDecoder, Encoder as OpusEncoder, SampleRate};
 use crate::mumble::audio::setup_audio;
 use crate::mumble::MumbleCommand;
-use crate::api::client::{MumbleEvent, MumbleUser};
+use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
 use ringbuf::traits::{Consumer, Producer, Observer};
 use std::collections::HashMap;
 use bytes::{Bytes, BytesMut};
-use std::net::SocketAddr;
 
 pub struct VoiceHandler;
 
@@ -85,20 +84,20 @@ impl VoiceHandler {
                     }
 
                     let is_ptt = *ptt_active.lock().await;
-                    if is_ptt {
-                        if audio.input_consumer.occupied_len() >= 960 {
-                            let read = audio.input_consumer.pop_slice(&mut pcm_frame);
-                            if read == 960 {
-                                println!("--- RUST: Recorded 960 samples from mic ---");
-                                let mut sum_sq = 0.0;
-                                for (i, &sample) in pcm_frame.iter().enumerate() {
-                                    let f = sample as f32 / 32768.0;
-                                    f32_frame[i] = f;
-                                    sum_sq += f * f;
-                                }
-                                let rms = (sum_sq / 960.0).sqrt();
-                                let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
+                    
+                    while audio.input_consumer.occupied_len() >= 960 {
+                        let read = audio.input_consumer.pop_slice(&mut pcm_frame);
+                        if read == 960 {
+                            let mut sum_sq = 0.0;
+                            for (i, &sample) in pcm_frame.iter().enumerate() {
+                                let f = sample as f32 / 32768.0;
+                                f32_frame[i] = f;
+                                sum_sq += f * f;
+                            }
+                            let rms = (sum_sq / 960.0).sqrt();
+                            let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
 
+                            if is_ptt {
                                 match encoder.encode_float_to_slice(&f32_frame[..960], &mut opus_buf) {
                                     Ok(len) => {
                                         let packet = VoicePacket::Audio {
@@ -124,10 +123,9 @@ impl VoiceHandler {
                                 }
                             }
                         }
-                    } else {
-                        if audio.input_consumer.occupied_len() > 0 {
-                            audio.input_consumer.clear();
-                        }
+                    }
+
+                    if !is_ptt {
                         if sequence > 0 {
                             // Send terminator
                             let packet = VoicePacket::Audio {
