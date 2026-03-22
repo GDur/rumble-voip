@@ -19,8 +19,8 @@ impl VoiceHandler {
     const CHANNELS: usize = 1;
     const FRAME_MS: usize = 20;
     const FRAME_SIZE: usize = Self::SAMPLE_RATE * Self::FRAME_MS / 1000;
-    const BITRATE: usize = 72000;
-    const COMPLEXITY: u32 = 0;
+    const BITRATE: usize = 40000;
+    const COMPLEXITY: u32 = 10;
 
     pub async fn run(
         server_addr_str: String,
@@ -44,7 +44,9 @@ impl VoiceHandler {
 
         let mut encoder = OpusEncoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS, Application::Voip)
             .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
-        encoder.use_cbr = true;
+        encoder.use_cbr = false;
+        encoder.use_inband_fec = true;
+        encoder.packet_loss_perc = 10; // Could be dynamically updated based on udp packet loss
         encoder.bitrate_bps = Self::BITRATE as i32;
         encoder.complexity = Self::COMPLEXITY as i32;
         
@@ -189,7 +191,6 @@ impl VoiceHandler {
                                                         vec![0.0f32; Self::FRAME_SIZE * 6]
                                                     )
                                                 });
-                                                
                                                 entry.2 = std::time::Instant::now();
                                                 if !entry.1 {
                                                     entry.1 = true;
