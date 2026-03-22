@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter/services.dart';
+import 'package:pasteboard/pasteboard.dart';
+import 'package:rumble/utils/html_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 class ChatView extends StatefulWidget {
@@ -22,6 +25,7 @@ class _ChatViewState extends State<ChatView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final mumbleService = context.read<MumbleService>();
       mumbleService.addListener(_onMessagesUpdated);
+      _focusNode.onKeyEvent = _onKeyEvent;
     });
   }
 
@@ -64,6 +68,35 @@ class _ChatViewState extends State<ChatView> {
         );
       }
     });
+  }
+
+  Future<void> _handlePaste() async {
+    try {
+      final imageBytes = await Pasteboard.image;
+      if (imageBytes != null) {
+        final html = HtmlUtils.imageToHtml(imageBytes);
+        if (mounted) {
+          context.read<MumbleService>().sendMessage(html);
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error pasting image: $e');
+    }
+  }
+
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent) {
+      // Check for Cmd+V or Ctrl+V
+      final bool isV = event.logicalKey == LogicalKeyboardKey.keyV;
+      final bool modifierPressed = HardwareKeyboard.instance.isMetaPressed || 
+                                   HardwareKeyboard.instance.isControlPressed;
+
+      if (isV && modifierPressed) {
+        _handlePaste();
+      }
+    }
+    return KeyEventResult.ignored;
   }
 
   @override

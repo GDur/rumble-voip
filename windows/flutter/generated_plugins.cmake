@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   hotkey_manager_windows
+  pasteboard
   permission_handler_windows
   record_windows
   screen_retriever_windows

@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:rumble/utils/html_utils.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<dumble.Channel> channels;
@@ -530,7 +531,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                             const SizedBox(width: 6),
                             NoticeButton(
                               title: 'Channel Description',
-                              notice: channel.description!,
+                              notice: HtmlUtils.sanitizeMumbleHtml(channel.description!),
                               icon: LucideIcons.info,
                             ),
                           ],
@@ -752,7 +753,7 @@ class _ChannelTreeState extends State<ChannelTree> {
               const SizedBox(width: 6),
               NoticeButton(
                 title: 'User Notice',
-                notice: comment,
+                notice: HtmlUtils.sanitizeMumbleHtml(comment),
                 icon: LucideIcons.fileText,
               ),
             ],

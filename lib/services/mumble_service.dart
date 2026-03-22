@@ -11,6 +11,7 @@ import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/audio_playback_service.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/utils/html_utils.dart';
 import 'package:rumble/utils/mumble_audio.dart';
 
 class MumbleService extends ChangeNotifier
@@ -130,7 +131,7 @@ class MumbleService extends ChangeNotifier
       _messages.add(
         ChatMessage(
           senderName: _client!.self.name ?? 'Me',
-          content: text,
+          content: HtmlUtils.sanitizeMumbleHtml(text),
           timestamp: DateTime.now(),
           isSelf: true,
           sender: _client!.self,
@@ -407,7 +408,7 @@ class MumbleService extends ChangeNotifier
       // Display server welcome message (MOTD) if available
       final welcomeMessage = _client?.serverInfo.config?.welcomeText;
       if (welcomeMessage != null && welcomeMessage.isNotEmpty) {
-        _addSystemMessage(welcomeMessage, senderName: 'Welcome message');
+        _addSystemMessage(HtmlUtils.sanitizeMumbleHtml(welcomeMessage), senderName: 'Welcome message');
       }
       
       notifyListeners();
@@ -794,7 +795,7 @@ class MumbleService extends ChangeNotifier
     _messages.add(
       ChatMessage(
         senderName: message.actor?.name ?? 'Unknown',
-        content: message.message,
+        content: HtmlUtils.sanitizeMumbleHtml(message.message),
         timestamp: DateTime.now(),
         isSelf: message.actor?.session == _client?.self.session,
         sender: message.actor,
