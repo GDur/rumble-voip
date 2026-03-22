@@ -88,4 +88,30 @@ class HtmlUtils {
     // Wrap in standard HTML that old Qt clients usually accept
     return '<img src="data:$mimeType;base64,$base64String" />';
   }
+
+  /// Extracts all image sources from an HTML string.
+  static List<String> extractImageSources(String html) {
+    if (html.isEmpty) return [];
+    
+    final dataUriPattern = RegExp(
+      r"""data:[^;]+;base64,[^"'>]+""",
+      caseSensitive: false,
+    );
+    
+    // Also match HTTP/HTTPS image links if present
+    final httpPattern = RegExp(
+      r"""src=["'](https?://[^"']+)["']""",
+      caseSensitive: false,
+    );
+
+    final sources = <String>{};
+    for (final match in dataUriPattern.allMatches(html)) {
+      sources.add(match.group(0)!);
+    }
+    for (final match in httpPattern.allMatches(html)) {
+      sources.add(match.group(1)!);
+    }
+    
+    return sources.toList();
+  }
 }

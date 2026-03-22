@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:rumble/components/image_gallery.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -168,6 +169,13 @@ class _ChatViewState extends State<ChatView> {
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
                           ),
+                          onTapImage: (imageData) {
+                            final allImages = messages
+                                .expand((m) => HtmlUtils.extractImageSources(m.content))
+                                .toList();
+                            final index = allImages.indexOf(imageData.sources.first.url);
+                            ImageGalleryDialog.show(context, allImages, index >= 0 ? index : 0);
+                          },
                         ),
                       ],
                     ),
@@ -234,6 +242,40 @@ class _ChatViewState extends State<ChatView> {
                       child: HtmlWidget(
                         msg.content,
                         textStyle: theme.textTheme.p.copyWith(fontSize: 14),
+                        onTapImage: (imageData) {
+                          // Extract all unique images from all messages
+                          final allImages = messages
+                              .expand((m) => HtmlUtils.extractImageSources(m.content))
+                              .toList();
+                          // Handle duplicates by getting unique list while preserving order
+                          final uniqueImages = <String>[];
+                          for (final img in allImages) {
+                            if (!uniqueImages.contains(img)) {
+                              uniqueImages.add(img);
+                            }
+                          }
+                          
+                          final currentUrl = imageData.sources.first.url;
+                          final index = uniqueImages.indexOf(currentUrl);
+                          
+                          ImageGalleryDialog.show(
+                            context,
+                            uniqueImages,
+                            index >= 0 ? index : 0,
+                          );
+                        },
+                        customStylesBuilder: (element) {
+                          if (element.localName == 'img') {
+                            return {
+                              'width': 'auto',
+                              'max-width': '100%',
+                              'height': 'auto',
+                              'cursor': 'pointer',
+                              'border-radius': '8px',
+                            };
+                          }
+                          return null;
+                        },
                       ),
                     ),
                   ],
