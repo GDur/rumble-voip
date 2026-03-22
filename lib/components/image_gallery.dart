@@ -106,9 +106,9 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
 
                 return PhotoViewGalleryPageOptions(
                   imageProvider: imageProvider,
-                  initialScale: PhotoViewComputedScale.contained,
-                  minScale: PhotoViewComputedScale.contained * 0.8,
-                  maxScale: PhotoViewComputedScale.covered * 2,
+                  initialScale: 1.0,
+                  minScale: PhotoViewComputedScale.contained * 0.5,
+                  maxScale: PhotoViewComputedScale.covered * 4.0,
                   heroAttributes: PhotoViewHeroAttributes(tag: source),
                 );
               },
