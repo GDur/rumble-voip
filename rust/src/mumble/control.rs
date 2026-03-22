@@ -42,7 +42,15 @@ pub async fn run_loop(
 
     let mut framed = Framed::new(tls_stream, ControlCodec::<Serverbound, Clientbound>::new());
 
-    // 2. Authenticate
+    // 2. Handshake (Version and Authenticate)
+    let mut version = msgs::Version::new();
+    version.set_version_v1(0x00010400); // 1.4.0
+    version.set_release("Rumble".to_string());
+    version.set_os("macOS".to_string());
+    version.set_os_version("14.0.0".to_string());
+    framed.send(ControlPacket::Version(Box::new(version))).await?;
+    println!("Version packet sent");
+
     let mut auth = msgs::Authenticate::new();
     auth.set_username(username);
     if let Some(p) = password {
