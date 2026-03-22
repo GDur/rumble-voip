@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rumble/utils/mumble_audio.dart';
 
@@ -25,7 +26,7 @@ void main() {
     final originalBytes = originalSamples.buffer.asUint8List();
     final originalFile = File('test_original.pcm');
     await originalFile.writeAsBytes(originalBytes);
-    print('Saved Original PCM: ${originalFile.absolute.path}');
+    debugPrint('Saved Original PCM: ${originalFile.absolute.path}');
 
     // 2. Perform Round Trip (Encoding & Decoding in 20ms chunks)
     try {
@@ -54,17 +55,17 @@ void main() {
       final roundTripBytes = roundTripSamples.buffer.asUint8List();
       final roundTripFile = File('test_roundtrip.pcm');
       await roundTripFile.writeAsBytes(roundTripBytes);
-      print('Saved Roundtrip PCM: ${roundTripFile.absolute.path}');
+      debugPrint('Saved Roundtrip PCM: ${roundTripFile.absolute.path}');
 
       encoder.dispose();
       decoder.dispose();
 
-      print('--- FINISHED GENERATING FILES ---');
-      print('Use ffplay or Audacity to listen:');
-      print('ffplay -f s16le -ar 48000 -ac 1 test_original.pcm');
-      print('ffplay -f s16le -ar 48000 -ac 1 test_roundtrip.pcm');
+      debugPrint('--- FINISHED GENERATING FILES ---');
+      debugPrint('Use ffplay or Audacity to listen:');
+      debugPrint('ffplay -f s16le -ar 48000 -ac 1 test_original.pcm');
+      debugPrint('ffplay -f s16le -ar 48000 -ac 1 test_roundtrip.pcm');
     } catch (e) {
-      print('Native Opus error: $e');
+      debugPrint('Native Opus error: $e');
     }
   });
 }

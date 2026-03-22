@@ -689,14 +689,15 @@ class _ChannelTreeState extends State<ChannelTree> {
                   controller: ShadPopoverController(),
                   popover: (context) {
                     String label = 'Muted';
-                    if (isSelfMuted && isMuted)
+                    if (isSelfMuted && isMuted) {
                       label = 'Muted (Self & Server)';
-                    else if (isSelfMuted)
+                    } else if (isSelfMuted) {
                       label = 'Muted themselves';
-                    else if (isMuted)
+                    } else if (isMuted) {
                       label = 'Muted by Server';
-                    else if (isSuppressed)
+                    } else if (isSuppressed) {
                       label = 'Suppressed by Server';
+                    }
 
                     return Container(
                       padding: const EdgeInsets.all(12),
@@ -724,12 +725,13 @@ class _ChannelTreeState extends State<ChannelTree> {
                   controller: ShadPopoverController(),
                   popover: (context) {
                     String label = 'Deafened';
-                    if (isSelfDeafened && isDeaf)
+                    if (isSelfDeafened && isDeaf) {
                       label = 'Deafened (Self & Server)';
-                    else if (isSelfDeafened)
+                    } else if (isSelfDeafened) {
                       label = 'Deafened themselves';
-                    else if (isDeaf)
+                    } else if (isDeaf) {
                       label = 'Deafened by Server';
+                    }
 
                     return Container(
                       padding: const EdgeInsets.all(12),

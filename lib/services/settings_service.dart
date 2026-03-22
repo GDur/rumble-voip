@@ -34,7 +34,7 @@ class SettingsService extends ChangeNotifier {
   double _inputGain;
   double _outputVolume;
   bool _ignoreAccessibility;
-  Map<String, double> _userVolumes;
+  final Map<String, double> _userVolumes;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],

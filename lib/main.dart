@@ -22,6 +22,7 @@ import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
 import 'package:rumble/components/chat_view.dart';
 import 'package:rumble/services/connectivity_service.dart';
+import 'package:rumble/utils/logger.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -30,6 +31,7 @@ const kBrandGreenButton = Color.fromARGB(255, 79, 196, 157);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  setupLogger();
 
   final prefs = await SharedPreferences.getInstance();
   final settingsService = SettingsService(prefs);

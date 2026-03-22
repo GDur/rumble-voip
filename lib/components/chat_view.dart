@@ -75,171 +75,169 @@ class _ChatViewState extends State<ChatView> {
     final self = mumbleService.self;
     final currentChannelName = self?.channel.name ?? 'Chat';
 
-    return Container(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: theme.colorScheme.border.withValues(alpha: 0.5),
-                ),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.border.withValues(alpha: 0.5),
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  LucideIcons.messageSquare,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  currentChannelName,
-                  style: theme.textTheme.small.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${messages.length} messages',
-                  style: theme.textTheme.muted.copyWith(fontSize: 10),
-                ),
-              ],
-            ),
           ),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final msg = messages[index];
-                if (msg.isSystem) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Text(
-                            '[${DateFormat('HH:mm:ss').format(msg.timestamp)}] ${msg.senderName}:',
-                            style: theme.textTheme.muted.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          HtmlWidget(
-                            msg.content,
-                            textStyle: theme.textTheme.muted.copyWith(
-                              fontSize: 12,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+          child: Row(
+            children: [
+              Icon(
+                LucideIcons.messageSquare,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                currentChannelName,
+                style: theme.textTheme.small.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${messages.length} messages',
+                style: theme.textTheme.muted.copyWith(fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: messages.length,
+            itemBuilder: (context, index) {
+              final msg = messages[index];
+              if (msg.isSystem) {
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    crossAxisAlignment: msg.isSelf
-                        ? CrossAxisAlignment.end
-                        : CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (!msg.isSelf)
-                            Text(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          '[${DateFormat('HH:mm:ss').format(msg.timestamp)}] ${msg.senderName}:',
+                          style: theme.textTheme.muted.copyWith(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        HtmlWidget(
+                          msg.content,
+                          textStyle: theme.textTheme.muted.copyWith(
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: msg.isSelf
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!msg.isSelf)
+                          Text(
+                            msg.senderName,
+                            style: theme.textTheme.small.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('HH:mm').format(msg.timestamp),
+                          style: theme.textTheme.muted.copyWith(fontSize: 10),
+                        ),
+                        if (msg.isSelf)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Text(
                               msg.senderName,
                               style: theme.textTheme.small.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
+                                color: theme.colorScheme.mutedForeground,
                               ),
                             ),
-                          const SizedBox(width: 8),
-                          Text(
-                            DateFormat('HH:mm').format(msg.timestamp),
-                            style: theme.textTheme.muted.copyWith(fontSize: 10),
                           ),
-                          if (msg.isSelf)
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Text(
-                                msg.senderName,
-                                style: theme.textTheme.small.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.mutedForeground,
-                                ),
-                              ),
-                            ),
-                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
+                      decoration: BoxDecoration(
+                        color: msg.isSelf
+                            ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                            : theme.colorScheme.muted.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
                           color: msg.isSelf
-                              ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                              : theme.colorScheme.muted.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: msg.isSelf
-                                ? theme.colorScheme.primary.withValues(
-                                    alpha: 0.2,
-                                  )
-                                : theme.colorScheme.border.withValues(
-                                    alpha: 0.5,
-                                  ),
-                          ),
-                        ),
-                        child: HtmlWidget(
-                          msg.content,
-                          textStyle: theme.textTheme.p.copyWith(fontSize: 14),
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.2,
+                                )
+                              : theme.colorScheme.border.withValues(
+                                  alpha: 0.5,
+                                ),
                         ),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                  color: theme.colorScheme.border.withValues(alpha: 0.5),
+                      child: HtmlWidget(
+                        msg.content,
+                        textStyle: theme.textTheme.p.copyWith(fontSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
+              );
+            },
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.border.withValues(alpha: 0.5),
               ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ShadInput(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    autofocus: true,
-                    placeholder: const Text('Type a message...'),
-                    onSubmitted: (_) => _sendMessage(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ShadIconButton(
-                  icon: const Icon(LucideIcons.send, size: 18),
-                  onPressed: _sendMessage,
-                ),
-              ],
-            ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: ShadInput(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  placeholder: const Text('Type a message...'),
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ShadIconButton(
+                icon: const Icon(LucideIcons.send, size: 18),
+                onPressed: _sendMessage,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

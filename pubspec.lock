@@ -493,7 +493,7 @@ packages:
     source: hosted
     version: "0.17.1"
   flutter_widget_from_html_core:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_widget_from_html_core
       sha256: "1120ee6ed3509ceff2d55aa6c6cbc7b6b1291434422de2411b5a59364dd6ff03"
@@ -749,7 +749,7 @@ packages:
     source: hosted
     version: "6.1.0"
   logging:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: logging
       sha256: c8245ada5f1717ed44271ed1c26b8ce85ca3228fd2ffdb75468ab01979309d61
