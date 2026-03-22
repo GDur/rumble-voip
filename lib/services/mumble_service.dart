@@ -127,7 +127,7 @@ class MumbleService extends ChangeNotifier {
   }
 
   void _handleEvent(MumbleEvent event) {
-    debugPrint('[MumbleService] Received event: $event');
+    // debugPrint('[MumbleService] Received event: $event');
     if (event is MumbleEvent_Connected) {
       _isConnected = true;
       _selfSession = event.field0 as int;
