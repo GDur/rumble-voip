@@ -658,10 +658,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 4:
         return MumbleEvent_UserRemoved(dco_decode_u_32(raw[1]));
       case 5:
+        return MumbleEvent_UserTalking(
+          dco_decode_u_32(raw[1]),
+          dco_decode_bool(raw[2]),
+        );
+      case 6:
         return MumbleEvent_TextMessage(
           dco_decode_box_autoadd_mumble_text_message(raw[1]),
         );
-      case 6:
+      case 7:
         return MumbleEvent_AudioVolume(dco_decode_f_32(raw[1]));
       default:
         throw Exception("unreachable");
@@ -904,11 +909,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_field0 = sse_decode_u_32(deserializer);
         return MumbleEvent_UserRemoved(var_field0);
       case 5:
+        var var_field0 = sse_decode_u_32(deserializer);
+        var var_field1 = sse_decode_bool(deserializer);
+        return MumbleEvent_UserTalking(var_field0, var_field1);
+      case 6:
         var var_field0 = sse_decode_box_autoadd_mumble_text_message(
           deserializer,
         );
         return MumbleEvent_TextMessage(var_field0);
-      case 6:
+      case 7:
         var var_field0 = sse_decode_f_32(deserializer);
         return MumbleEvent_AudioVolume(var_field0);
       default:
@@ -1171,11 +1180,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case MumbleEvent_UserRemoved(field0: final field0):
         sse_encode_i_32(4, serializer);
         sse_encode_u_32(field0, serializer);
-      case MumbleEvent_TextMessage(field0: final field0):
+      case MumbleEvent_UserTalking(field0: final field0, field1: final field1):
         sse_encode_i_32(5, serializer);
+        sse_encode_u_32(field0, serializer);
+        sse_encode_bool(field1, serializer);
+      case MumbleEvent_TextMessage(field0: final field0):
+        sse_encode_i_32(6, serializer);
         sse_encode_box_autoadd_mumble_text_message(field0, serializer);
       case MumbleEvent_AudioVolume(field0: final field0):
-        sse_encode_i_32(6, serializer);
+        sse_encode_i_32(7, serializer);
         sse_encode_f_32(field0, serializer);
     }
   }

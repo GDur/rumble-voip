@@ -93,6 +93,8 @@ sealed class MumbleEvent with _$MumbleEvent {
   const factory MumbleEvent.userUpdate(MumbleUser field0) =
       MumbleEvent_UserUpdate;
   const factory MumbleEvent.userRemoved(int field0) = MumbleEvent_UserRemoved;
+  const factory MumbleEvent.userTalking(int field0, bool field1) =
+      MumbleEvent_UserTalking;
   const factory MumbleEvent.textMessage(MumbleTextMessage field0) =
       MumbleEvent_TextMessage;
   const factory MumbleEvent.audioVolume(double field0) =

@@ -14,19 +14,10 @@ class MumbleService extends ChangeNotifier {
   Map<int, MumbleUser> _users = {};
   bool _isTalking = false;
 
-  // Track talking status for all users (session ID -> isTalking)
   final Map<int, bool> _talkingUsers = {};
-
-  // Volume monitoring
   double _currentVolume = 0.0;
-
-  // Local storage for chat messages
   final List<ChatMessage> _messages = [];
-
-  // PTT error message
   String? _pttErrorMessage;
-
-  // Cached devices from Rust
   List<String> _inputDevices = [];
   List<String> _outputDevices = [];
 
@@ -98,7 +89,6 @@ class MumbleService extends ChangeNotifier {
     double? inputGain,
     double? outputVolume,
   }) async {
-    // Rust handles these internally now, or we could add specific Rust methods if needed
     notifyListeners();
   }
 
@@ -137,6 +127,7 @@ class MumbleService extends ChangeNotifier {
   }
 
   void _handleEvent(MumbleEvent event) {
+    debugPrint('[MumbleService] Received event: $event');
     if (event is MumbleEvent_Connected) {
       _isConnected = true;
       _selfSession = event.field0 as int;
@@ -149,8 +140,40 @@ class MumbleService extends ChangeNotifier {
       _channels.add(channel);
     } else if (event is MumbleEvent_UserUpdate) {
       final user = event.field0;
-      _users[user.session as int] = user;
-      _talkingUsers[user.session as int] = user.isTalking;
+      final existing = _users[user.session as int];
+      if (existing != null) {
+        final updatedUser = MumbleUser(
+          session: user.session,
+          name: user.name.isEmpty ? existing.name : user.name,
+          channelId: user.channelId == 0 ? existing.channelId : user.channelId,
+          isTalking: user.isTalking,
+          isMuted: user.isMuted,
+          isDeafened: user.isDeafened,
+          isSuppressed: user.isSuppressed,
+          comment: user.comment ?? existing.comment,
+        );
+        _users[user.session as int] = updatedUser;
+      } else {
+        _users[user.session as int] = user;
+      }
+      _talkingUsers[user.session as int] = _users[user.session as int]!.isTalking;
+    } else if (event is MumbleEvent_UserTalking) {
+      final session = event.field0 as int;
+      final isTalking = event.field1;
+      _talkingUsers[session] = isTalking;
+      final user = _users[session];
+      if (user != null) {
+        _users[session] = MumbleUser(
+          session: user.session,
+          name: user.name,
+          channelId: user.channelId,
+          isTalking: isTalking,
+          isMuted: user.isMuted,
+          isDeafened: user.isDeafened,
+          isSuppressed: user.isSuppressed,
+          comment: user.comment,
+        );
+      }
     } else if (event is MumbleEvent_UserRemoved) {
       final session = event.field0;
       _users.remove(session as int);
@@ -174,12 +197,18 @@ class MumbleService extends ChangeNotifier {
   void startPushToTalk() {
     _client.setPtt(active: true);
     _isTalking = true;
+    if (_selfSession != null) {
+      _talkingUsers[_selfSession!] = true;
+    }
     notifyListeners();
   }
 
   void stopPushToTalk() {
     _client.setPtt(active: false);
     _isTalking = false;
+    if (_selfSession != null) {
+      _talkingUsers[_selfSession!] = false;
+    }
     notifyListeners();
   }
 

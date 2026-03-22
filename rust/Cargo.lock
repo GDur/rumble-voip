@@ -1335,6 +1335,7 @@ dependencies = [
  "once_cell",
  "openssl",
  "opus-rs",
+ "oslog",
  "parking_lot",
  "protobuf",
  "ringbuf",

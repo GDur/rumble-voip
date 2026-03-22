@@ -8,7 +8,17 @@ use crate::mumble::audio::{list_input_devices as list_in, list_output_devices as
 #[frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
+    
+    // Always use env_logger for visible output in flutter run
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .parse_default_env()
+        .try_init();
+    
+    log::info!("Rust initialised");
+    println!("--- RUST: initialised ---");
 }
+
 #[derive(Debug, Clone)]
 pub enum MumbleEvent {
     Connected(u32),
@@ -16,6 +26,7 @@ pub enum MumbleEvent {
     ChannelUpdate(MumbleChannel),
     UserUpdate(MumbleUser),
     UserRemoved(u32),
+    UserTalking(u32, bool),
     TextMessage(MumbleTextMessage),
     AudioVolume(f32),
 }
@@ -47,7 +58,6 @@ pub struct MumbleTextMessage {
     pub sender_name: String,
     pub message: String,
 }
-
 
 pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
@@ -84,7 +94,6 @@ impl RustMumbleClient {
                     *internal = Some(client);
                 }
                 Err(e) => {
-                    // event_sink would be useful here but it's already used by InternalMumbleClient::start
                     log::error!("Failed to start mumble client: {}", e);
                 }
             }

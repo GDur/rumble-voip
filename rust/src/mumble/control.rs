@@ -23,23 +23,23 @@ pub async fn run_loop(
     mut cmd_rx: mpsc::Receiver<MumbleCommand>,
     event_sink: StreamSink<MumbleEvent>,
 ) -> anyhow::Result<()> {
+    log::info!("Starting control loop for {}:{}", host, port);
+    println!("--- RUST: control loop starting for {}:{} ---", host, port);
+    
     // 1. Setup TLS with OpenSSL
     let mut builder = SslConnector::builder(SslMethod::tls())?;
-    
-    // For Mumble, we often want to allow self-signed certs or handle verification manually
-    // For now, we'll use the default system roots (handled by openssl-vendored)
-    // but disable strict verification if needed for certain servers.
     builder.set_verify(SslVerifyMode::NONE); 
 
     let connector = builder.build();
     let tcp_stream = TcpStream::connect(format!("{}:{}", host, port)).await?;
+    log::info!("TCP connected to {}:{}", host, port);
     
     let ssl = connector.configure()?.into_ssl(&host)?;
     let mut tls_stream = SslStream::new(ssl, tcp_stream)?;
     
-    // Perform the TLS handshake
     Pin::new(&mut tls_stream).connect().await
         .map_err(|e| anyhow::anyhow!("TLS connection failed: {}", e))?;
+    log::info!("TLS handshake successful");
 
     let mut framed = Framed::new(tls_stream, ControlCodec::<Serverbound, Clientbound>::new());
 
@@ -51,10 +51,11 @@ pub async fn run_loop(
     }
     auth.set_opus(true);
     framed.send(ControlPacket::Authenticate(Box::new(auth))).await?;
+    log::info!("Authentication packet sent");
 
     let mut channels: HashMap<u32, MumbleChannel> = HashMap::new();
     let mut users: HashMap<u32, MumbleUser> = HashMap::new();
-    let mut _crypt_setup = None;
+    let mut voice_cmd_tx: Option<mpsc::Sender<MumbleCommand>> = None;
 
     // 3. Main Loop
     let mut session_id = 0;
@@ -65,6 +66,8 @@ pub async fn run_loop(
                 match packet {
                     Some(Ok(ControlPacket::ServerSync(ss))) => {
                         session_id = ss.session();
+                        log::info!("ServerSync received. Session ID: {}", session_id);
+                        println!("--- RUST: connected as session {} ---", session_id);
                         let _ = event_sink.add(MumbleEvent::Connected(session_id));
                     }
                     Some(Ok(ControlPacket::ChannelState(cs))) => {
@@ -107,17 +110,65 @@ pub async fn run_loop(
                         }));
                     }
                     Some(Ok(ControlPacket::CryptSetup(cs))) => {
-                         _crypt_setup = Some(cs);
+                         log::info!("CryptSetup received, starting VoiceHandler");
+                         println!("--- RUST: CryptSetup received, starting VoiceHandler ---");
+
+                         // Stop old voice handler if any
+                         if let Some(v_tx) = voice_cmd_tx.take() {
+                             let _ = v_tx.send(MumbleCommand::Disconnect).await;
+                         }
+
+                         use std::convert::TryInto;
+
+                         let mut key = [0u8; 16];
+                         let mut encrypt_nonce = [0u8; 16];
+                         let mut decrypt_nonce = [0u8; 16];
+                         
+                         if let Some(k) = &cs.key {
+                             if k.len() >= 16 {
+                                key.copy_from_slice(&k[..16]);
+                             }
+                         }
+                         if let Some(cn) = &cs.client_nonce {
+                             let len = cn.len().min(16);
+                             encrypt_nonce[..len].copy_from_slice(&cn[..len]);
+                         }
+                         if let Some(sn) = &cs.server_nonce {
+                             let len = sn.len().min(16);
+                             decrypt_nonce[..len].copy_from_slice(&sn[..len]);
+                         }
+
+                         let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(key, encrypt_nonce, decrypt_nonce);
+                         
+                         let host_clone = host.clone();
+                         let port_clone = port;
+                         let (v_tx, v_rx) = mpsc::channel(32);
+                         voice_cmd_tx = Some(v_tx);
+                         let event_sink_clone = event_sink.clone();
+                         
+                         tokio::spawn(async move {
+                             if let Err(e) = crate::mumble::voice::VoiceHandler::run(
+                                 format!("{}:{}", host_clone, port_clone),
+                                 crypt_state,
+                                 v_rx,
+                                 event_sink_clone,
+                             ).await {
+                                 log::error!("Voice handler error: {}", e);
+                                 println!("--- RUST: Voice handler error: {} ---", e);
+                             }
+                         });
                     }
-                    Some(Ok(_)) => {}
                     Some(Err(e)) => {
+                        log::error!("Protocol error: {}", e);
                         let _ = event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));
                         break;
                     }
                     None => {
+                        log::info!("Server closed connection");
                         let _ = event_sink.add(MumbleEvent::Disconnected("Server closed connection".to_string()));
                         break;
                     }
+                    _ => {}
                 }
             }
             cmd = cmd_rx.recv() => {
@@ -143,6 +194,11 @@ pub async fn run_loop(
                         us.set_self_deaf(deafen);
                         if deafen { us.set_self_mute(true); }
                         framed.send(ControlPacket::UserState(Box::new(us))).await?;
+                    }
+                    Some(MumbleCommand::SetPtt(active)) => {
+                        if let Some(v_tx) = &voice_cmd_tx {
+                            let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
+                        }
                     }
                     _ => {}
                 }

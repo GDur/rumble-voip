@@ -25,6 +25,7 @@ mixin _$MumbleEvent {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) => throw _privateConstructorUsedError;
@@ -35,6 +36,7 @@ mixin _$MumbleEvent {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) => throw _privateConstructorUsedError;
@@ -45,6 +47,7 @@ mixin _$MumbleEvent {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -56,6 +59,7 @@ mixin _$MumbleEvent {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) => throw _privateConstructorUsedError;
@@ -66,6 +70,7 @@ mixin _$MumbleEvent {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) => throw _privateConstructorUsedError;
@@ -76,6 +81,7 @@ mixin _$MumbleEvent {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -183,6 +189,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -197,6 +204,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -211,6 +219,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -229,6 +238,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -243,6 +253,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -257,6 +268,7 @@ class _$MumbleEvent_ConnectedImpl extends MumbleEvent_Connected {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -361,6 +373,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -375,6 +388,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -389,6 +403,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -407,6 +422,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -421,6 +437,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -435,6 +452,7 @@ class _$MumbleEvent_DisconnectedImpl extends MumbleEvent_Disconnected {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -539,6 +557,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -553,6 +572,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -567,6 +587,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -585,6 +606,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -599,6 +621,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -613,6 +636,7 @@ class _$MumbleEvent_ChannelUpdateImpl extends MumbleEvent_ChannelUpdate {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -718,6 +742,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -732,6 +757,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -746,6 +772,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -764,6 +791,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -778,6 +806,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -792,6 +821,7 @@ class _$MumbleEvent_UserUpdateImpl extends MumbleEvent_UserUpdate {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -896,6 +926,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -910,6 +941,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -924,6 +956,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -942,6 +975,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -956,6 +990,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -970,6 +1005,7 @@ class _$MumbleEvent_UserRemovedImpl extends MumbleEvent_UserRemoved {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -993,6 +1029,198 @@ abstract class MumbleEvent_UserRemoved extends MumbleEvent {
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$MumbleEvent_UserRemovedImplCopyWith<_$MumbleEvent_UserRemovedImpl>
+  get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class _$$MumbleEvent_UserTalkingImplCopyWith<$Res> {
+  factory _$$MumbleEvent_UserTalkingImplCopyWith(
+    _$MumbleEvent_UserTalkingImpl value,
+    $Res Function(_$MumbleEvent_UserTalkingImpl) then,
+  ) = __$$MumbleEvent_UserTalkingImplCopyWithImpl<$Res>;
+  @useResult
+  $Res call({int field0, bool field1});
+}
+
+/// @nodoc
+class __$$MumbleEvent_UserTalkingImplCopyWithImpl<$Res>
+    extends _$MumbleEventCopyWithImpl<$Res, _$MumbleEvent_UserTalkingImpl>
+    implements _$$MumbleEvent_UserTalkingImplCopyWith<$Res> {
+  __$$MumbleEvent_UserTalkingImplCopyWithImpl(
+    _$MumbleEvent_UserTalkingImpl _value,
+    $Res Function(_$MumbleEvent_UserTalkingImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of MumbleEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? field0 = null, Object? field1 = null}) {
+    return _then(
+      _$MumbleEvent_UserTalkingImpl(
+        null == field0
+            ? _value.field0
+            : field0 // ignore: cast_nullable_to_non_nullable
+                  as int,
+        null == field1
+            ? _value.field1
+            : field1 // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+
+class _$MumbleEvent_UserTalkingImpl extends MumbleEvent_UserTalking {
+  const _$MumbleEvent_UserTalkingImpl(this.field0, this.field1) : super._();
+
+  @override
+  final int field0;
+  @override
+  final bool field1;
+
+  @override
+  String toString() {
+    return 'MumbleEvent.userTalking(field0: $field0, field1: $field1)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$MumbleEvent_UserTalkingImpl &&
+            (identical(other.field0, field0) || other.field0 == field0) &&
+            (identical(other.field1, field1) || other.field1 == field1));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0, field1);
+
+  /// Create a copy of MumbleEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$MumbleEvent_UserTalkingImplCopyWith<_$MumbleEvent_UserTalkingImpl>
+  get copyWith =>
+      __$$MumbleEvent_UserTalkingImplCopyWithImpl<
+        _$MumbleEvent_UserTalkingImpl
+      >(this, _$identity);
+
+  @override
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int field0) connected,
+    required TResult Function(String field0) disconnected,
+    required TResult Function(MumbleChannel field0) channelUpdate,
+    required TResult Function(MumbleUser field0) userUpdate,
+    required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
+    required TResult Function(MumbleTextMessage field0) textMessage,
+    required TResult Function(double field0) audioVolume,
+  }) {
+    return userTalking(field0, field1);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int field0)? connected,
+    TResult? Function(String field0)? disconnected,
+    TResult? Function(MumbleChannel field0)? channelUpdate,
+    TResult? Function(MumbleUser field0)? userUpdate,
+    TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
+    TResult? Function(MumbleTextMessage field0)? textMessage,
+    TResult? Function(double field0)? audioVolume,
+  }) {
+    return userTalking?.call(field0, field1);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int field0)? connected,
+    TResult Function(String field0)? disconnected,
+    TResult Function(MumbleChannel field0)? channelUpdate,
+    TResult Function(MumbleUser field0)? userUpdate,
+    TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
+    TResult Function(MumbleTextMessage field0)? textMessage,
+    TResult Function(double field0)? audioVolume,
+    required TResult orElse(),
+  }) {
+    if (userTalking != null) {
+      return userTalking(field0, field1);
+    }
+    return orElse();
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(MumbleEvent_Connected value) connected,
+    required TResult Function(MumbleEvent_Disconnected value) disconnected,
+    required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
+    required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
+    required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
+    required TResult Function(MumbleEvent_TextMessage value) textMessage,
+    required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
+  }) {
+    return userTalking(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(MumbleEvent_Connected value)? connected,
+    TResult? Function(MumbleEvent_Disconnected value)? disconnected,
+    TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
+    TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
+    TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
+    TResult? Function(MumbleEvent_TextMessage value)? textMessage,
+    TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
+  }) {
+    return userTalking?.call(this);
+  }
+
+  @override
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(MumbleEvent_Connected value)? connected,
+    TResult Function(MumbleEvent_Disconnected value)? disconnected,
+    TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
+    TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
+    TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
+    TResult Function(MumbleEvent_TextMessage value)? textMessage,
+    TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
+    required TResult orElse(),
+  }) {
+    if (userTalking != null) {
+      return userTalking(this);
+    }
+    return orElse();
+  }
+}
+
+abstract class MumbleEvent_UserTalking extends MumbleEvent {
+  const factory MumbleEvent_UserTalking(final int field0, final bool field1) =
+      _$MumbleEvent_UserTalkingImpl;
+  const MumbleEvent_UserTalking._() : super._();
+
+  @override
+  int get field0;
+  bool get field1;
+
+  /// Create a copy of MumbleEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$MumbleEvent_UserTalkingImplCopyWith<_$MumbleEvent_UserTalkingImpl>
   get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -1074,6 +1302,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -1088,6 +1317,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -1102,6 +1332,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -1120,6 +1351,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -1134,6 +1366,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -1148,6 +1381,7 @@ class _$MumbleEvent_TextMessageImpl extends MumbleEvent_TextMessage {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),
@@ -1252,6 +1486,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     required TResult Function(MumbleChannel field0) channelUpdate,
     required TResult Function(MumbleUser field0) userUpdate,
     required TResult Function(int field0) userRemoved,
+    required TResult Function(int field0, bool field1) userTalking,
     required TResult Function(MumbleTextMessage field0) textMessage,
     required TResult Function(double field0) audioVolume,
   }) {
@@ -1266,6 +1501,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     TResult? Function(MumbleChannel field0)? channelUpdate,
     TResult? Function(MumbleUser field0)? userUpdate,
     TResult? Function(int field0)? userRemoved,
+    TResult? Function(int field0, bool field1)? userTalking,
     TResult? Function(MumbleTextMessage field0)? textMessage,
     TResult? Function(double field0)? audioVolume,
   }) {
@@ -1280,6 +1516,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     TResult Function(MumbleChannel field0)? channelUpdate,
     TResult Function(MumbleUser field0)? userUpdate,
     TResult Function(int field0)? userRemoved,
+    TResult Function(int field0, bool field1)? userTalking,
     TResult Function(MumbleTextMessage field0)? textMessage,
     TResult Function(double field0)? audioVolume,
     required TResult orElse(),
@@ -1298,6 +1535,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     required TResult Function(MumbleEvent_ChannelUpdate value) channelUpdate,
     required TResult Function(MumbleEvent_UserUpdate value) userUpdate,
     required TResult Function(MumbleEvent_UserRemoved value) userRemoved,
+    required TResult Function(MumbleEvent_UserTalking value) userTalking,
     required TResult Function(MumbleEvent_TextMessage value) textMessage,
     required TResult Function(MumbleEvent_AudioVolume value) audioVolume,
   }) {
@@ -1312,6 +1550,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     TResult? Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult? Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult? Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult? Function(MumbleEvent_UserTalking value)? userTalking,
     TResult? Function(MumbleEvent_TextMessage value)? textMessage,
     TResult? Function(MumbleEvent_AudioVolume value)? audioVolume,
   }) {
@@ -1326,6 +1565,7 @@ class _$MumbleEvent_AudioVolumeImpl extends MumbleEvent_AudioVolume {
     TResult Function(MumbleEvent_ChannelUpdate value)? channelUpdate,
     TResult Function(MumbleEvent_UserUpdate value)? userUpdate,
     TResult Function(MumbleEvent_UserRemoved value)? userRemoved,
+    TResult Function(MumbleEvent_UserTalking value)? userTalking,
     TResult Function(MumbleEvent_TextMessage value)? textMessage,
     TResult Function(MumbleEvent_AudioVolume value)? audioVolume,
     required TResult orElse(),

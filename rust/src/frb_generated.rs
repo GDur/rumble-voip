@@ -702,11 +702,16 @@ impl SseDecode for crate::api::client::MumbleEvent {
                 return crate::api::client::MumbleEvent::UserRemoved(var_field0);
             }
             5 => {
+                let mut var_field0 = <u32>::sse_decode(deserializer);
+                let mut var_field1 = <bool>::sse_decode(deserializer);
+                return crate::api::client::MumbleEvent::UserTalking(var_field0, var_field1);
+            }
+            6 => {
                 let mut var_field0 =
                     <crate::api::client::MumbleTextMessage>::sse_decode(deserializer);
                 return crate::api::client::MumbleEvent::TextMessage(var_field0);
             }
-            6 => {
+            7 => {
                 let mut var_field0 = <f32>::sse_decode(deserializer);
                 return crate::api::client::MumbleEvent::AudioVolume(var_field0);
             }
@@ -947,11 +952,17 @@ impl flutter_rust_bridge::IntoDart for crate::api::client::MumbleEvent {
             crate::api::client::MumbleEvent::UserRemoved(field0) => {
                 [4.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
+            crate::api::client::MumbleEvent::UserTalking(field0, field1) => [
+                5.into_dart(),
+                field0.into_into_dart().into_dart(),
+                field1.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
             crate::api::client::MumbleEvent::TextMessage(field0) => {
-                [5.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [6.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             crate::api::client::MumbleEvent::AudioVolume(field0) => {
-                [6.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [7.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -1137,12 +1148,17 @@ impl SseEncode for crate::api::client::MumbleEvent {
                 <i32>::sse_encode(4, serializer);
                 <u32>::sse_encode(field0, serializer);
             }
-            crate::api::client::MumbleEvent::TextMessage(field0) => {
+            crate::api::client::MumbleEvent::UserTalking(field0, field1) => {
                 <i32>::sse_encode(5, serializer);
+                <u32>::sse_encode(field0, serializer);
+                <bool>::sse_encode(field1, serializer);
+            }
+            crate::api::client::MumbleEvent::TextMessage(field0) => {
+                <i32>::sse_encode(6, serializer);
                 <crate::api::client::MumbleTextMessage>::sse_encode(field0, serializer);
             }
             crate::api::client::MumbleEvent::AudioVolume(field0) => {
-                <i32>::sse_encode(6, serializer);
+                <i32>::sse_encode(7, serializer);
                 <f32>::sse_encode(field0, serializer);
             }
             _ => {
