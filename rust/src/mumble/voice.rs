@@ -189,7 +189,7 @@ impl VoiceHandler {
                                                 }
 
                                                 if !data.is_empty() {
-                                                    match entry.0.decode(&data, 960, &mut entry.3) {
+                                                    match entry.0.decode(&data, 5760, &mut entry.3) {
                                                         Ok(samples) => {
                                                             let mut decoded_i16 = vec![0i16; samples];
                                                             for i in 0..samples {
