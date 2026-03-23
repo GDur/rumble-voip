@@ -5,6 +5,8 @@ import 'package:rumble/models/server.dart';
 import 'package:rumble/models/certificate.dart';
 import 'package:rumble/src/rust/api/client.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
+import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/utils/html_utils.dart';
 
 class MumbleService extends ChangeNotifier {
   final RustMumbleClient _client = RustMumbleClient();
@@ -20,6 +22,7 @@ class MumbleService extends ChangeNotifier {
   String? _pttErrorMessage;
   List<String> _inputDevices = [];
   List<String> _outputDevices = [];
+  SettingsService? _settings;
 
   bool get isConnected => _isConnected;
   String? get error => _error;
@@ -74,13 +77,17 @@ class MumbleService extends ChangeNotifier {
     }
   }
 
-  Future<void> initialize({
-    String? inputDeviceId,
-    String? outputDeviceId,
-    double? inputGain,
-    double? outputVolume,
-  }) async {
+  Future<void> initialize(
+    SettingsService settings,
+    double inputGain,
+    double outputVolume,
+    String? inputId,
+    String? outputId,
+  ) async {
+    _settings = settings;
     await _refreshDevices();
+    // In Rust-based plugin, we might need to pass these settings to Rust eventually
+    // For now, we just store them.
   }
 
   Future<void> updateAudioSettings({
@@ -89,6 +96,7 @@ class MumbleService extends ChangeNotifier {
     double? inputGain,
     double? outputVolume,
   }) async {
+    // Rust-based plugin handles these internally or via future API calls
     notifyListeners();
   }
 
@@ -127,20 +135,21 @@ class MumbleService extends ChangeNotifier {
   }
 
   void _handleEvent(MumbleEvent event) {
-    // debugPrint('[MumbleService] Received event: $event');
     if (event is MumbleEvent_Connected) {
       _isConnected = true;
-      _selfSession = event.field0 as int;
+      _selfSession = event.field0;
+      _addSystemMessage('Connected.');
     } else if (event is MumbleEvent_Disconnected) {
       _isConnected = false;
       _error = event.field0;
+      _addSystemMessage('Disconnected: ${event.field0}');
     } else if (event is MumbleEvent_ChannelUpdate) {
       final channel = event.field0;
       _channels.removeWhere((c) => c.id == channel.id);
       _channels.add(channel);
     } else if (event is MumbleEvent_UserUpdate) {
       final user = event.field0;
-      final existing = _users[user.session as int];
+      final existing = _users[user.session];
       if (existing != null) {
         final updatedUser = MumbleUser(
           session: user.session,
@@ -152,13 +161,13 @@ class MumbleService extends ChangeNotifier {
           isSuppressed: user.isSuppressed,
           comment: user.comment ?? existing.comment,
         );
-        _users[user.session as int] = updatedUser;
+        _users[user.session] = updatedUser;
       } else {
-        _users[user.session as int] = user;
+        _users[user.session] = user;
       }
-      _talkingUsers[user.session as int] = _users[user.session as int]!.isTalking;
+      _talkingUsers[user.session] = _users[user.session]!.isTalking;
     } else if (event is MumbleEvent_UserTalking) {
-      final session = event.field0 as int;
+      final session = event.field0;
       final isTalking = event.field1;
       _talkingUsers[session] = isTalking;
       final user = _users[session];
@@ -176,14 +185,14 @@ class MumbleService extends ChangeNotifier {
       }
     } else if (event is MumbleEvent_UserRemoved) {
       final session = event.field0;
-      _users.remove(session as int);
-      _talkingUsers.remove(session as int);
+      _users.remove(session);
+      _talkingUsers.remove(session);
     } else if (event is MumbleEvent_TextMessage) {
       final tm = event.field0;
       _messages.add(
         ChatMessage(
           senderName: tm.senderName,
-          content: tm.message,
+          content: HtmlUtils.sanitizeMumbleHtml(tm.message),
           timestamp: DateTime.now(),
           isSelf: false, 
         ),
@@ -191,6 +200,19 @@ class MumbleService extends ChangeNotifier {
     } else if (event is MumbleEvent_AudioVolume) {
       _currentVolume = event.field0;
     }
+    notifyListeners();
+  }
+
+  void _addSystemMessage(String text, {String senderName = 'System'}) {
+    _messages.add(
+      ChatMessage(
+        senderName: senderName,
+        content: text,
+        timestamp: DateTime.now(),
+        isSystem: true,
+        isSelf: false,
+      ),
+    );
     notifyListeners();
   }
 
@@ -225,16 +247,19 @@ class MumbleService extends ChangeNotifier {
   }
 
   void sendMessage(String text) {
-    _client.sendTextMessage(message: text);
-    _messages.add(
-      ChatMessage(
-        senderName: self?.name ?? 'Me',
-        content: text,
-        timestamp: DateTime.now(),
-        isSelf: true,
-      ),
-    );
-    notifyListeners();
+    if (text.isNotEmpty) {
+      _client.sendTextMessage(message: text);
+      _messages.add(
+        ChatMessage(
+          senderName: self?.name ?? 'Me',
+          content: HtmlUtils.sanitizeMumbleHtml(text),
+          timestamp: DateTime.now(),
+          isSelf: true,
+          sender: self,
+        ),
+      );
+      notifyListeners();
+    }
   }
 
   void toggleMute() {
@@ -249,6 +274,21 @@ class MumbleService extends ChangeNotifier {
 
   Future<void> joinChannel(MumbleChannel channel) async {
     _client.joinChannel(channelId: channel.id);
+  }
+
+  Future<void> setUserVolume(MumbleUser user, double volume) async {
+    if (_settings != null) {
+      await _settings!.setUserVolume(user.name, volume);
+      // Rust plugin doesn't support per-user volume in API yet, but we store it in settings
+      notifyListeners();
+    }
+  }
+
+  double getUserVolume(MumbleUser user) {
+    if (_settings != null) {
+      return _settings!.getUserVolume(user.name);
+    }
+    return 1.0;
   }
 
   @override

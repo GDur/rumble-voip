@@ -23,6 +23,7 @@ import 'package:rumble/components/hotkey_recorder.dart';
 import 'package:rumble/components/chat_view.dart';
 import 'package:rumble/services/connectivity_service.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
+import 'package:rumble/utils/logger.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -34,6 +35,7 @@ void main() async {
   
   // Initialize Rust
   await RustLib.init();
+  setupLogger();
 
   final prefs = await SharedPreferences.getInstance();
   final settingsService = SettingsService(prefs);
@@ -77,10 +79,11 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => MumbleService()
             ..initialize(
-              inputGain: settingsService.inputGain,
-              outputVolume: settingsService.outputVolume,
-              inputDeviceId: settingsService.inputDeviceId,
-              outputDeviceId: settingsService.outputDeviceId,
+              settingsService,
+              settingsService.inputGain,
+              settingsService.outputVolume,
+              settingsService.inputDeviceId,
+              settingsService.outputDeviceId,
             ),
         ),
         ChangeNotifierProvider(create: (_) => ServerProvider()),
@@ -179,7 +182,6 @@ class _WindowResizeListenerState extends State<_WindowResizeListener>
   }
 
   @override
-  @override
   void onWindowResize() async {
     final settings = Provider.of<SettingsService>(context, listen: false);
     final size = await windowManager.getSize();
@@ -206,6 +208,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? _connectingServerId;
+  final _volumePopoverController = ShadPopoverController();
 
   @override
   void initState() {
@@ -222,10 +225,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // We can't use Provider.of in dispose, so we'd need a reference
-    // but MumbleService is a global provider so we can find it.
-    // However, since it's a singleton-like in this app context, and the app is closed, it's usually fine.
-    // But for good practice:
     _removePttListener();
     super.dispose();
   }
@@ -750,6 +749,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          _buildVolumeControl(service),
+          const SizedBox(width: 8),
           _buildMicStatus(service),
           const SizedBox(width: 16),
           _buildPTTButton(service),
@@ -818,6 +819,60 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => service.toggleDeafen(),
         ),
       ],
+    );
+  }
+
+  Widget _buildVolumeControl(MumbleService service) {
+    final theme = ShadTheme.of(context);
+    final settings = Provider.of<SettingsService>(context);
+
+    return ShadPopover(
+      controller: _volumePopoverController,
+      popover: (context) => SizedBox(
+        width: 250,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Master Volume', style: theme.textTheme.small),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ShadSlider(
+                      initialValue: settings.outputVolume,
+                      min: 0.0,
+                      max: 2.0,
+                      onChanged: (v) {
+                        settings.setOutputVolume(v);
+                        service.updateAudioSettings(outputVolume: v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${(settings.outputVolume * 100).round()}%',
+                    style: theme.textTheme.muted.copyWith(fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      child: ShadIconButton.ghost(
+        onPressed: () => _volumePopoverController.toggle(),
+        icon: Icon(
+          settings.outputVolume == 0
+              ? LucideIcons.volumeX
+              : settings.outputVolume < 0.5
+                  ? LucideIcons.volume1
+                  : LucideIcons.volume2,
+          color: theme.colorScheme.primary,
+        ),
+      ),
     );
   }
 

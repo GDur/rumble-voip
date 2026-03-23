@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -7,6 +8,7 @@ import 'package:rumble/services/mumble_service.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/src/rust/api/client.dart';
+import 'package:rumble/utils/html_utils.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<MumbleChannel> channels;
@@ -100,7 +102,7 @@ class _ChannelTreeState extends State<ChannelTree> {
 
   void _selectUser(MumbleUser user) {
     setState(() {
-      _selectedUserSession = user.session as int;
+      _selectedUserSession = user.session;
       _selectedChannelId = null;
     });
   }
@@ -115,7 +117,6 @@ class _ChannelTreeState extends State<ChannelTree> {
       );
     }
 
-    // This functionality might need a Rust side implementation
     showShadDialog(
       context: context,
       builder: (context) => ShadDialog(
@@ -129,7 +130,7 @@ class _ChannelTreeState extends State<ChannelTree> {
           ShadButton(
             child: const Text('Save Notice'),
             onPressed: () {
-              // Rust set_comment functionality needed here
+              // Rust set_comment functionality would go here
               Navigator.of(context).pop();
             },
           ),
@@ -144,6 +145,56 @@ class _ChannelTreeState extends State<ChannelTree> {
             autofocus: true,
           ),
         ),
+      ),
+    );
+  }
+
+  void _showUserVolumeDialog(BuildContext context, MumbleUser user) {
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    double volume = mumbleService.getUserVolume(user);
+
+    showShadDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final theme = ShadTheme.of(context);
+          return ShadDialog(
+            title: Text('Volume for ${user.name}'),
+            description: const Text(
+              'Adjust the playback volume for this user individually.',
+            ),
+            actions: [
+              ShadButton(
+                child: const Text('Close'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ShadSlider(
+                      initialValue: volume,
+                      min: 0.0,
+                      max: 2.0,
+                      onChanged: (v) {
+                        setState(() => volume = v);
+                        mumbleService.setUserVolume(user, v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    '${(volume * 100).round()}%',
+                    style: theme.textTheme.muted,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -309,7 +360,6 @@ class _ChannelTreeState extends State<ChannelTree> {
         .where((u) => u.channelId == channel.id)
         .toList();
 
-    // Sort sub-channels by position, then name
     subChannels.sort((a, b) {
       if (a.position != b.position) {
         return (a.position).compareTo(b.position);
@@ -319,7 +369,6 @@ class _ChannelTreeState extends State<ChannelTree> {
       );
     });
 
-    // Sort users by name
     usersInChannel.sort(
       (a, b) =>
           (a.name).toLowerCase().compareTo((b.name).toLowerCase()),
@@ -370,7 +419,9 @@ class _ChannelTreeState extends State<ChannelTree> {
                                   ? LucideIcons.chevronDown
                                   : LucideIcons.chevronRight,
                               size: 14,
-                              color: theme.colorScheme.mutedForeground,
+                              color: theme.colorScheme.foreground.withValues(
+                                alpha: 0.4,
+                              ),
                             )
                           : null,
                     ),
@@ -415,19 +466,11 @@ class _ChannelTreeState extends State<ChannelTree> {
                   ],
                   if (channel.description != null &&
                       channel.description!.isNotEmpty) ...[
-                    const SizedBox(width: 4),
-                    _PopoverButton(
-                      popoverContent: Container(
-                        width: 300,
-                        padding: const EdgeInsets.all(12),
-                        child: HtmlWidget(
-                          channel.description!,
-                          onTapUrl: (url) => launchUrl(Uri.parse(url)),
-                          textStyle: theme.textTheme.small,
-                        ),
-                      ),
-                      icon: Icon(LucideIcons.info,
-                          size: 14, color: theme.colorScheme.mutedForeground),
+                    const SizedBox(width: 6),
+                    NoticeButton(
+                      title: 'Channel Description',
+                      notice: HtmlUtils.sanitizeMumbleHtml(channel.description!),
+                      icon: LucideIcons.info,
                     ),
                   ],
                 ],
@@ -445,7 +488,8 @@ class _ChannelTreeState extends State<ChannelTree> {
 
   Widget _buildUserItem(BuildContext context, MumbleUser u, int depth) {
     final theme = ShadTheme.of(context);
-    final isTalking = widget.talkingUsers[u.session as int] ?? false;
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    final isTalking = widget.talkingUsers[u.session] ?? false;
     final bool isMe = widget.self?.session == u.session;
     final bool isSelected = _selectedUserSession == u.session;
     final bool isHovered = _hoveredUserSession == u.session;
@@ -467,106 +511,274 @@ class _ChannelTreeState extends State<ChannelTree> {
       }
     }
 
-    return GestureDetector(
-      onTapDown: (_) => _selectUser(u),
-      onTap: () {},
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _hoveredUserSession = u.session as int),
-        onExit: (_) => setState(() => _hoveredUserSession = null),
-        child: Container(
-          margin: EdgeInsets.only(
-            left: 48.0 + 8.0 + (depth * 16.0),
-            right: 16,
-            top: 1,
-            bottom: 1,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                : isHovered
-                    ? theme.colorScheme.primary.withValues(alpha: 0.08)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isSelected
-                  ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                  : isHovered
-                      ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                      : Colors.transparent,
-              width: 1,
+    Widget content = Container(
+      margin: EdgeInsets.only(
+        left: 48.0 + 8.0 + (depth * 16.0),
+        right: 16,
+        top: 1,
+        bottom: 1,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? theme.colorScheme.primary.withValues(alpha: 0.15)
+            : isHovered
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isSelected
+              ? theme.colorScheme.primary.withValues(alpha: 0.2)
+              : isHovered
+                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                  : Colors.transparent,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: statusColor.withValues(alpha: 0.4),
+                  blurRadius: isTalking ? 8 : 4,
+                  spreadRadius: isTalking ? 2 : 1,
+                ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: statusColor.withValues(alpha: 0.4),
-                      blurRadius: isTalking ? 8 : 4,
-                      spreadRadius: isTalking ? 2 : 1,
-                    ),
-                  ],
-                ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              isMe ? '${u.name} (You)' : (u.name),
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 14,
+                color: (isTalking || isSelected)
+                    ? theme.colorScheme.foreground
+                    : theme.colorScheme.foreground.withValues(alpha: 0.6),
+                fontWeight: (isTalking || isMe || isSelected)
+                    ? FontWeight.w700
+                    : FontWeight.w400,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  isMe ? '${u.name} (You)' : (u.name),
-                  style: TextStyle(
-                    fontFamily: 'Outfit',
-                    fontSize: 14,
-                    color: (isTalking || isSelected)
-                        ? theme.colorScheme.foreground
-                        : theme.colorScheme.foreground.withValues(alpha: 0.6),
-                    fontWeight: (isTalking || isMe || isSelected)
-                        ? FontWeight.w700
-                        : FontWeight.w400,
-                  ),
-                ),
-              ),
-              if (u.comment != null && u.comment!.isNotEmpty) ...[
-                const SizedBox(width: 4),
-                _PopoverButton(
-                  popoverContent: Container(
-                    width: 300,
-                    padding: const EdgeInsets.all(12),
-                    child: HtmlWidget(
-                      u.comment!,
-                      onTapUrl: (url) => launchUrl(Uri.parse(url)),
-                      textStyle: theme.textTheme.small,
-                    ),
-                  ),
-                  icon: Icon(LucideIcons.messageSquare,
-                      size: 14, color: theme.colorScheme.mutedForeground),
-                ),
-              ],
-              if (isMuted || isSuppressed) ...[
-                const SizedBox(width: 8),
-                Icon(
-                  LucideIcons.micOff,
-                  size: 14,
-                  color: (isMuted || isSuppressed)
-                      ? theme.colorScheme.destructive.withValues(alpha: 0.7)
-                      : theme.colorScheme.foreground.withValues(alpha: 0.4),
-                ),
-              ],
-              if (isDeaf) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  LucideIcons.headphones,
-                  size: 14,
-                  color: theme.colorScheme.foreground.withValues(alpha: 0.4),
-                ),
-              ],
-            ],
+            ),
           ),
+          if (u.comment != null && u.comment!.isNotEmpty) ...[
+            const SizedBox(width: 6),
+            NoticeButton(
+              title: 'User Notice',
+              notice: HtmlUtils.sanitizeMumbleHtml(u.comment!),
+              icon: LucideIcons.fileText,
+            ),
+          ],
+          if (isMuted || isSuppressed) ...[
+            const SizedBox(width: 8),
+            Icon(
+              LucideIcons.micOff,
+              size: 14,
+              color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+            ),
+          ],
+          if (isDeaf) ...[
+            const SizedBox(width: 4),
+            Icon(
+              LucideIcons.headphoneOff,
+              size: 14,
+              color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final List<Widget> contextMenuItems = [];
+
+    if (isMe && widget.self != null) {
+      contextMenuItems.addAll([
+        ShadContextMenuItem(
+          onPressed: () => _showSetNoticeDialog(context, widget.self!),
+          leading: const Icon(LucideIcons.filePenLine, size: 16),
+          child: const Text('Set Self Notice'),
+        ),
+        const Divider(height: 1),
+        ShadContextMenuItem(
+          onPressed: () => mumbleService.toggleMute(),
+          leading: Icon(
+            mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff,
+            size: 16,
+          ),
+          child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
+        ),
+        ShadContextMenuItem(
+          onPressed: () => mumbleService.toggleDeafen(),
+          leading: Icon(
+            mumbleService.isDeafened
+                ? LucideIcons.headphones
+                : LucideIcons.headphoneOff,
+            size: 16,
+          ),
+          child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
+        ),
+      ]);
+    }
+
+    if (!isMe) {
+      contextMenuItems.add(
+        ShadContextMenuItem(
+          onPressed: () => _showUserVolumeDialog(context, u),
+          leading: const Icon(LucideIcons.volume2, size: 16),
+          child: const Text('Adjust User Volume'),
+        ),
+      );
+    }
+
+    if (contextMenuItems.isNotEmpty) {
+      content = ShadContextMenuRegion(
+        longPressEnabled: true,
+        items: contextMenuItems,
+        child: content,
+      );
+    }
+
+    return GestureDetector(
+      onTapDown: (_) => _selectUser(u),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hoveredUserSession = u.session),
+        onExit: (_) => setState(() => _hoveredUserSession = null),
+        child: content,
+      ),
+    );
+  }
+}
+
+class NoticeButton extends StatefulWidget {
+  final String title;
+  final String notice;
+  final IconData icon;
+
+  const NoticeButton({
+    super.key,
+    required this.title,
+    required this.notice,
+    required this.icon,
+  });
+
+  @override
+  State<NoticeButton> createState() => _NoticeButtonState();
+}
+
+class _NoticeButtonState extends State<NoticeButton> {
+  final controller = ShadPopoverController();
+  Timer? _hideTimer;
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    controller.dispose();
+    super.dispose();
+  }
+
+  void _showPopover() {
+    _hideTimer?.cancel();
+    if (!controller.isOpen) controller.show();
+  }
+
+  void _hidePopover() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) controller.hide();
+    });
+  }
+
+  void _showImageModal(String imageUrl) {
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Image Preview'),
+        description: const Text('Click outside to close'),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+            maxWidth: MediaQuery.of(context).size.width * 0.8,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: InteractiveViewer(
+              child: imageUrl.startsWith('data:image')
+                  ? Image.memory(
+                      base64Decode(imageUrl.split(',').last),
+                      fit: BoxFit.contain,
+                    )
+                  : Image.network(imageUrl, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    return MouseRegion(
+      onEnter: (_) => _showPopover(),
+      onExit: (_) => _hidePopover(),
+      child: ShadPopover(
+        controller: controller,
+        popover: (context) => MouseRegion(
+          onEnter: (_) => _showPopover(),
+          onExit: (_) => _hidePopover(),
+          child: Container(
+            width: 320,
+            constraints: const BoxConstraints(maxHeight: 400),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(widget.icon, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(widget.title, style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  HtmlWidget(
+                    widget.notice,
+                    onTapImage: (imageData) {
+                      _showImageModal(imageData.sources.first.url);
+                    },
+                    onTapUrl: (url) async {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                      return true;
+                    },
+                    textStyle: theme.textTheme.small.copyWith(
+                      color: theme.colorScheme.foreground.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        child: ShadIconButton.ghost(
+          padding: EdgeInsets.zero,
+          width: 20,
+          height: 20,
+          onPressed: () => controller.toggle(),
+          icon: Icon(widget.icon, size: 14, color: theme.colorScheme.foreground.withValues(alpha: 0.4)),
         ),
       ),
     );
@@ -584,42 +796,3 @@ class _ArrowIntent extends Intent {
 class _EnterIntent extends Intent {
   const _EnterIntent();
 }
-
-class _PopoverButton extends StatefulWidget {
-  final Widget icon;
-  final Widget popoverContent;
-
-  const _PopoverButton({
-    required this.icon,
-    required this.popoverContent,
-  });
-
-  @override
-  State<_PopoverButton> createState() => _PopoverButtonState();
-}
-
-class _PopoverButtonState extends State<_PopoverButton> {
-  final _controller = ShadPopoverController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ShadPopover(
-      controller: _controller,
-      popover: (context) => widget.popoverContent,
-      child: ShadButton.ghost(
-        padding: EdgeInsets.zero,
-        width: 20,
-        height: 20,
-        onPressed: _controller.toggle,
-        child: widget.icon,
-      ),
-    );
-  }
-}
-

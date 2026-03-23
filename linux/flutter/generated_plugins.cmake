@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   hotkey_manager_linux
+  pasteboard
   screen_retriever_linux
   url_launcher_linux
   window_manager

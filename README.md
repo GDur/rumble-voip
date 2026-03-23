@@ -2,7 +2,9 @@
 
 **Rumble** is an alternative Mumble voice chat client built with [Flutter](https://flutter.dev), designed to bring a modern UI/UX to the rock-solid Mumble protocol.
 
-The goal is to create a seamless experience across all platforms—Mobile, Tablet, and Desktop—without sacrificing the performance Mumble is known for.
+The goal is to create a seamless experience across all platforms—Mobile, Tablet, and Desktop. While we strive for the high performance and low latency that Mumble is known for, Rumble's primary focus is on **user convenience** and **modern UI/UX**. From intuitive offline indicators to helpful setup guides for macOS accessibility permissions, we believe that a great user experience is just as important as the protocol itself.
+
+Looking ahead, we plan to implement automatic updates to keep the experience seamless and effortless.
 
 ## Why Rumble?
 
@@ -33,11 +35,11 @@ Rumble is currently in active development.
 | Linux | (x)* | |
 | Web (can't work) | | x |
 
-\* *Requires native `libopus` libraries in the application directory.*
+\* *Experimental. Requires native `libopus` libraries in the application directory; testing is ongoing for these platforms.*
 
 
 ### Currently Supported
-- **Mobile/Tablets**: Full voice functionality with hotkey/PTT support.
+- **Mobile/Tablets(Android, iOs)**: Full voice functionality with hotkey/PTT support.
 - **Desktop (macOS, Linux, Windows)**: Global hotkey activation (Push-to-Talk) is functional across all three desktop platforms.
 
 ### Audio Architecture (The "Rumble" Standard)
