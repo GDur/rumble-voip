@@ -1,16 +1,16 @@
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
-use tokio::net::UdpSocket;
-use mumble_protocol_2x::crypt::CryptState;
-use mumble_protocol_2x::voice::{Serverbound, Clientbound, VoicePacket, VoicePacketPayload};
-use opus_head_sys::*;
-use crate::mumble::audio::setup_audio;
-use crate::mumble::MumbleCommand;
 use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
-use ringbuf::traits::{Consumer, Producer, Observer};
-use std::collections::HashMap;
+use crate::mumble::audio::setup_audio;
+use crate::mumble::MumbleCommand;
 use bytes::{Bytes, BytesMut};
+use mumble_protocol_2x::crypt::CryptState;
+use mumble_protocol_2x::voice::{Clientbound, Serverbound, VoicePacket, VoicePacketPayload};
+use opus_head_sys::*;
+use ringbuf::traits::{Consumer, Observer, Producer};
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::net::UdpSocket;
+use tokio::sync::{mpsc, Mutex};
 
 struct SafeOpusEncoder(*mut OpusEncoder);
 impl SafeOpusEncoder {
@@ -101,13 +101,20 @@ impl VoiceHandler {
         mut cmd_rx: mpsc::Receiver<MumbleCommand>,
         event_sink: StreamSink<MumbleEvent>,
     ) -> anyhow::Result<()> {
-        println!("--- RUST: VoiceHandler task starting for {} ---", server_addr_str);
-        
+        println!(
+            "--- RUST: VoiceHandler task starting for {} ---",
+            server_addr_str
+        );
+
         let mut addrs = tokio::net::lookup_host(&server_addr_str).await?;
-        let server_addr = addrs.next()
+        let server_addr = addrs
+            .next()
             .ok_or_else(|| anyhow::anyhow!("Could not resolve server address"))?;
-        
-        println!("--- RUST: resolved {} to {} ---", server_addr_str, server_addr);
+
+        println!(
+            "--- RUST: resolved {} to {} ---",
+            server_addr_str, server_addr
+        );
 
         let mut audio = setup_audio()?;
 
@@ -115,25 +122,31 @@ impl VoiceHandler {
         socket.connect(server_addr).await?;
         println!("--- RUST: UDP socket connected ---");
 
-        let encoder = SafeOpusEncoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32, OPUS_APPLICATION_VOIP as i32)
-            .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
+        let encoder = SafeOpusEncoder::new(
+            Self::SAMPLE_RATE as i32,
+            Self::CHANNELS as i32,
+            OPUS_APPLICATION_VOIP as i32,
+        )
+        .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
         encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1); // use_cbr = false -> VBR = true
         encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
         encoder.ctl(OPUS_SET_BITRATE_REQUEST as i32, Self::BITRATE as i32);
         encoder.ctl(OPUS_SET_COMPLEXITY_REQUEST as i32, Self::COMPLEXITY as i32);
-        
-        let mut decoders: HashMap<u32, (SafeOpusDecoder, bool, std::time::Instant, Vec<f32>)> = HashMap::new();
-        
+
+        let mut decoders: HashMap<u32, (SafeOpusDecoder, bool, std::time::Instant, Vec<f32>)> =
+            HashMap::new();
+
         let ptt_active = Arc::new(Mutex::new(false));
 
         let mut pcm_frame = vec![0i16; Self::FRAME_SIZE];
         let mut f32_frame = vec![0.0f32; Self::FRAME_SIZE];
         let mut opus_buf = vec![0u8; 1024];
         let mut udp_recv_buf = [0u8; 2048];
-        
+
         let mut sequence: u64 = 0;
         let mut last_ping = std::time::Instant::now();
+        let mut last_volume_sent = std::time::Instant::now();
         let mut packets_sent = 0;
         let mut packets_received = 0;
 
@@ -155,10 +168,10 @@ impl VoiceHandler {
                         _ => {}
                     }
                 }
-                
+
                 _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
                     let now = std::time::Instant::now();
-                    
+
                     // UDP Ping every 1 second
                     if now.duration_since(last_ping) > std::time::Duration::from_secs(1) {
                         let packet = VoicePacket::Ping { timestamp: 0 };
@@ -169,7 +182,7 @@ impl VoiceHandler {
                     }
 
                     let is_ptt = *ptt_active.lock().await;
-                    
+
                     while audio.input_consumer.occupied_len() >= Self::FRAME_SIZE {
                         let read = audio.input_consumer.pop_slice(&mut pcm_frame);
                         if read == Self::FRAME_SIZE {
@@ -181,7 +194,11 @@ impl VoiceHandler {
                                 sum_sq += f * f;
                             }
                             let rms = (sum_sq / Self::FRAME_SIZE as f32).sqrt();
-                            let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
+                            // Send volume at most every 200ms and only if it changed.
+                            if now.duration_since(last_volume_sent) >= std::time::Duration::from_millis(200) {
+                                let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
+                                last_volume_sent = now;
+                            }
 
                             if is_ptt {
                                 match encoder.encode(&f32_frame[..Self::FRAME_SIZE], Self::FRAME_SIZE, &mut opus_buf) {
@@ -195,7 +212,7 @@ impl VoiceHandler {
                                             position_info: None,
                                         };
                                         sequence += 1;
-                                        
+
                                         let mut encrypted = BytesMut::new();
                                         crypt_state.encrypt(packet, &mut encrypted);
                                         if let Ok(_) = socket.send(&encrypted).await {
@@ -248,7 +265,7 @@ impl VoiceHandler {
                         Ok(len) => {
                             packets_received += 1;
                             let mut data_to_decrypt = BytesMut::from(&udp_recv_buf[..len]);
-                            
+
                             match crypt_state.decrypt(&mut data_to_decrypt) {
                                 Ok(Ok(packet)) => {
                                     match packet {
@@ -258,8 +275,8 @@ impl VoiceHandler {
                                                 let entry = decoders.entry(sid_u32).or_insert_with(|| {
                                                     println!("--- RUST: New talking user detected: {} ---", sid_u32);
                                                     (
-                                                        SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"), 
-                                                        false, 
+                                                        SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"),
+                                                        false,
                                                         std::time::Instant::now(),
                                                         vec![0.0f32; Self::FRAME_SIZE]
                                                     )
@@ -284,7 +301,7 @@ impl VoiceHandler {
                                                                 decoded_i16[i] = (entry.3[i] * i16::MAX as f32)
                                                                     .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                                             }
-                                                            
+
                                                             if audio.output_producer.vacant_len() >= samples {
                                                                 let _ = audio.output_producer.push_slice(&decoded_i16);
                                                             } else {
@@ -311,7 +328,7 @@ impl VoiceHandler {
                 }
             }
         }
-        
+
         Ok(())
     }
 }
