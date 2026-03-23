@@ -43,12 +43,18 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
 
     println!(
         "Input device: {} ({} Hz)",
-        input_device.name().unwrap_or_default(),
+        input_device
+            .description()
+            .map(|d| d.name().to_string())
+            .unwrap_or_default(),
         input_rate
     );
     println!(
         "Output device: {} ({} Hz)",
-        output_device.name().unwrap_or_default(),
+        output_device
+            .description()
+            .map(|d| d.name().to_string())
+            .unwrap_or_default(),
         output_rate
     );
 
@@ -369,13 +375,21 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
 pub fn list_input_devices() -> Vec<String> {
     let host = cpal::default_host();
     host.input_devices()
-        .map(|devices| devices.filter_map(|d| d.name().ok()).collect())
+        .map(|devices| {
+            devices
+                .filter_map(|d| d.description().map(|desc| desc.name().to_string()).ok())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
 pub fn list_output_devices() -> Vec<String> {
     let host = cpal::default_host();
     host.output_devices()
-        .map(|devices| devices.filter_map(|d| d.name().ok()).collect())
+        .map(|devices| {
+            devices
+                .filter_map(|d| d.description().map(|desc| desc.name().to_string()).ok())
+                .collect()
+        })
         .unwrap_or_default()
 }
