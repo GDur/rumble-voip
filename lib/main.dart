@@ -739,47 +739,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = ShadTheme.of(context);
     final isMuted = service.isMuted;
     final isDeafened = service.isDeafened;
-    const double volumeMultiplier = 20.0;
 
     return Row(
       children: [
-        // Mic signal indicator (circle that grows with volume)
-        ValueListenableBuilder<double>(
-          valueListenable: service.volumeNotifier,
-          builder: (context, volume, _) {
-            final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
-            return Container(
-              width: 12,
-              height: 12,
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: kBrandGreen.withValues(alpha: 0.1),
-              ),
-              child: Center(
-                child: Container(
-                  width: 2 + (10 * displayVolume),
-                  height: 2 + (10 * displayVolume),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: (isMuted || isDeafened)
-                        ? theme.colorScheme.mutedForeground.withValues(alpha: 0.3)
-                        : kBrandGreen.withValues(
-                            alpha: (0.4 + (displayVolume * 0.6)).clamp(0, 1.0),
-                          ),
-                    boxShadow: [
-                      if (!isMuted && !isDeafened && displayVolume > 0.1)
-                        BoxShadow(
-                          color: kBrandGreen.withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+        // Mic signal indicator (performance-optimized CustomPainter)
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: VolumeIndicator(
+            volumeNotifier: service.volumeNotifier,
+            isMuted: isMuted,
+            isDeafened: isDeafened,
+            foregroundColor: kBrandGreen,
+            mutedColor: theme.colorScheme.mutedForeground,
+          ),
         ),
         ShadIconButton.ghost(
           icon: Icon(
@@ -934,3 +906,104 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
+/// A high-performance volume indicator that paints directly to the canvas.
+/// Uses [RepaintBoundary] to isolate repaints and [CustomPainter] with a
+/// [repaint] listener to skip the build and layout phases of the Flutter pipeline.
+class VolumeIndicator extends StatelessWidget {
+  final ValueListenable<double> volumeNotifier;
+  final bool isMuted;
+  final bool isDeafened;
+  final Color foregroundColor;
+  final Color mutedColor;
+
+  const VolumeIndicator({
+    super.key,
+    required this.volumeNotifier,
+    required this.isMuted,
+    required this.isDeafened,
+    required this.foregroundColor,
+    required this.mutedColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: CustomPaint(
+        size: const Size(12, 12),
+        painter: _VolumeIndicatorPainter(
+          volumeNotifier: volumeNotifier,
+          isMuted: isMuted,
+          isDeafened: isDeafened,
+          foregroundColor: foregroundColor,
+          mutedColor: mutedColor,
+        ),
+      ),
+    );
+  }
+}
+
+class _VolumeIndicatorPainter extends CustomPainter {
+  final ValueListenable<double> volumeNotifier;
+  final bool isMuted;
+  final bool isDeafened;
+  final Color foregroundColor;
+  final Color mutedColor;
+
+  _VolumeIndicatorPainter({
+    required this.volumeNotifier,
+    required this.isMuted,
+    required this.isDeafened,
+    required this.foregroundColor,
+    required this.mutedColor,
+  }) : super(repaint: volumeNotifier);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    // 1. Draw background circle
+    final bgPaint = Paint()
+      ..color = foregroundColor.withValues(alpha: 0.1)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(center, radius, bgPaint);
+
+    final volume = volumeNotifier.value;
+    const double volumeMultiplier = 20.0;
+    final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
+
+    // 2. Calculate inner circle size (radius)
+    final innerRadius = (2.0 + (10.0 * displayVolume)) / 2;
+
+    // 3. Draw shadow (only if talking and not muted)
+    if (!isMuted && !isDeafened && displayVolume > 0.1) {
+      final shadowPaint = Paint()
+        ..color = foregroundColor.withValues(alpha: 0.3)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+      // spreadRadius: 1 is achieved by adding 1 to the radius
+      canvas.drawCircle(center, innerRadius + 1, shadowPaint);
+    }
+
+    // 4. Draw inner circle
+    final innerPaint = Paint()..style = PaintingStyle.fill;
+    if (isMuted || isDeafened) {
+      innerPaint.color = mutedColor.withValues(alpha: 0.3);
+    } else {
+      innerPaint.color = foregroundColor.withValues(
+        alpha: (0.4 + (displayVolume * 0.6)).clamp(0.0, 1.0),
+      );
+    }
+
+    canvas.drawCircle(center, innerRadius, innerPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _VolumeIndicatorPainter oldDelegate) {
+    return oldDelegate.isMuted != isMuted ||
+        oldDelegate.isDeafened != isDeafened ||
+        oldDelegate.foregroundColor != foregroundColor ||
+        oldDelegate.mutedColor != mutedColor;
+  }
+}
+
