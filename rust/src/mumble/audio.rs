@@ -38,8 +38,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     let input_config = input_device.default_input_config()?;
     let output_config = output_device.default_output_config()?;
 
-    let input_rate = input_config.sample_rate().0;
-    let output_rate = output_config.sample_rate().0;
+    let input_rate = input_config.sample_rate();
+    let output_rate = output_config.sample_rate();
 
     println!(
         "Input device: {} ({} Hz)",

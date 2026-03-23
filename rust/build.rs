@@ -14,4 +14,8 @@ fn main() {
             println!("cargo:rustc-link-lib=framework=AudioUnit");
         }
     }
+
+    if target.contains("android") {
+        println!("cargo:rustc-link-lib=aaudio");
+    }
 }
