@@ -67,6 +67,20 @@ pub fn spawn_encode_thread(
 
             let ptt = ptt_active.load(Ordering::Relaxed);
 
+            if !ptt {
+                if was_ptt {
+                    was_ptt = false;
+                    let packet = AudioPacket {
+                        payload: bytes::Bytes::new(),
+                        is_last: true,
+                    };
+                    let _ = network_tx.try_send(packet);
+                }
+                pcm_buffer.clear();
+                f32_48k_buffer.clear();
+                continue;
+            }
+
             if let Some(res) = &mut resampler {
                 res.process(&pcm_buffer, &mut f32_48k_buffer);
                 pcm_buffer.clear();
@@ -76,32 +90,19 @@ pub fn spawn_encode_thread(
             }
 
             while f32_48k_buffer.len() >= frame_size {
-                if ptt {
-                    was_ptt = true;
-                    if let Ok(len) =
-                        encoder.encode(&f32_48k_buffer[..frame_size], frame_size, &mut opus_buf)
-                    {
-                        payload_buf.clear();
-                        payload_buf.extend_from_slice(&opus_buf[..len]);
-                        let packet = AudioPacket {
-                            payload: payload_buf.split_to(len).freeze(),
-                            is_last: false,
-                        };
-                        let _ = network_tx.try_send(packet);
-                    }
-                } else if was_ptt {
-                    was_ptt = false;
+                was_ptt = true;
+                if let Ok(len) =
+                    encoder.encode(&f32_48k_buffer[..frame_size], frame_size, &mut opus_buf)
+                {
+                    payload_buf.clear();
+                    payload_buf.extend_from_slice(&opus_buf[..len]);
                     let packet = AudioPacket {
-                        payload: bytes::Bytes::new(),
-                        is_last: true,
+                        payload: payload_buf.split_to(len).freeze(),
+                        is_last: false,
                     };
                     let _ = network_tx.try_send(packet);
                 }
                 f32_48k_buffer.drain(..frame_size);
-            }
-
-            if !ptt {
-                f32_48k_buffer.clear(); // Drop samples to save CPU when idle
             }
         }
     });
@@ -136,6 +137,8 @@ pub fn spawn_decode_thread(
         } else {
             (frame_size as f32 * (output_rate as f32 / sample_rate as f32)).ceil() as usize
         };
+
+        let silence_frame = vec![0.0f32; out_frame_size];
 
         // Calculate latency buffer dynamically based on config
         let target_latency_frames =
@@ -199,6 +202,15 @@ pub fn spawn_decode_thread(
                                     active_users += 1;
                                 }
                             }
+                        }
+
+                        if active_users == 0 {
+                            // FAST PATH: Do not run resampler or Opus decoder on pure silence!
+                            let _ = prod_out.push_slice(&silence_frame);
+                            if prod_out.vacant_len() < out_frame_size {
+                                break;
+                            }
+                            continue;
                         }
 
                         // Soft limiting if multiple users are talking
