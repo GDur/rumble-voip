@@ -56,12 +56,14 @@ pub struct MumbleTextMessage {
 pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
     internal: Arc<Mutex<Option<InternalMumbleClient>>>,
+    config: crate::mumble::types::MumbleConfig,
 }
 
 impl RustMumbleClient {
     #[frb(sync)]
     pub fn new() -> Self {
         let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
             .enable_all()
             .build()
             .unwrap();
@@ -69,6 +71,7 @@ impl RustMumbleClient {
         Self {
             runtime,
             internal: Arc::new(Mutex::new(None)),
+            config: crate::mumble::types::MumbleConfig::default(),
         }
     }
 
@@ -81,8 +84,11 @@ impl RustMumbleClient {
         event_sink: StreamSink<MumbleEvent>,
     ) -> Result<(), String> {
         let internal_arc = self.internal.clone();
+        let config = self.config.clone();
         self.runtime.spawn(async move {
-            match InternalMumbleClient::start(host, port, username, password, event_sink).await {
+            match InternalMumbleClient::start(host, port, username, password, event_sink, config)
+                .await
+            {
                 Ok(client) => {
                     let mut internal = internal_arc.lock().await;
                     *internal = Some(client);
