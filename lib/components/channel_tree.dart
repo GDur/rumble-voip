@@ -234,13 +234,16 @@ class _ChannelTreeState extends State<ChannelTree> {
         },
         child: Focus(
           autofocus: true,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: rootChannels
-                  .map((c) => _buildChannelItem(context, c, 0))
-                  .toList(),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: rootChannels
+                    .map((c) => _buildChannelItem(context, c, 0))
+                    .toList(),
+              ),
             ),
           ),
         ),

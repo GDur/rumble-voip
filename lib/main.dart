@@ -412,6 +412,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final mumbleService = Provider.of<MumbleService>(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
+    final isSlim = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
@@ -446,60 +447,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            _buildHeader(mumbleService),
+            _buildHeader(mumbleService, isSlim),
             const PermissionBanner(),
             Expanded(
               child: ListenableBuilder(
                 listenable: mumbleService,
                 builder: (context, _) {
                   if (mumbleService.isConnected) {
-                    final platformDesktop =
-                        !kIsWeb &&
-                        (defaultTargetPlatform == TargetPlatform.windows ||
-                            defaultTargetPlatform == TargetPlatform.linux ||
-                            defaultTargetPlatform == TargetPlatform.macOS);
-
-                    final isSlim = MediaQuery.of(context).size.width < 900;
-
-                    if (platformDesktop) {
-                      if (isSlim) {
-                        return ChannelTree(
-                          channels: mumbleService.channels,
-                          users: mumbleService.users,
-                          talkingUsers: mumbleService.talkingUsers,
-                          self: mumbleService.self,
-                          hasMicPermission: mumbleService.hasMicPermission,
-                          onChannelTap: (c) => mumbleService.joinChannel(c),
-                        );
-                      }
-                      return ShadResizablePanelGroup(
-                        showHandle: true,
-                        children: [
-                          ShadResizablePanel(
-                            id: 0,
-                            defaultSize: .3,
-                            minSize: .2,
-                            child: ChannelTree(
-                              channels: mumbleService.channels,
-                              users: mumbleService.users,
-                              talkingUsers: mumbleService.talkingUsers,
-                              self: mumbleService.self,
-                              hasMicPermission: mumbleService.hasMicPermission,
-                              onChannelTap: (c) => mumbleService.joinChannel(c),
-                            ),
-                          ),
-                          ShadResizablePanel(
-                            id: 1,
-                            defaultSize: .7,
-                            minSize: .3,
-                            child: ColoredBox(
-                              color: theme.colorScheme.background,
-                              child: const ChatView(),
-                            ),
-                          ),
-                        ],
-                      );
-                    } else {
+                    if (isSlim) {
                       return ChannelTree(
                         channels: mumbleService.channels,
                         users: mumbleService.users,
@@ -509,8 +464,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         onChannelTap: (c) => mumbleService.joinChannel(c),
                       );
                     }
+                    return ShadResizablePanelGroup(
+                      showHandle: true,
+                      children: [
+                        ShadResizablePanel(
+                          id: 0,
+                          defaultSize: .3,
+                          minSize: .2,
+                          child: ChannelTree(
+                            channels: mumbleService.channels,
+                            users: mumbleService.users,
+                            talkingUsers: mumbleService.talkingUsers,
+                            self: mumbleService.self,
+                            hasMicPermission: mumbleService.hasMicPermission,
+                            onChannelTap: (c) => mumbleService.joinChannel(c),
+                          ),
+                        ),
+                        ShadResizablePanel(
+                          id: 1,
+                          defaultSize: .7,
+                          minSize: .3,
+                          child: ColoredBox(
+                            color: theme.colorScheme.background,
+                            child: const ChatView(),
+                          ),
+                        ),
+                      ],
+                    );
                   }
-                  return _buildServerList();
+                  return _buildServerList(isSlim);
                 },
               ),
             ),
@@ -521,14 +503,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(MumbleService mumbleService) {
+  Widget _buildHeader(MumbleService mumbleService, bool isSlim) {
     final theme = ShadTheme.of(context);
-    final isDesktop = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.windows ||
-            defaultTargetPlatform == TargetPlatform.linux ||
-            defaultTargetPlatform == TargetPlatform.macOS);
-    final isWide = MediaQuery.of(context).size.width >= 900;
-    final showChatToggle = mumbleService.isConnected && !(isDesktop && isWide);
+    final showChatToggle = mumbleService.isConnected && isSlim;
 
     return Container(
       padding: const EdgeInsets.only(left: 20, right: 8, top: 16, bottom: 12),
@@ -589,9 +566,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildServerList() {
+  Widget _buildServerList(bool isSlim) {
     final theme = ShadTheme.of(context);
-    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Consumer<ServerProvider>(
       builder: (context, provider, _) {
@@ -608,8 +584,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return ListView(
           padding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 12 : 32,
-            vertical: isMobile ? 12 : 40,
+            horizontal: isSlim ? 12 : 32,
+            vertical: isSlim ? 12 : 40,
           ),
           children: [
             Row(
