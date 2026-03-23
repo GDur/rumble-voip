@@ -203,7 +203,7 @@ pub async fn run_loop(
             }
             cmd = cmd_rx.recv() => {
                 match cmd {
-                    Some(MumbleCommand::Disconnect) => break,
+                    Some(MumbleCommand::Disconnect) | None => break,
                     Some(MumbleCommand::JoinChannel(id)) => {
                         let mut us = msgs::UserState::new();
                         us.set_channel_id(id);
@@ -231,7 +231,6 @@ pub async fn run_loop(
                             let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
                         }
                     }
-                    _ => {}
                 }
             }
         }

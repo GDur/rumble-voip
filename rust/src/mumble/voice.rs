@@ -161,7 +161,7 @@ impl VoiceHandler {
                             *ptt = active;
                             println!("--- RUST: PTT changed to: {} ---", active);
                         }
-                        Some(MumbleCommand::Disconnect) => {
+                        Some(MumbleCommand::Disconnect) | None => {
                             println!("--- RUST: VoiceHandler disconnecting ---");
                             break;
                         }
