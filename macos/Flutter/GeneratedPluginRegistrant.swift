@@ -9,7 +9,6 @@ import audio_session
 import connectivity_plus
 import file_picker
 import flutter_macos_permissions
-import flutter_pcm_sound
 import hotkey_manager_macos
 import just_audio
 import package_info_plus
@@ -27,7 +26,6 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   ConnectivityPlusPlugin.register(with: registry.registrar(forPlugin: "ConnectivityPlusPlugin"))
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   FlutterMacosPermissionsPlugin.register(with: registry.registrar(forPlugin: "FlutterMacosPermissionsPlugin"))
-  FlutterPcmSoundPlugin.register(with: registry.registrar(forPlugin: "FlutterPcmSoundPlugin"))
   HotkeyManagerMacosPlugin.register(with: registry.registrar(forPlugin: "HotkeyManagerMacosPlugin"))
   JustAudioPlugin.register(with: registry.registrar(forPlugin: "JustAudioPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))

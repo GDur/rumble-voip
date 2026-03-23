@@ -416,14 +416,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.7"
-  flutter_pcm_sound:
-    dependency: "direct main"
-    description:
-      name: flutter_pcm_sound
-      sha256: "15c6894da8195122001375084d51449bd77849579c93fca2800c00b615699dc0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.3.3"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -448,14 +440,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.3"
-  flutter_soloud:
-    dependency: "direct main"
-    description:
-      name: flutter_soloud
-      sha256: d275ff1fcaca64eab81189f260613b42787655d213013ab316ecd31bb52a5913
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.5.4"
   flutter_svg:
     dependency: transitive
     description:
