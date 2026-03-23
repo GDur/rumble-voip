@@ -20,6 +20,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kOutputVolume = 'output_volume';
   static const String _kIgnoreAccessibility = 'ignore_accessibility';
   static const String _kUserVolumes = 'user_volumes';
+  static const String _kShowVolumeIndicator = 'show_volume_indicator';
 
   final SharedPreferences _prefs;
 
@@ -34,6 +35,7 @@ class SettingsService extends ChangeNotifier {
   double _inputGain;
   double _outputVolume;
   bool _ignoreAccessibility;
+  bool _showVolumeIndicator;
   final Map<String, double> _userVolumes;
 
   SettingsService(this._prefs)
@@ -47,6 +49,7 @@ class SettingsService extends ChangeNotifier {
       _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
       _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
       _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false,
+      _showVolumeIndicator = _prefs.getBool(_kShowVolumeIndicator) ?? true,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -84,6 +87,7 @@ class SettingsService extends ChangeNotifier {
   double get inputGain => _inputGain;
   double get outputVolume => _outputVolume;
   bool get ignoreAccessibility => _ignoreAccessibility;
+  bool get showVolumeIndicator => _showVolumeIndicator;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -191,6 +195,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setIgnoreAccessibility(bool value) async {
     _ignoreAccessibility = value;
     await _prefs.setBool(_kIgnoreAccessibility, value);
+    notifyListeners();
+  }
+
+  Future<void> setShowVolumeIndicator(bool value) async {
+    _showVolumeIndicator = value;
+    await _prefs.setBool(_kShowVolumeIndicator, value);
     notifyListeners();
   }
 

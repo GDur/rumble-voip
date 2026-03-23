@@ -737,22 +737,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildMicStatus(MumbleService service) {
     final theme = ShadTheme.of(context);
+    final settings = Provider.of<SettingsService>(context);
     final isMuted = service.isMuted;
     final isDeafened = service.isDeafened;
 
     return Row(
       children: [
         // Mic signal indicator (performance-optimized CustomPainter)
-        Padding(
-          padding: const EdgeInsets.only(right: 8),
-          child: VolumeIndicator(
-            volumeNotifier: service.volumeNotifier,
-            isMuted: isMuted,
-            isDeafened: isDeafened,
-            foregroundColor: kBrandGreen,
-            mutedColor: theme.colorScheme.mutedForeground,
+        if (settings.showVolumeIndicator)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: VolumeIndicator(
+              volumeNotifier: service.volumeNotifier,
+              isMuted: isMuted,
+              isDeafened: isDeafened,
+              foregroundColor: kBrandGreen,
+              mutedColor: theme.colorScheme.mutedForeground,
+            ),
           ),
-        ),
         ShadIconButton.ghost(
           icon: Icon(
             isMuted ? LucideIcons.micOff : LucideIcons.mic,

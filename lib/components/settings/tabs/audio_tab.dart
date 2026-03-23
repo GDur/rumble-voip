@@ -173,6 +173,23 @@ class AudioTab extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Show volume indicator',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ShadSwitch(
+                value: settings.showVolumeIndicator,
+                onChanged: (v) {
+                  settings.setShowVolumeIndicator(v);
+                  onUpdate(() {});
+                },
+              ),
+            ],
+          ),
           const SizedBox(height: 32),
           const Text(
             'Microphone Test',
