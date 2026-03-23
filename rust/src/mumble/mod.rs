@@ -1,10 +1,10 @@
+pub mod audio;
 pub mod control;
 pub mod voice;
-pub mod audio;
 
-use tokio::sync::mpsc;
 use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
+use tokio::sync::mpsc;
 
 pub enum MumbleCommand {
     Disconnect,
@@ -28,18 +28,17 @@ impl InternalMumbleClient {
         event_sink: StreamSink<MumbleEvent>,
     ) -> anyhow::Result<Self> {
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
-        
+
         // Main loop runner
         tokio::spawn(async move {
-            if let Err(e) = crate::mumble::control::run_loop(
-                host, port, username, password, cmd_rx, event_sink
-            ).await {
+            if let Err(e) =
+                crate::mumble::control::run_loop(host, port, username, password, cmd_rx, event_sink)
+                    .await
+            {
                 eprintln!("Mumble client loop error: {}", e);
             }
         });
 
-        Ok(Self {
-            cmd_tx,
-        })
+        Ok(Self { cmd_tx })
     }
 }

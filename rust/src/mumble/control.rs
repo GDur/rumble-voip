@@ -1,18 +1,18 @@
-use tokio::sync::mpsc;
-use futures_util::{StreamExt, SinkExt};
-use tokio_util::codec::Framed;
-use mumble_protocol_2x::control::ControlPacket;
-use mumble_protocol_2x::control::ControlCodec;
-use mumble_protocol_2x::control::msgs;
-use mumble_protocol_2x::voice::{Serverbound, Clientbound};
-use tokio::net::TcpStream;
-use openssl::ssl::{SslMethod, SslConnector, SslVerifyMode};
-use tokio_openssl::SslStream;
-use std::pin::Pin;
-use std::collections::HashMap;
-use crate::api::client::{MumbleEvent, MumbleChannel, MumbleUser, MumbleTextMessage};
+use crate::api::client::{MumbleChannel, MumbleEvent, MumbleTextMessage, MumbleUser};
 use crate::frb_generated::StreamSink;
 use crate::mumble::MumbleCommand;
+use futures_util::{SinkExt, StreamExt};
+use mumble_protocol_2x::control::msgs;
+use mumble_protocol_2x::control::ControlCodec;
+use mumble_protocol_2x::control::ControlPacket;
+use mumble_protocol_2x::voice::{Clientbound, Serverbound};
+use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+use std::collections::HashMap;
+use std::pin::Pin;
+use tokio::net::TcpStream;
+use tokio::sync::mpsc;
+use tokio_openssl::SslStream;
+use tokio_util::codec::Framed;
 
 pub async fn run_loop(
     host: String,
@@ -24,19 +24,21 @@ pub async fn run_loop(
 ) -> anyhow::Result<()> {
     println!("Starting control loop for {}:{}", host, port);
     println!("--- RUST: control loop starting for {}:{} ---", host, port);
-    
+
     // 1. Setup TLS with OpenSSL
     let mut builder = SslConnector::builder(SslMethod::tls())?;
-    builder.set_verify(SslVerifyMode::NONE); 
+    builder.set_verify(SslVerifyMode::NONE);
 
     let connector = builder.build();
     let tcp_stream = TcpStream::connect(format!("{}:{}", host, port)).await?;
     println!("TCP connected to {}:{}", host, port);
-    
+
     let ssl = connector.configure()?.into_ssl(&host)?;
     let mut tls_stream = SslStream::new(ssl, tcp_stream)?;
-    
-    Pin::new(&mut tls_stream).connect().await
+
+    Pin::new(&mut tls_stream)
+        .connect()
+        .await
         .map_err(|e| anyhow::anyhow!("TLS connection failed: {}", e))?;
     println!("TLS handshake successful");
 
@@ -48,7 +50,9 @@ pub async fn run_loop(
     version.set_release("Rumble".to_string());
     version.set_os("macOS".to_string());
     version.set_os_version("14.0.0".to_string());
-    framed.send(ControlPacket::Version(Box::new(version))).await?;
+    framed
+        .send(ControlPacket::Version(Box::new(version)))
+        .await?;
     println!("Version packet sent");
 
     let mut auth = msgs::Authenticate::new();
@@ -57,7 +61,9 @@ pub async fn run_loop(
         auth.set_password(p);
     }
     auth.set_opus(true);
-    framed.send(ControlPacket::Authenticate(Box::new(auth))).await?;
+    framed
+        .send(ControlPacket::Authenticate(Box::new(auth)))
+        .await?;
     println!("Authentication packet sent");
 
     let mut channels: HashMap<u32, MumbleChannel> = HashMap::new();
@@ -147,7 +153,7 @@ pub async fn run_loop(
                          let mut key = [0u8; 16];
                          let mut encrypt_nonce = [0u8; 16];
                          let mut decrypt_nonce = [0u8; 16];
-                         
+
                          if let Some(k) = &cs.key {
                              if k.len() >= 16 {
                                 key.copy_from_slice(&k[..16]);
@@ -163,13 +169,13 @@ pub async fn run_loop(
                          }
 
                          let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(key, encrypt_nonce, decrypt_nonce);
-                         
+
                          let host_clone = host.clone();
                          let port_clone = port;
                          let (v_tx, v_rx) = mpsc::channel(32);
                          voice_cmd_tx = Some(v_tx);
                          let event_sink_clone = event_sink.clone();
-                         
+
                          tokio::spawn(async move {
                              if let Err(e) = crate::mumble::voice::VoiceHandler::run(
                                  format!("{}:{}", host_clone, port_clone),

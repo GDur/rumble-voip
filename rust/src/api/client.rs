@@ -1,14 +1,14 @@
+use crate::frb_generated::StreamSink;
+use crate::mumble::audio::{list_input_devices as list_in, list_output_devices as list_out};
+use crate::mumble::{InternalMumbleClient, MumbleCommand};
+use flutter_rust_bridge::frb;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use flutter_rust_bridge::frb;
-use crate::frb_generated::StreamSink;
-use crate::mumble::{InternalMumbleClient, MumbleCommand};
-use crate::mumble::audio::{list_input_devices as list_in, list_output_devices as list_out};
 
 #[frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
-    
+
     println!("Rust initialised");
     println!("--- RUST: initialised ---");
 }
@@ -65,7 +65,7 @@ impl RustMumbleClient {
             .enable_all()
             .build()
             .unwrap();
-        
+
         Self {
             runtime,
             internal: Arc::new(Mutex::new(None)),

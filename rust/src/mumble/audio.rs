@@ -1,3 +1,4 @@
+use audioadapter_buffers::direct::InterleavedSlice;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use ringbuf::{
     storage::Heap,
@@ -5,9 +6,11 @@ use ringbuf::{
     wrap::caching::Caching,
     HeapRb, SharedRb,
 };
+use rubato::{
+    calculate_cutoff, Async, FixedAsync, Indexing, Resampler, SincInterpolationParameters,
+    SincInterpolationType, WindowFunction,
+};
 use std::sync::Arc;
-use rubato::{Resampler, Async, FixedAsync, Indexing, SincInterpolationType, SincInterpolationParameters, WindowFunction, calculate_cutoff};
-use audioadapter_buffers::direct::InterleavedSlice;
 
 const MUMBLE_SAMPLE_RATE: u32 = 48000;
 
@@ -38,8 +41,16 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     let input_rate = input_config.sample_rate().0;
     let output_rate = output_config.sample_rate().0;
 
-    println!("Input device: {} ({} Hz)", input_device.name().unwrap_or_default(), input_rate);
-    println!("Output device: {} ({} Hz)", output_device.name().unwrap_or_default(), output_rate);
+    println!(
+        "Input device: {} ({} Hz)",
+        input_device.name().unwrap_or_default(),
+        input_rate
+    );
+    println!(
+        "Output device: {} ({} Hz)",
+        output_device.name().unwrap_or_default(),
+        output_rate
+    );
 
     // Ringbuffers: Always MUMBLE_SAMPLE_RATE Hz for Mumble compatibility
     let rb_in = Arc::new(HeapRb::<i16>::new(MUMBLE_SAMPLE_RATE as usize));
@@ -47,7 +58,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
 
     // Setup rubato resampler for input: [Native -> MUMBLE_SAMPLE_RATE]
     let resample_ratio = MUMBLE_SAMPLE_RATE as f64 / input_rate as f64;
-    
+
     let sinc_len = 128;
     let window = WindowFunction::BlackmanHarris2;
     let f_cutoff = calculate_cutoff(sinc_len, window);
@@ -60,14 +71,17 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     };
 
     let mut resampler_in: Option<Async<f32>> = if input_rate != MUMBLE_SAMPLE_RATE {
-        Some(Async::<f32>::new_sinc(
-            resample_ratio,
-            1.1,
-            &params,
-            1024, // Input chunk size
-            1,    // channels
-            FixedAsync::Input,
-        ).map_err(|e| anyhow::anyhow!("Failed to create input resampler: {}", e))?)
+        Some(
+            Async::<f32>::new_sinc(
+                resample_ratio,
+                1.1,
+                &params,
+                1024, // Input chunk size
+                1,    // channels
+                FixedAsync::Input,
+            )
+            .map_err(|e| anyhow::anyhow!("Failed to create input resampler: {}", e))?,
+        )
     } else {
         None
     };
@@ -90,22 +104,30 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     let mut input_frames_next = resampler.input_frames_next();
                     while input_buffer_f32.len() >= input_frames_next {
                         let chunk: Vec<f32> = input_buffer_f32.drain(..input_frames_next).collect();
-                        let input_adapter = InterleavedSlice::new(&chunk, 1, input_frames_next).unwrap();
-                        
+                        let input_adapter =
+                            InterleavedSlice::new(&chunk, 1, input_frames_next).unwrap();
+
                         let max_out = resampler.output_frames_max();
                         let mut out_buf = vec![0.0f32; max_out];
-                        let mut output_adapter = InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
-                        
+                        let mut output_adapter =
+                            InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
+
                         let indexing = Indexing {
                             input_offset: 0,
                             output_offset: 0,
                             active_channels_mask: None,
                             partial_len: None,
                         };
-                        
-                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
+
+                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(
+                            &input_adapter,
+                            &mut output_adapter,
+                            Some(&indexing),
+                        ) {
                             for &s in &out_buf[..out_len] {
-                                let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                                let s_i16 = (s * i16::MAX as f32)
+                                    .clamp(i16::MIN as f32, i16::MAX as f32)
+                                    as i16;
                                 let _ = prod_in.try_push(s_i16);
                             }
                         }
@@ -113,7 +135,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 } else {
                     for s in mono_f32 {
-                        let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        let s_i16 =
+                            (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
@@ -135,22 +158,30 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     let mut input_frames_next = resampler.input_frames_next();
                     while input_buffer_f32.len() >= input_frames_next {
                         let chunk: Vec<f32> = input_buffer_f32.drain(..input_frames_next).collect();
-                        let input_adapter = InterleavedSlice::new(&chunk, 1, input_frames_next).unwrap();
-                        
+                        let input_adapter =
+                            InterleavedSlice::new(&chunk, 1, input_frames_next).unwrap();
+
                         let max_out = resampler.output_frames_max();
                         let mut out_buf = vec![0.0f32; max_out];
-                        let mut output_adapter = InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
-                        
+                        let mut output_adapter =
+                            InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
+
                         let indexing = Indexing {
                             input_offset: 0,
                             output_offset: 0,
                             active_channels_mask: None,
                             partial_len: None,
                         };
-                        
-                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
+
+                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(
+                            &input_adapter,
+                            &mut output_adapter,
+                            Some(&indexing),
+                        ) {
                             for &s in &out_buf[..out_len] {
-                                let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                                let s_i16 = (s * i16::MAX as f32)
+                                    .clamp(i16::MIN as f32, i16::MAX as f32)
+                                    as i16;
                                 let _ = prod_in.try_push(s_i16);
                             }
                         }
@@ -158,7 +189,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                     }
                 } else {
                     for s in mono_f32 {
-                        let s_i16 = (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        let s_i16 =
+                            (s * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
@@ -174,7 +206,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
 
     // Setup rubato resampler for output: [MUMBLE_SAMPLE_RATE -> Native]
     let resample_ratio_out = output_rate as f64 / MUMBLE_SAMPLE_RATE as f64;
-    
+
     let params_out = SincInterpolationParameters {
         sinc_len,
         f_cutoff,
@@ -184,14 +216,17 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     };
 
     let mut resampler_out: Option<Async<f32>> = if output_rate != MUMBLE_SAMPLE_RATE {
-        Some(Async::<f32>::new_sinc(
-            resample_ratio_out,
-            1.1,
-            &params_out,
-            1024, // Input chunk size (from Mumble side)
-            1,
-            FixedAsync::Input,
-        ).map_err(|e| anyhow::anyhow!("Failed to create output resampler: {}", e))?)
+        Some(
+            Async::<f32>::new_sinc(
+                resample_ratio_out,
+                1.1,
+                &params_out,
+                1024, // Input chunk size (from Mumble side)
+                1,
+                FixedAsync::Input,
+            )
+            .map_err(|e| anyhow::anyhow!("Failed to create output resampler: {}", e))?,
+        )
     } else {
         None
     };
@@ -205,33 +240,39 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
             &output_config.into(),
             move |data: &mut [f32], _| {
                 let frames_needed = data.len() / output_channels;
-                
+
                 if let Some(resampler) = &mut resampler_out {
                     while output_buffer_f32.len() < frames_needed {
                         let needed_in = resampler.input_frames_next();
                         let mut chunk_in = vec![0.0f32; needed_in];
                         for i in 0..needed_in {
                             // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
-                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
+                            chunk_in[i] =
+                                cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
                         }
                         let input_adapter = InterleavedSlice::new(&chunk_in, 1, needed_in).unwrap();
-                        
+
                         let max_out = resampler.output_frames_max();
                         let mut out_buf = vec![0.0f32; max_out];
-                        let mut output_adapter = InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
-                        
+                        let mut output_adapter =
+                            InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
+
                         let indexing = Indexing {
                             input_offset: 0,
                             output_offset: 0,
                             active_channels_mask: None,
                             partial_len: None,
                         };
-                        
-                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
+
+                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(
+                            &input_adapter,
+                            &mut output_adapter,
+                            Some(&indexing),
+                        ) {
                             output_buffer_f32.extend_from_slice(&out_buf[..out_len]);
                         }
                     }
-                    
+
                     let out_chunk: Vec<f32> = output_buffer_f32.drain(..frames_needed).collect();
                     for (i, frame) in data.chunks_mut(output_channels).enumerate() {
                         for out_sample in frame {
@@ -256,36 +297,44 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
             &output_config.into(),
             move |data: &mut [i16], _| {
                 let frames_needed = data.len() / output_channels;
-                
+
                 if let Some(resampler) = &mut resampler_out {
                     while output_buffer_f32.len() < frames_needed {
                         let needed_in = resampler.input_frames_next();
                         let mut chunk_in = vec![0.0f32; needed_in];
                         for i in 0..needed_in {
                             // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
-                            chunk_in[i] = cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
+                            chunk_in[i] =
+                                cons_out.try_pop().unwrap_or(0) as f32 / -(i16::MIN as f32);
                         }
                         let input_adapter = InterleavedSlice::new(&chunk_in, 1, needed_in).unwrap();
-                        
+
                         let max_out = resampler.output_frames_max();
                         let mut out_buf = vec![0.0f32; max_out];
-                        let mut output_adapter = InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
-                        
+                        let mut output_adapter =
+                            InterleavedSlice::new_mut(&mut out_buf, 1, max_out).unwrap();
+
                         let indexing = Indexing {
                             input_offset: 0,
                             output_offset: 0,
                             active_channels_mask: None,
                             partial_len: None,
                         };
-                        
-                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(&input_adapter, &mut output_adapter, Some(&indexing)) {
+
+                        if let Ok((_in_len, out_len)) = resampler.process_into_buffer(
+                            &input_adapter,
+                            &mut output_adapter,
+                            Some(&indexing),
+                        ) {
                             output_buffer_f32.extend_from_slice(&out_buf[..out_len]);
                         }
                     }
-                    
+
                     let out_chunk: Vec<f32> = output_buffer_f32.drain(..frames_needed).collect();
                     for (i, frame) in data.chunks_mut(output_channels).enumerate() {
-                        let s_i16 = (out_chunk[i] * i16::MAX as f32).clamp(i16::MIN as f32, i16::MAX as f32) as i16;
+                        let s_i16 = (out_chunk[i] * i16::MAX as f32)
+                            .clamp(i16::MIN as f32, i16::MAX as f32)
+                            as i16;
                         for out_sample in frame {
                             *out_sample = s_i16;
                         }
