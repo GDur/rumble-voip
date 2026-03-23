@@ -17,3 +17,9 @@ clean:
 test:
     flutter test
     cd rust && cargo test
+
+fmt:
+    cd rust && cargo fmt --all
+
+lint:
+    cd rust && cargo clippy --fix --allow-dirty
