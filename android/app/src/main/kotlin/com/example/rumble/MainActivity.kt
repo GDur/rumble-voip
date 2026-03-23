@@ -1,4 +1,4 @@
-package com.example.rumble
+package com.rumbledev.rumble
 
 import io.flutter.embedding.android.FlutterActivity
 
