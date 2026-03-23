@@ -17,15 +17,21 @@ const MUMBLE_SAMPLE_RATE: u32 = 48000;
 pub struct SendStream(pub cpal::Stream);
 unsafe impl Send for SendStream {}
 
+// Type aliases for the ringbuffer handles
+pub type RbConsumer = Caching<Arc<SharedRb<Heap<i16>>>, false, true>;
+pub type RbProducer = Caching<Arc<SharedRb<Heap<i16>>>, true, false>;
+
 pub struct AudioStreams {
     pub input_stream: SendStream,
     pub output_stream: SendStream,
-    pub input_consumer: Caching<Arc<SharedRb<Heap<i16>>>, false, true>,
-    pub output_producer: Caching<Arc<SharedRb<Heap<i16>>>, true, false>,
+    pub input_consumer: RbConsumer,
+    pub output_producer: RbProducer,
+    pub input_notify: Arc<tokio::sync::Notify>,
 }
 
 pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     println!("--- RUST: setup_audio starting ---");
+    let input_notify = Arc::new(tokio::sync::Notify::new());
     let host = cpal::default_host();
 
     let input_device = host
@@ -100,6 +106,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
     let mut mono_buffer_f32 = Vec::with_capacity(2048);
     let mut resample_out_buf = Vec::with_capacity(2048);
 
+    let input_notify_clone = input_notify.clone();
+
     let input_stream = match input_config.sample_format() {
         cpal::SampleFormat::F32 => input_device.build_input_stream(
             &input_config.into(),
@@ -157,6 +165,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
+                // Wake up the voice task
+                input_notify_clone.notify_one();
             },
             |e| eprintln!("Input stream error: {}", e),
             None,
@@ -218,6 +228,8 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
                         let _ = prod_in.try_push(s_i16);
                     }
                 }
+                // Wake up the voice task
+                input_notify_clone.notify_one();
             },
             |e| eprintln!("Input stream error: {}", e),
             None,
@@ -388,7 +400,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
             |e| eprintln!("Output stream error: {}", e),
             None,
         )?,
-        _ => return Err(anyhow::anyhow!("Unsupported output sample format")),
+        _ => return Err(anyhow::anyhow!("Unsupported input sample format")),
     };
 
     input_stream.play()?;
@@ -400,6 +412,7 @@ pub fn setup_audio() -> anyhow::Result<AudioStreams> {
         output_stream: SendStream(output_stream),
         input_consumer: consumer_in,
         output_producer: producer_out,
+        input_notify,
     })
 }
 

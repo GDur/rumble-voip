@@ -129,7 +129,7 @@ impl VoiceHandler {
 
         let socket = UdpSocket::bind("0.0.0.0:0").await?;
         socket.connect(server_addr).await?;
-        println!("--- RUST: UDP socket connected ---");
+        println!("--- RUST: UDP socket connected to {} ---", server_addr);
 
         let encoder = SafeOpusEncoder::new(
             Self::SAMPLE_RATE as i32,
@@ -137,7 +137,7 @@ impl VoiceHandler {
             OPUS_APPLICATION_VOIP as i32,
         )
         .map_err(|e| anyhow::anyhow!("Opus encoder error: {}", e))?;
-        encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1); // use_cbr = false -> VBR = true
+        encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
         encoder.ctl(OPUS_SET_BITRATE_REQUEST as i32, Self::BITRATE as i32);
@@ -160,6 +160,9 @@ impl VoiceHandler {
         let mut packets_sent = 0;
         let mut packets_received = 0;
 
+        // Maintenance ticker for low-frequency tasks (pings, timeouts)
+        let mut maintenance_ticker = tokio::time::interval(std::time::Duration::from_millis(500));
+
         println!("--- RUST: Voice loop starting ---");
 
         loop {
@@ -169,6 +172,10 @@ impl VoiceHandler {
                         Some(MumbleCommand::SetPtt(active)) => {
                             ptt_active.store(active, Ordering::Relaxed);
                             println!("--- RUST: PTT changed to: {} ---", active);
+                            
+                            // Wake up the audio processing branch to handle any leftover samples
+                            // or send the terminator packet immediately.
+                            audio.input_notify.notify_one();
                         }
                         Some(MumbleCommand::Disconnect) | None => {
                             println!("--- RUST: VoiceHandler disconnecting ---");
@@ -178,24 +185,14 @@ impl VoiceHandler {
                     }
                 }
 
-                _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
+                _ = audio.input_notify.notified() => {
                     let now = std::time::Instant::now();
-
-                    // UDP Ping every 1 second
-                    if now.duration_since(last_ping) > std::time::Duration::from_secs(1) {
-                        let packet = VoicePacket::Ping { timestamp: 0 };
-                        encryption_buf.clear();
-                        crypt_state.encrypt(packet, &mut encryption_buf);
-                        let _ = socket.send(&encryption_buf).await;
-                        last_ping = now;
-                    }
-
                     let is_ptt = ptt_active.load(Ordering::Relaxed);
 
                     while audio.input_consumer.occupied_len() >= Self::FRAME_SIZE {
                         let read = audio.input_consumer.pop_slice(&mut pcm_frame);
                         if read == Self::FRAME_SIZE {
-                            // Only calculate RMS if we are going to send it (every 200ms)
+                            // 1. Volume Calculation
                             if now.duration_since(last_volume_sent) >= std::time::Duration::from_millis(200) {
                                 let mut sum_sq = 0.0;
                                 for sample in pcm_frame.iter() {
@@ -207,56 +204,63 @@ impl VoiceHandler {
                                 last_volume_sent = now;
                             }
 
-                            // Still need to convert pcm to f32 if we are going to encode
+                            // 2. Encoding & Sending
                             if is_ptt {
                                 for (i, &sample) in pcm_frame.iter().enumerate() {
                                     f32_frame[i] = sample as f32 / -(i16::MIN as f32);
                                 }
-                                match encoder.encode(&f32_frame[..Self::FRAME_SIZE], Self::FRAME_SIZE, &mut opus_buf) {
-                                    Ok(len) => {
-                                        let packet = VoicePacket::Audio {
-                                            _dst: std::marker::PhantomData,
-                                            target: 0,
-                                            session_id: (),
-                                            seq_num: sequence,
-                                            payload: VoicePacketPayload::Opus(Bytes::copy_from_slice(&opus_buf[..len]), false),
-                                            position_info: None,
-                                        };
-                                        sequence += 1;
-
-                                        encryption_buf.clear();
-                                        crypt_state.encrypt(packet, &mut encryption_buf);
-                                        if let Ok(_) = socket.send(&encryption_buf).await {
-                                            packets_sent += 1;
-                                            if packets_sent % 100 == 0 {
-                                                println!("--- RUST: Sent 100 packets, current seq={} ---", sequence);
-                                            }
-                                        }
+                                if let Ok(len) = encoder.encode(&f32_frame, Self::FRAME_SIZE, &mut opus_buf) {
+                                    let packet = VoicePacket::Audio {
+                                        _dst: std::marker::PhantomData,
+                                        target: 0,
+                                        session_id: (),
+                                        seq_num: sequence,
+                                        payload: VoicePacketPayload::Opus(Bytes::copy_from_slice(&opus_buf[..len]), false),
+                                        position_info: None,
+                                    };
+                                    sequence += 1;
+                                    encryption_buf.clear();
+                                    crypt_state.encrypt(packet, &mut encryption_buf);
+                                    let _ = socket.send(&encryption_buf).await;
+                                    packets_sent += 1;
+                                    if packets_sent % 100 == 0 {
+                                        println!("--- RUST: Sent 100 packets, current seq={} ---", sequence);
                                     }
-                                    Err(e) => eprintln!("Opus encode error: {:?}", e),
                                 }
                             }
                         }
                     }
 
-                    if !is_ptt
-                        && sequence > 0 {
-                            // Send terminator
-                            let packet = VoicePacket::Audio {
-                                _dst: std::marker::PhantomData,
-                                target: 0,
-                                session_id: (),
-                                seq_num: sequence,
-                                payload: VoicePacketPayload::Opus(Bytes::new(), true),
-                                position_info: None,
-                            };
-                            encryption_buf.clear();
-                            crypt_state.encrypt(packet, &mut encryption_buf);
-                            let _ = socket.send(&encryption_buf).await;
-                            sequence = 0;
-                        }
+                    // 3. Terminator Logic
+                    if !is_ptt && sequence > 0 {
+                        let packet = VoicePacket::Audio {
+                            _dst: std::marker::PhantomData,
+                            target: 0,
+                            session_id: (),
+                            seq_num: sequence,
+                            payload: VoicePacketPayload::Opus(Bytes::new(), true),
+                            position_info: None,
+                        };
+                        encryption_buf.clear();
+                        crypt_state.encrypt(packet, &mut encryption_buf);
+                        let _ = socket.send(&encryption_buf).await;
+                        sequence = 0;
+                    }
+                }
 
-                    // Remote user timeout check
+                _ = maintenance_ticker.tick() => {
+                    let now = std::time::Instant::now();
+
+                    // UDP Ping every 1 second
+                    if now.duration_since(last_ping) >= std::time::Duration::from_secs(1) {
+                        let packet = VoicePacket::Ping { timestamp: 0 };
+                        encryption_buf.clear();
+                        crypt_state.encrypt(packet, &mut encryption_buf);
+                        let _ = socket.send(&encryption_buf).await;
+                        last_ping = now;
+                    }
+
+                    // Remote user timeout check (checked every 500ms)
                     let mut stopped_talking = Vec::new();
                     for (&sid, user) in decoders.iter_mut() {
                         if user.is_talking && now.duration_since(user.last_packet_time) > std::time::Duration::from_millis(500) {
@@ -306,7 +310,6 @@ impl VoiceHandler {
                                             if !data.is_empty() {
                                                 match user.decoder.decode(&data, Self::FRAME_SIZE, &mut user.f32_pcm_buf[..]) {
                                                     Ok(samples) => {
-                                                        // Reuse the i16 buffer
                                                         if user.i16_pcm_buf.len() < samples {
                                                             user.i16_pcm_buf.resize(samples, 0);
                                                         }
