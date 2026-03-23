@@ -8,9 +8,10 @@ use mumble_protocol_2x::voice::{Clientbound, Serverbound, VoicePacket, VoicePack
 use opus_head_sys::*;
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::net::UdpSocket;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::mpsc;
 
 struct SafeOpusEncoder(*mut OpusEncoder);
 impl SafeOpusEncoder {
@@ -85,6 +86,14 @@ impl Drop for SafeOpusDecoder {
 }
 unsafe impl Send for SafeOpusDecoder {}
 
+struct RemoteUserData {
+    decoder: SafeOpusDecoder,
+    is_talking: bool,
+    last_packet_time: std::time::Instant,
+    f32_pcm_buf: Vec<f32>,
+    i16_pcm_buf: Vec<i16>,
+}
+
 pub struct VoiceHandler;
 
 impl VoiceHandler {
@@ -134,15 +143,16 @@ impl VoiceHandler {
         encoder.ctl(OPUS_SET_BITRATE_REQUEST as i32, Self::BITRATE as i32);
         encoder.ctl(OPUS_SET_COMPLEXITY_REQUEST as i32, Self::COMPLEXITY as i32);
 
-        let mut decoders: HashMap<u32, (SafeOpusDecoder, bool, std::time::Instant, Vec<f32>)> =
-            HashMap::new();
+        // Key: session_id (u32)
+        let mut decoders: HashMap<u32, RemoteUserData> = HashMap::new();
 
-        let ptt_active = Arc::new(Mutex::new(false));
+        let ptt_active = Arc::new(AtomicBool::new(false));
 
         let mut pcm_frame = vec![0i16; Self::FRAME_SIZE];
         let mut f32_frame = vec![0.0f32; Self::FRAME_SIZE];
         let mut opus_buf = vec![0u8; 1024];
         let mut udp_recv_buf = [0u8; 2048];
+        let mut encryption_buf = BytesMut::with_capacity(1024);
 
         let mut sequence: u64 = 0;
         let mut last_ping = std::time::Instant::now();
@@ -157,8 +167,7 @@ impl VoiceHandler {
                 cmd = cmd_rx.recv() => {
                     match cmd {
                         Some(MumbleCommand::SetPtt(active)) => {
-                            let mut ptt = ptt_active.lock().await;
-                            *ptt = active;
+                            ptt_active.store(active, Ordering::Relaxed);
                             println!("--- RUST: PTT changed to: {} ---", active);
                         }
                         Some(MumbleCommand::Disconnect) | None => {
@@ -175,32 +184,34 @@ impl VoiceHandler {
                     // UDP Ping every 1 second
                     if now.duration_since(last_ping) > std::time::Duration::from_secs(1) {
                         let packet = VoicePacket::Ping { timestamp: 0 };
-                        let mut bytes = BytesMut::new();
-                        crypt_state.encrypt(packet, &mut bytes);
-                        let _ = socket.send(&bytes).await;
+                        encryption_buf.clear();
+                        crypt_state.encrypt(packet, &mut encryption_buf);
+                        let _ = socket.send(&encryption_buf).await;
                         last_ping = now;
                     }
 
-                    let is_ptt = *ptt_active.lock().await;
+                    let is_ptt = ptt_active.load(Ordering::Relaxed);
 
                     while audio.input_consumer.occupied_len() >= Self::FRAME_SIZE {
                         let read = audio.input_consumer.pop_slice(&mut pcm_frame);
                         if read == Self::FRAME_SIZE {
-                            let mut sum_sq = 0.0;
-                            for (i, &sample) in pcm_frame.iter().enumerate() {
-                                // Use i16::MIN (32768) for normalization so that -32768 / 32768.0 == -1.0 exactly
-                                let f = sample as f32 / -(i16::MIN as f32);
-                                f32_frame[i] = f;
-                                sum_sq += f * f;
-                            }
-                            let rms = (sum_sq / Self::FRAME_SIZE as f32).sqrt();
-                            // Send volume at most every 200ms and only if it changed.
+                            // Only calculate RMS if we are going to send it (every 200ms)
                             if now.duration_since(last_volume_sent) >= std::time::Duration::from_millis(200) {
+                                let mut sum_sq = 0.0;
+                                for sample in pcm_frame.iter() {
+                                    let f = *sample as f32 / -(i16::MIN as f32);
+                                    sum_sq += f * f;
+                                }
+                                let rms = (sum_sq / Self::FRAME_SIZE as f32).sqrt();
                                 let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
                                 last_volume_sent = now;
                             }
 
+                            // Still need to convert pcm to f32 if we are going to encode
                             if is_ptt {
+                                for (i, &sample) in pcm_frame.iter().enumerate() {
+                                    f32_frame[i] = sample as f32 / -(i16::MIN as f32);
+                                }
                                 match encoder.encode(&f32_frame[..Self::FRAME_SIZE], Self::FRAME_SIZE, &mut opus_buf) {
                                     Ok(len) => {
                                         let packet = VoicePacket::Audio {
@@ -213,9 +224,9 @@ impl VoiceHandler {
                                         };
                                         sequence += 1;
 
-                                        let mut encrypted = BytesMut::new();
-                                        crypt_state.encrypt(packet, &mut encrypted);
-                                        if let Ok(_) = socket.send(&encrypted).await {
+                                        encryption_buf.clear();
+                                        crypt_state.encrypt(packet, &mut encryption_buf);
+                                        if let Ok(_) = socket.send(&encryption_buf).await {
                                             packets_sent += 1;
                                             if packets_sent % 100 == 0 {
                                                 println!("--- RUST: Sent 100 packets, current seq={} ---", sequence);
@@ -239,17 +250,17 @@ impl VoiceHandler {
                                 payload: VoicePacketPayload::Opus(Bytes::new(), true),
                                 position_info: None,
                             };
-                            let mut encrypted = BytesMut::new();
-                            crypt_state.encrypt(packet, &mut encrypted);
-                            let _ = socket.send(&encrypted).await;
+                            encryption_buf.clear();
+                            crypt_state.encrypt(packet, &mut encryption_buf);
+                            let _ = socket.send(&encryption_buf).await;
                             sequence = 0;
                         }
 
                     // Remote user timeout check
                     let mut stopped_talking = Vec::new();
-                    for (&sid, (_, is_talking, last_packet, _)) in decoders.iter_mut() {
-                        if *is_talking && now.duration_since(*last_packet) > std::time::Duration::from_millis(500) {
-                            *is_talking = false;
+                    for (&sid, user) in decoders.iter_mut() {
+                        if user.is_talking && now.duration_since(user.last_packet_time) > std::time::Duration::from_millis(500) {
+                            user.is_talking = false;
                             stopped_talking.push(sid);
                         }
                     }
@@ -270,38 +281,42 @@ impl VoiceHandler {
                                     if let VoicePacket::Audio { session_id, payload, .. } = packet {
                                         if let VoicePacketPayload::Opus(data, last) = payload {
                                             let sid_u32 = session_id;
-                                            let entry = decoders.entry(sid_u32).or_insert_with(|| {
+                                            let user = decoders.entry(sid_u32).or_insert_with(|| {
                                                 println!("--- RUST: New talking user detected: {} ---", sid_u32);
-                                                (
-                                                    SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"),
-                                                    false,
-                                                    std::time::Instant::now(),
-                                                    vec![0.0f32; Self::FRAME_SIZE]
-                                                )
+                                                RemoteUserData {
+                                                    decoder: SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"),
+                                                    is_talking: false,
+                                                    last_packet_time: std::time::Instant::now(),
+                                                    f32_pcm_buf: vec![0.0f32; Self::FRAME_SIZE],
+                                                    i16_pcm_buf: vec![0i16; Self::FRAME_SIZE],
+                                                }
                                             });
-                                            entry.2 = std::time::Instant::now();
-                                            if !entry.1 {
-                                                entry.1 = true;
+                                            user.last_packet_time = std::time::Instant::now();
+                                            if !user.is_talking {
+                                                user.is_talking = true;
                                                 println!("--- RUST: User {} started talking ---", sid_u32);
                                                 let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, true));
                                             }
 
                                             if last {
-                                                entry.1 = false;
+                                                user.is_talking = false;
                                                 let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, false));
                                             }
 
                                             if !data.is_empty() {
-                                                match entry.0.decode(&data, Self::FRAME_SIZE, &mut entry.3[..]) {
+                                                match user.decoder.decode(&data, Self::FRAME_SIZE, &mut user.f32_pcm_buf[..]) {
                                                     Ok(samples) => {
-                                                        let mut decoded_i16 = vec![0i16; samples];
+                                                        // Reuse the i16 buffer
+                                                        if user.i16_pcm_buf.len() < samples {
+                                                            user.i16_pcm_buf.resize(samples, 0);
+                                                        }
                                                         for i in 0..samples {
-                                                            decoded_i16[i] = (entry.3[i] * i16::MAX as f32)
+                                                            user.i16_pcm_buf[i] = (user.f32_pcm_buf[i] * i16::MAX as f32)
                                                                 .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                                         }
 
                                                         if audio.output_producer.vacant_len() >= samples {
-                                                            let _ = audio.output_producer.push_slice(&decoded_i16);
+                                                            let _ = audio.output_producer.push_slice(&user.i16_pcm_buf[..samples]);
                                                         } else {
                                                             eprintln!("Output buffer full, dropping frame for user {}", sid_u32);
                                                         }
