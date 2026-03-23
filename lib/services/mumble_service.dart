@@ -17,7 +17,7 @@ class MumbleService extends ChangeNotifier {
   bool _isTalking = false;
 
   final Map<int, bool> _talkingUsers = {};
-  double _currentVolume = 0.0;
+  final ValueNotifier<double> volumeNotifier = ValueNotifier(0.0);
   final List<ChatMessage> _messages = [];
   String? _pttErrorMessage;
   List<String> _inputDevices = [];
@@ -27,8 +27,8 @@ class MumbleService extends ChangeNotifier {
   bool get isConnected => _isConnected;
   String? get error => _error;
   List<MumbleChannel> get channels => _channels;
-  bool get isTalking => _isTalking;
-  double get currentVolume => _currentVolume;
+  bool get isTalking => _selfSession != null && (_talkingUsers[_selfSession!] ?? false);
+  double get currentVolume => volumeNotifier.value;
   Map<int, bool> get talkingUsers => _talkingUsers;
   List<MumbleUser> get users => _users.values.toList();
   List<String> get inputDevices => _inputDevices;
@@ -198,7 +198,8 @@ class MumbleService extends ChangeNotifier {
         ),
       );
     } else if (event is MumbleEvent_AudioVolume) {
-      _currentVolume = event.field0;
+      volumeNotifier.value = event.field0;
+      return; // Early return to NOT trigger notifyListeners() for the entire service
     }
     notifyListeners();
   }

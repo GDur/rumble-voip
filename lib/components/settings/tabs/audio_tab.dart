@@ -19,6 +19,7 @@ class AudioTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
+    const double volumeMultiplier = 10.0;
 
     return SingleChildScrollView(
       child: Column(
@@ -178,10 +179,10 @@ class AudioTab extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ListenableBuilder(
-            listenable: mumbleService,
-            builder: (context, _) {
-              final volume = mumbleService.currentVolume;
+          ValueListenableBuilder<double>(
+            valueListenable: mumbleService.volumeNotifier,
+            builder: (context, volume, child) {
+              final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
               return Container(
                 height: 24,
                 width: double.infinity,
@@ -193,7 +194,7 @@ class AudioTab extends StatelessWidget {
                   children: [
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
-                      widthFactor: volume.clamp(0.0, 1.0),
+                      widthFactor: displayVolume,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(

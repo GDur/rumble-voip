@@ -739,42 +739,47 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = ShadTheme.of(context);
     final isMuted = service.isMuted;
     final isDeafened = service.isDeafened;
-    final volume = service.currentVolume;
+    const double volumeMultiplier = 20.0;
 
     return Row(
       children: [
         // Mic signal indicator (circle that grows with volume)
-        Container(
-          width: 8,
-          height: 8,
-          margin: const EdgeInsets.only(right: 8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: kBrandGreen.withValues(alpha: 0.1),
-          ),
-          child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 50),
-              width: 2 + (8 * volume).clamp(0, 8),
-              height: 2 + (8 * volume).clamp(0, 8),
+        ValueListenableBuilder<double>(
+          valueListenable: service.volumeNotifier,
+          builder: (context, volume, _) {
+            final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
+            return Container(
+              width: 12,
+              height: 12,
+              margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isMuted || isDeafened)
-                    ? theme.colorScheme.mutedForeground.withValues(alpha: 0.3)
-                    : kBrandGreen.withValues(
-                        alpha: (0.4 + (volume * 0.6)).clamp(0, 1.0),
-                      ),
-                boxShadow: [
-                  if (!isMuted && !isDeafened && volume > 0.1)
-                    BoxShadow(
-                      color: kBrandGreen.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      spreadRadius: 1,
-                    ),
-                ],
+                color: kBrandGreen.withValues(alpha: 0.1),
               ),
-            ),
-          ),
+              child: Center(
+                child: Container(
+                  width: 2 + (10 * displayVolume),
+                  height: 2 + (10 * displayVolume),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: (isMuted || isDeafened)
+                        ? theme.colorScheme.mutedForeground.withValues(alpha: 0.3)
+                        : kBrandGreen.withValues(
+                            alpha: (0.4 + (displayVolume * 0.6)).clamp(0, 1.0),
+                          ),
+                    boxShadow: [
+                      if (!isMuted && !isDeafened && displayVolume > 0.1)
+                        BoxShadow(
+                          color: kBrandGreen.withValues(alpha: 0.3),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
         ShadIconButton.ghost(
           icon: Icon(
