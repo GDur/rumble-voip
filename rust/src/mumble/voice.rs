@@ -228,8 +228,8 @@ impl VoiceHandler {
                         }
                     }
 
-                    if !is_ptt {
-                        if sequence > 0 {
+                    if !is_ptt
+                        && sequence > 0 {
                             // Send terminator
                             let packet = VoicePacket::Audio {
                                 _dst: std::marker::PhantomData,
@@ -244,7 +244,6 @@ impl VoiceHandler {
                             let _ = socket.send(&encrypted).await;
                             sequence = 0;
                         }
-                    }
 
                     // Remote user timeout check
                     let mut stopped_talking = Vec::new();
@@ -268,52 +267,49 @@ impl VoiceHandler {
 
                             match crypt_state.decrypt(&mut data_to_decrypt) {
                                 Ok(Ok(packet)) => {
-                                    match packet {
-                                        VoicePacket::Audio { session_id, payload, .. } => {
-                                            if let VoicePacketPayload::Opus(data, last) = payload {
-                                                let sid_u32 = session_id as u32;
-                                                let entry = decoders.entry(sid_u32).or_insert_with(|| {
-                                                    println!("--- RUST: New talking user detected: {} ---", sid_u32);
-                                                    (
-                                                        SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"),
-                                                        false,
-                                                        std::time::Instant::now(),
-                                                        vec![0.0f32; Self::FRAME_SIZE]
-                                                    )
-                                                });
-                                                entry.2 = std::time::Instant::now();
-                                                if !entry.1 {
-                                                    entry.1 = true;
-                                                    println!("--- RUST: User {} started talking ---", sid_u32);
-                                                    let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, true));
-                                                }
+                                    if let VoicePacket::Audio { session_id, payload, .. } = packet {
+                                        if let VoicePacketPayload::Opus(data, last) = payload {
+                                            let sid_u32 = session_id;
+                                            let entry = decoders.entry(sid_u32).or_insert_with(|| {
+                                                println!("--- RUST: New talking user detected: {} ---", sid_u32);
+                                                (
+                                                    SafeOpusDecoder::new(Self::SAMPLE_RATE as i32, Self::CHANNELS as i32).expect("Failed to create Opus decoder"),
+                                                    false,
+                                                    std::time::Instant::now(),
+                                                    vec![0.0f32; Self::FRAME_SIZE]
+                                                )
+                                            });
+                                            entry.2 = std::time::Instant::now();
+                                            if !entry.1 {
+                                                entry.1 = true;
+                                                println!("--- RUST: User {} started talking ---", sid_u32);
+                                                let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, true));
+                                            }
 
-                                                if last {
-                                                    entry.1 = false;
-                                                    let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, false));
-                                                }
+                                            if last {
+                                                entry.1 = false;
+                                                let _ = event_sink.add(MumbleEvent::UserTalking(sid_u32, false));
+                                            }
 
-                                                if !data.is_empty() {
-                                                    match entry.0.decode(&data, Self::FRAME_SIZE, &mut entry.3[..]) {
-                                                        Ok(samples) => {
-                                                            let mut decoded_i16 = vec![0i16; samples];
-                                                            for i in 0..samples {
-                                                                decoded_i16[i] = (entry.3[i] * i16::MAX as f32)
-                                                                    .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
-                                                            }
-
-                                                            if audio.output_producer.vacant_len() >= samples {
-                                                                let _ = audio.output_producer.push_slice(&decoded_i16);
-                                                            } else {
-                                                                eprintln!("Output buffer full, dropping frame for user {}", sid_u32);
-                                                            }
+                                            if !data.is_empty() {
+                                                match entry.0.decode(&data, Self::FRAME_SIZE, &mut entry.3[..]) {
+                                                    Ok(samples) => {
+                                                        let mut decoded_i16 = vec![0i16; samples];
+                                                        for i in 0..samples {
+                                                            decoded_i16[i] = (entry.3[i] * i16::MAX as f32)
+                                                                .clamp(i16::MIN as f32, i16::MAX as f32) as i16;
                                                         }
-                                                        Err(e) => eprintln!("Opus decode error: {}", e),
+
+                                                        if audio.output_producer.vacant_len() >= samples {
+                                                            let _ = audio.output_producer.push_slice(&decoded_i16);
+                                                        } else {
+                                                            eprintln!("Output buffer full, dropping frame for user {}", sid_u32);
+                                                        }
                                                     }
+                                                    Err(e) => eprintln!("Opus decode error: {}", e),
                                                 }
                                             }
                                         }
-                                        _ => {}
                                     }
                                 }
                                 _ => {
