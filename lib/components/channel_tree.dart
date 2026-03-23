@@ -73,13 +73,11 @@ class _ChannelTreeState extends State<ChannelTree> {
   }
 
   bool _isExpanded(int channelId) {
-    if (channelId == 0) return true;
     if (_channelsWithUsers.contains(channelId)) return true;
     return _manualToggles.contains(channelId);
   }
 
   void _toggleChannel(int channelId) {
-    if (channelId == 0) return;
     setState(() {
       if (_manualToggles.contains(channelId)) {
         _manualToggles.remove(channelId);
@@ -390,6 +388,7 @@ class _ChannelTreeState extends State<ChannelTree> {
         GestureDetector(
           onDoubleTap: () => _onEnterChannel(channel),
           onTap: () => _selectChannel(channel),
+          behavior: HitTestBehavior.opaque,
           child: MouseRegion(
             onEnter: (_) => setState(() => _hoveredChannelId = channel.id),
             onExit: (_) => setState(() => _hoveredChannelId = null),

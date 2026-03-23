@@ -154,7 +154,7 @@ class MumbleService extends ChangeNotifier {
         final updatedUser = MumbleUser(
           session: user.session,
           name: user.name.isEmpty ? existing.name : user.name,
-          channelId: user.channelId == 0 ? existing.channelId : user.channelId,
+          channelId: user.channelId,
           isTalking: user.isTalking,
           isMuted: user.isMuted,
           isDeafened: user.isDeafened,
