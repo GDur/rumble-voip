@@ -15,12 +15,35 @@ Looking ahead, we plan to implement automatic updates to keep the experience sea
 
 Rumble is currently in active development.
 
-## Development Requirements
+## Build Requirements
+
+These instructions assume you are using **macOS** on Apple Silicon and have homebrew installed.
+
+### Core Requirements
+- **CMake**: Required for both Android and iOS builds.
+  ```bash
+  brew install cmake
+  ```
+- **Rust**:
+  - **Install**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  - **Update**: `rustup update`
+  - **Targets**:
+    ```bash
+    rustup target add aarch64-apple-ios            # For iOS
+    rustup target add aarch64-apple-ios-sim        # For iOS (Silicon)
+    rustup target add aarch64-apple-darwin         # For macOS (Silicon)
+    rustup target add aarch64-linux-android        # For Android (ARM64)
+    ```
 
 ### Android
-- **JDK 17** is required. The Android Gradle Plugin (AGP 8.11+) mandates JDK 17 for the build daemon. Ensure your `JAVA_HOME` or IDE settings are configured to use JDK 17.
+- **Android Studio**: `brew install android-studio`
+- **SDK & NDK**: NDK version `28.2.13676358` is required (install via Android Studio SDK Manager).
+- **Java**: JDK 21 is required (bundled with modern Android Studio).
 
-### macOS
+### iOS
+- **Xcode**: Required for building iOS and macOS applications.
+
+## macOS Permissions
 - Accessibility permissions are required for global hotkeys (standard for macOS chat apps).
 
 
@@ -54,7 +77,6 @@ To ensure reliable audio on mobile (especially iOS), Rumble uses a custom high-p
 ## Tech Stack
 - **Framework**: Flutter
 - **UI System**: shadcn_ui (Flutter implementation)
-- **Protocol**: Mumble (via dumble)
 - **State Management**: Provider
 
 ## Branding
