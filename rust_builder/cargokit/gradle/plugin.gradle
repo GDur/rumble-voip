@@ -80,6 +80,8 @@ abstract class CargoKitBuildTask extends DefaultTask {
             environment "CARGOKIT_MIN_SDK_VERSION", minSdkVersion
             environment "CARGOKIT_TARGET_PLATFORMS", targetPlatforms.join(",")
             environment "CARGOKIT_JAVA_HOME", System.properties['java.home']
+            environment "ANDROID_NDK_HOME", "${sdkDirectory}/ndk/${ndkVersion}"
+            environment "ANDROID_NDK", "${sdkDirectory}/ndk/${ndkVersion}"
         }
     }
 }
