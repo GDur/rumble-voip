@@ -38,8 +38,8 @@ impl Default for MumbleConfig {
             audio_bitrate: 72000,
             audio_frame_ms: 10,
             opus_complexity: 10,
-            jitter_buffer_ms: 10,
-            output_buffer_size: AudioBufferSize::Fixed(40),
+            jitter_buffer_ms: 40,
+            output_buffer_size: AudioBufferSize::Default,
             input_buffer_size: AudioBufferSize::Default,
         }
     }
