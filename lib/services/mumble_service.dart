@@ -117,20 +117,41 @@ class MumbleService extends ChangeNotifier {
     _selfSession = null;
     notifyListeners();
 
+    final completer = Completer<void>();
+
     try {
-      final events = await _client.connect(
+      final events = _client.connect(
         host: server.host,
         port: server.port,
         username: server.username,
         password: server.password.isEmpty ? null : server.password,
       );
       
-      _eventSubscription = events.listen(_handleEvent, onError: (e) {
+      _eventSubscription = events.listen((event) {
+        _handleEvent(event);
+        if (!completer.isCompleted) {
+          if (event is MumbleEvent_Connected) {
+            completer.complete();
+          } else if (event is MumbleEvent_Disconnected) {
+            completer.completeError(Exception(event.field0));
+          }
+        }
+      }, onError: (e) {
         _error = e.toString();
         _isConnected = false;
         notifyListeners();
+        if (!completer.isCompleted) completer.completeError(e);
       });
 
+      await completer.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          if (!completer.isCompleted) {
+            completer.completeError(Exception('Connection timed out'));
+            disconnect();
+          }
+        },
+      );
     } catch (e) {
       _error = e.toString();
       _isConnected = false;

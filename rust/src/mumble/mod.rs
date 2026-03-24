@@ -38,6 +38,8 @@ impl InternalMumbleClient {
     ) -> anyhow::Result<Self> {
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
+        let event_sink_clone = event_sink.clone();
+
         // Main loop runner
         tokio::spawn(async move {
             if let Err(e) = crate::mumble::control::run_loop(
@@ -46,6 +48,7 @@ impl InternalMumbleClient {
             .await
             {
                 eprintln!("Mumble client loop error: {}", e);
+                let _ = event_sink_clone.add(MumbleEvent::Disconnected(e.to_string()));
             }
         });
 
