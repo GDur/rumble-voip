@@ -77,6 +77,7 @@ pub async fn run_loop(
 
     let current_rms = Arc::new(AtomicU32::new(0.0f32.to_bits()));
     let global_volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+    let input_gain = Arc::new(AtomicU32::new(1.0f32.to_bits()));
     let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
     loop {
@@ -188,7 +189,7 @@ pub async fn run_loop(
 
                         let ptt_active = Arc::new(AtomicBool::new(false));
 
-                        match setup_audio(prod_in, cons_out, in_notify_tx, out_notify_tx, current_rms.clone(), &config) {
+                        match setup_audio(prod_in, cons_out, in_notify_tx, out_notify_tx, current_rms.clone(), input_gain.clone(), &config) {
                             Ok(audio_streams) => {
                                 spawn_encode_thread(
                                     cons_in,
@@ -280,6 +281,9 @@ pub async fn run_loop(
                     }
                     Some(MumbleCommand::SetOutputVolume(vol)) => {
                         global_volume.store(vol.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                    }
+                    Some(MumbleCommand::SetInputGain(gain)) => {
+                        input_gain.store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
                     }
                 }
             }

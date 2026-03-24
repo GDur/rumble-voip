@@ -20,6 +20,7 @@ pub enum MumbleCommand {
     SetPtt(bool),
     SetUserVolume(u32, f32),
     SetOutputVolume(f32),
+    SetInputGain(f32),
 }
 
 pub struct InternalMumbleClient {

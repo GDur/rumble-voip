@@ -132,6 +132,18 @@ impl RustMumbleClient {
         self.send_command(MumbleCommand::SetDeafen(deafen));
     }
 
+    pub fn set_input_gain(&self, gain: f32) {
+        self.send_command(MumbleCommand::SetInputGain(gain));
+    }
+
+    pub fn set_output_volume(&self, volume: f32) {
+        self.send_command(MumbleCommand::SetOutputVolume(volume));
+    }
+
+    pub fn set_user_volume(&self, session_id: u32, volume: f32) {
+        self.send_command(MumbleCommand::SetUserVolume(session_id, volume));
+    }
+
     fn send_command(&self, cmd: MumbleCommand) {
         let internal_arc = self.internal.clone();
         self.runtime.spawn(async move {

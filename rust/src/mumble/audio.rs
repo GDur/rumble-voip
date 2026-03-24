@@ -21,6 +21,7 @@ pub fn setup_audio(
     input_notify: Sender<()>,
     output_notify: Sender<()>,
     current_rms: Arc<AtomicU32>,
+    input_gain: Arc<AtomicU32>,
     config: &crate::mumble::types::MumbleConfig,
 ) -> anyhow::Result<AudioStreams> {
     let host = cpal::default_host();
@@ -63,13 +64,14 @@ pub fn setup_audio(
         move |data: &[f32], _| {
             let frames = data.len() / input_channels;
             let mut sum_sq = 0.0;
+            let gain = f32::from_bits(input_gain.load(Ordering::Relaxed));
 
             if frames > mono_buf_in.len() {
                 mono_buf_in.resize(frames, 0.0);
             }
 
             for i in 0..frames {
-                let sample = data[i * input_channels];
+                let sample = data[i * input_channels] * gain;
                 mono_buf_in[i] = sample;
                 sum_sq += sample * sample;
             }
