@@ -14,15 +14,25 @@ pub fn init_app() {
 }
 
 #[frb(sync)]
-pub fn init_android(
-    _vm_ptr: usize,
-    _context_ptr: usize,
+pub fn init_android(_vm_ptr: usize, _context_ptr: usize) {
+    // Deprecated: keeping signature to avoid regenerating flutter_rust_bridge
+}
+
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "C" fn Java_com_rumbledev_rumble_MainActivity_initAndroidContext(
+    env: jni::JNIEnv,
+    _class: jni::objects::JObject,
+    context: jni::objects::JObject,
 ) {
-    #[cfg(target_os = "android")]
-    {
-        use std::os::raw::c_void;
-        unsafe {
-            ndk_context::initialize_android_context(_vm_ptr as *mut c_void, _context_ptr as *mut c_void);
+    if let Ok(vm) = env.get_java_vm() {
+        if let Ok(context_global) = env.new_global_ref(context) {
+            unsafe {
+                let vm_ptr = vm.get_java_vm_pointer() as *mut std::ffi::c_void;
+                let context_ptr = context_global.as_obj().as_raw() as *mut std::ffi::c_void;
+                ndk_context::initialize_android_context(vm_ptr, context_ptr);
+                std::mem::forget(context_global);
+            }
         }
     }
 }
