@@ -1,6 +1,6 @@
 pub mod audio;
-pub mod codec;
 pub mod control;
+pub mod opus_codec;
 pub mod processing;
 pub mod resample;
 pub mod types;

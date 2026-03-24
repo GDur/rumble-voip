@@ -1,6 +1,6 @@
 use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
-use crate::mumble::codec::{SafeOpusDecoder, SafeOpusEncoder};
+use crate::mumble::opus_codec::{SafeOpusDecoder, SafeOpusEncoder};
 use crate::mumble::resample::AudioResampler;
 use crate::mumble::types::{AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer};
 use bytes::BytesMut;

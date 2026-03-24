@@ -40,9 +40,6 @@ impl Drop for SafeOpusEncoder {
     }
 }
 
-unsafe impl Send for SafeOpusEncoder {}
-unsafe impl Sync for SafeOpusEncoder {}
-
 pub struct SafeOpusDecoder(*mut OpusDecoder);
 
 impl SafeOpusDecoder {
@@ -87,6 +84,3 @@ impl Drop for SafeOpusDecoder {
         unsafe { opus_decoder_destroy(self.0) };
     }
 }
-
-unsafe impl Send for SafeOpusDecoder {}
-unsafe impl Sync for SafeOpusDecoder {}
