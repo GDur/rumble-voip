@@ -43,7 +43,7 @@ pub fn spawn_encode_thread(
                 if was_ptt {
                     was_ptt = false;
                     let _ = network_tx.try_send(AudioPacket {
-                        payload: bytes::Bytes::new(),
+                        payload: heapless::Vec::new(),
                         is_last: true,
                     });
                 }
@@ -100,7 +100,7 @@ pub fn spawn_decode_thread(
                             user.is_talking = false;
                             let _ = event_sink.add(MumbleEvent::UserTalking(sid, false));
                         } else {
-                            user.jitter_buffer.push_back(incoming.packet);
+                            user.jitter_buffer.push_back(incoming.packet).unwrap();
                         }
                     } else {
                         break;

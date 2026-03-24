@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use ringbuf::{storage::Heap, SharedRb};
 use std::sync::Arc;
 
@@ -45,9 +44,9 @@ impl Default for MumbleConfig {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AudioPacket {
-    pub payload: Bytes,
+    pub payload: heapless::Vec<u8, 512>,
     pub is_last: bool,
 }
 

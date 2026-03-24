@@ -10,8 +10,8 @@ pub struct InputPipeline {
     resampler: Option<AudioResampler>,
     apm: AudioProcessing,
     encoder: SafeOpusEncoder,
-    pcm_buffer: Vec<f32>,
-    f32_48k_buffer: Vec<f32>,
+    pcm_buffer: Box<heapless::Vec<f32, 8192>>,
+    f32_48k_buffer: Box<heapless::Vec<f32, 8192>>,
     processed_frame: Vec<f32>,
     opus_buf: Vec<u8>,
     payload_buf: BytesMut,
@@ -58,8 +58,8 @@ impl InputPipeline {
             resampler,
             apm,
             encoder,
-            pcm_buffer: Vec::with_capacity(8192),
-            f32_48k_buffer: Vec::with_capacity(8192),
+            pcm_buffer: Box::new(heapless::Vec::new()),
+            f32_48k_buffer: Box::new(heapless::Vec::new()),
             processed_frame: vec![0.0; frame_size],
             opus_buf: vec![0u8; 1024],
             payload_buf: BytesMut::with_capacity(4096),
@@ -68,7 +68,7 @@ impl InputPipeline {
     }
 
     pub fn push_pcm(&mut self, data: &[f32]) {
-        self.pcm_buffer.extend_from_slice(data);
+        self.pcm_buffer.extend_from_slice(data).unwrap();
     }
 
     pub fn process(&mut self) -> Vec<AudioPacket> {
@@ -76,7 +76,9 @@ impl InputPipeline {
             res.process(&self.pcm_buffer, &mut self.f32_48k_buffer);
             self.pcm_buffer.clear();
         } else {
-            self.f32_48k_buffer.extend_from_slice(&self.pcm_buffer);
+            self.f32_48k_buffer
+                .extend_from_slice(&self.pcm_buffer)
+                .unwrap();
             self.pcm_buffer.clear();
         }
 
@@ -93,14 +95,20 @@ impl InputPipeline {
                 self.encoder
                     .encode(&self.processed_frame, self.frame_size, &mut self.opus_buf)
             {
-                self.payload_buf.clear();
-                self.payload_buf.extend_from_slice(&self.opus_buf[..len]);
+                let mut payload = heapless::Vec::new();
+                payload
+                    .extend_from_slice(&self.opus_buf[..len.min(512)])
+                    .unwrap();
+
                 packets.push(AudioPacket {
-                    payload: self.payload_buf.split_to(len).freeze(),
+                    payload,
                     is_last: false,
                 });
             }
-            self.f32_48k_buffer.drain(..self.frame_size);
+
+            self.f32_48k_buffer.rotate_left(self.frame_size);
+            self.f32_48k_buffer
+                .truncate(self.f32_48k_buffer.len() - self.frame_size);
         }
         packets
     }

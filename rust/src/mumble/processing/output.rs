@@ -17,7 +17,7 @@ pub struct OutputMixer {
     mixed_48k: Vec<f32>,
     user_frame: Vec<f32>,
     leveled_frame: Vec<f32>,
-    final_out_buf: Vec<f32>,
+    final_out_buf: Box<heapless::Vec<f32, 8192>>,
     pub frame_size: usize,
     pub out_frame_size: usize,
     #[allow(dead_with_capacity)]
@@ -56,14 +56,14 @@ impl OutputMixer {
             .build();
 
         Self {
-            users: HashMap::new(),
+            users: HashMap::with_capacity(64),
             resampler,
             apm,
             global_volume,
             mixed_48k: vec![0.0; frame_size],
             user_frame: vec![0.0; frame_size],
             leveled_frame: vec![0.0; frame_size],
-            final_out_buf: Vec::with_capacity(8192),
+            final_out_buf: Box::new(heapless::Vec::new()),
             frame_size,
             out_frame_size,
             sample_rate,
@@ -98,7 +98,7 @@ impl OutputMixer {
 
         if active_users == 0 {
             self.final_out_buf.clear();
-            self.final_out_buf.resize(self.out_frame_size, 0.0);
+            self.final_out_buf.resize(self.out_frame_size, 0.0).unwrap();
             return &self.final_out_buf;
         }
 

@@ -56,7 +56,7 @@ impl VoiceHandler {
                 packet = network_rx.recv() => {
                     if let Some(audio_packet) = packet {
                         let is_last = audio_packet.is_last;
-                        let payload = VoicePacketPayload::Opus(audio_packet.payload, is_last);
+                        let payload = VoicePacketPayload::Opus(bytes::Bytes::copy_from_slice(&audio_packet.payload), is_last);
                         let voice_packet = VoicePacket::Audio {
                             _dst: std::marker::PhantomData,
                             target: 0,
@@ -95,10 +95,14 @@ impl VoiceHandler {
                         if let Ok(Ok(packet)) = crypt_state.decrypt(&mut data_to_decrypt) {
                             if let VoicePacket::Audio { session_id, payload, .. } = packet {
                                 if let VoicePacketPayload::Opus(data, last) = payload {
+                                    let mut p = heapless::Vec::<u8, 512>::new();
+                                    p.extend_from_slice(&data[..data.len().min(512)])
+                                        .unwrap();
+
                                     let _ = udp_tx.try_send(IncomingAudio {
                                         session_id,
                                         packet: AudioPacket {
-                                            payload: data,
+                                            payload: p,
                                             is_last: last,
                                         },
                                     });

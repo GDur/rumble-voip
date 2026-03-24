@@ -23,6 +23,7 @@ sonora-common-audio = "0.1.0"
 opus-head-sys = "0.1.0"
 mumble-protocol-2x = "0.6"
 crossbeam-channel = "0.5.15"
+heapless = "0.8.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22.4"
