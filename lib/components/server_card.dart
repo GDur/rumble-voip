@@ -220,7 +220,10 @@ class ServerCard extends StatelessWidget {
       width: width,
       child: ShadButton(
         size: size ?? ShadButtonSize.regular,
-        onPressed: isConnecting ? null : () => onConnect(server),
+        onPressed: isConnecting ? null : () {
+          debugPrint('[DEBUG] ServerCard: Connect button pressed for ${server.name}');
+          onConnect(server);
+        },
         child: Stack(
           alignment: Alignment.center,
           children: [

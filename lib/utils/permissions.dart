@@ -20,13 +20,16 @@ class PermissionUtils {
       if (result) _manuallyGranted = true;
       return result;
     } else {
+      debugPrint('[PermissionUtils] Requesting mic permission on Android/iOS...');
       final status = await ph.Permission.microphone.status;
+      debugPrint('[PermissionUtils] Current status: $status');
       if (status.isGranted) {
         _manuallyGranted = true;
         return true;
       }
 
       final result = await ph.Permission.microphone.request();
+      debugPrint('[PermissionUtils] Request result: $result');
       if (result.isGranted) _manuallyGranted = true;
       return result.isGranted;
     }

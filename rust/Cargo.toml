@@ -23,6 +23,8 @@ sonora-common-audio = "0.1.0"
 opus-head-sys = "0.1.0"
 mumble-protocol-2x = "0.6"
 crossbeam-channel = "0.5.15"
+ndk-context = "0.1"
+jni = "0.21"
 
 [profile.dev]
 opt-level = 3

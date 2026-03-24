@@ -24,6 +24,12 @@ pub fn setup_audio(
     input_gain: Arc<AtomicU32>,
     config: &crate::mumble::types::MumbleConfig,
 ) -> anyhow::Result<AudioStreams> {
+    #[cfg(target_os = "android")]
+    {
+        if ndk_context::android_context().vm().is_null() {
+            return Err(anyhow::anyhow!("Android context not initialized. Audio is not available yet."));
+        }
+    }
     let host = cpal::default_host();
 
     let input_device = host
@@ -133,6 +139,12 @@ pub fn setup_audio(
 }
 
 pub fn list_input_devices() -> Vec<String> {
+    #[cfg(target_os = "android")]
+    {
+        if ndk_context::android_context().vm().is_null() {
+            return vec!["Default Android Input".to_string()];
+        }
+    }
     let host = cpal::default_host();
     host.input_devices()
         .map(|devices| {
@@ -144,6 +156,12 @@ pub fn list_input_devices() -> Vec<String> {
 }
 
 pub fn list_output_devices() -> Vec<String> {
+    #[cfg(target_os = "android")]
+    {
+        if ndk_context::android_context().vm().is_null() {
+            return vec!["Default Android Output".to_string()];
+        }
+    }
     let host = cpal::default_host();
     host.output_devices()
         .map(|devices| {

@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:rumble/utils/permissions.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
@@ -172,12 +174,22 @@ class _WindowResizeListenerState extends State<_WindowResizeListener>
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this);
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      windowManager.addListener(this);
+    }
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this);
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      windowManager.removeListener(this);
+    }
     super.dispose();
   }
 
@@ -354,18 +366,42 @@ class _HomeScreenState extends State<HomeScreen> {
     MumbleService service,
     MumbleServer server,
   ) async {
+    debugPrint('[DEBUG] _connectToServer to: ${server.name} @ ${server.host}:${server.port}');
     if (mounted) setState(() => _connectingServerId = server.id);
     try {
+      // Request microphone permission on mobile platforms
+      debugPrint('[DEBUG] Platform check: isAndroid=${Platform.isAndroid}, isIOS=${Platform.isIOS}');
+      if (Platform.isAndroid || Platform.isIOS) {
+        debugPrint('[DEBUG] Requesting microphone permission...');
+        final hasPermission = await PermissionUtils.requestMicrophonePermission();
+        debugPrint('[DEBUG] Microphone permission result: $hasPermission');
+        if (!hasPermission) {
+          if (mounted) {
+            ShadToaster.of(context).show(
+              const ShadToast.destructive(
+                title: Text('Permission Denied'),
+                description: Text('Microphone access is required to connect to a server.'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      if (!mounted) return;
       final certService = Provider.of<CertificateService>(
         context,
         listen: false,
       );
+      debugPrint('[DEBUG] Accessed CertificateService');
       final defaultCertId = certService.defaultCertificateId;
       final certificate = defaultCertId != null
           ? certService.getCertificateById(defaultCertId)
           : null;
+      debugPrint('[DEBUG] Certificate resolved: $certificate');
 
       await service.connect(server, certificate: certificate);
+      debugPrint('[DEBUG] Connecting service done');
 
       if (mounted) {
         final settings = Provider.of<SettingsService>(context, listen: false);

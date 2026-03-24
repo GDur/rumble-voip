@@ -13,6 +13,20 @@ pub fn init_app() {
     println!("--- RUST: initialised ---");
 }
 
+#[frb(sync)]
+pub fn init_android(
+    _vm_ptr: usize,
+    _context_ptr: usize,
+) {
+    #[cfg(target_os = "android")]
+    {
+        use std::os::raw::c_void;
+        unsafe {
+            ndk_context::initialize_android_context(_vm_ptr as *mut c_void, _context_ptr as *mut c_void);
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum MumbleEvent {
     Connected(u32),

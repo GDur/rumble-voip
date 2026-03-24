@@ -23,6 +23,7 @@ These instructions assume you are using **macOS** on Apple Silicon and have home
 - **CMake**: Required for both Android and iOS builds.
   ```bash
   brew install cmake
+  brew install protobuf
   ```
 - **Rust**:
   - **Install**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
