@@ -37,9 +37,15 @@ abstract class RustMumbleClient implements RustOpaqueInterface {
 
   Future<void> setDeafen({required bool deafen});
 
+  Future<void> setInputGain({required double gain});
+
   Future<void> setMute({required bool mute});
 
+  Future<void> setOutputVolume({required double volume});
+
   Future<void> setPtt({required bool active});
+
+  Future<void> setUserVolume({required int sessionId, required double volume});
 }
 
 class MumbleChannel {

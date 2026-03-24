@@ -1,6 +1,6 @@
 pub mod audio;
-pub mod codec;
 pub mod control;
+pub mod opus_codec;
 pub mod processing;
 pub mod resample;
 pub mod types;
@@ -18,6 +18,9 @@ pub enum MumbleCommand {
     SetMute(bool),
     SetDeafen(bool),
     SetPtt(bool),
+    SetUserVolume(u32, f32),
+    SetOutputVolume(f32),
+    SetInputGain(f32),
 }
 
 pub struct InternalMumbleClient {

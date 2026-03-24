@@ -96,7 +96,12 @@ class MumbleService extends ChangeNotifier {
     double? inputGain,
     double? outputVolume,
   }) async {
-    // Rust-based plugin handles these internally or via future API calls
+    if (inputGain != null) {
+      await _client.setInputGain(gain: inputGain);
+    }
+    if (outputVolume != null) {
+      await _client.setOutputVolume(volume: outputVolume);
+    }
     notifyListeners();
   }
 
@@ -139,6 +144,12 @@ class MumbleService extends ChangeNotifier {
       _isConnected = true;
       _selfSession = event.field0;
       _addSystemMessage('Connected.');
+
+      // Apply audio settings upon connection
+      if (_settings != null) {
+        _client.setInputGain(gain: _settings!.inputGain);
+        _client.setOutputVolume(volume: _settings!.outputVolume);
+      }
     } else if (event is MumbleEvent_Disconnected) {
       _isConnected = false;
       _error = event.field0;
@@ -150,7 +161,24 @@ class MumbleService extends ChangeNotifier {
     } else if (event is MumbleEvent_UserUpdate) {
       final user = event.field0;
       final existing = _users[user.session];
+
+      // If it's a new user with a name, apply their saved volume
+      if (existing == null && user.name.isNotEmpty) {
+        final savedVolume = getUserVolume(user);
+        if (savedVolume != 1.0) {
+          _client.setUserVolume(sessionId: user.session, volume: savedVolume);
+        }
+      }
+
       if (existing != null) {
+        // If the name was previously empty and now we have it, apply saved volume
+        if (existing.name.isEmpty && user.name.isNotEmpty) {
+          final savedVolume = _settings?.getUserVolume(user.name) ?? 1.0;
+          if (savedVolume != 1.0) {
+            _client.setUserVolume(sessionId: user.session, volume: savedVolume);
+          }
+        }
+
         final updatedUser = MumbleUser(
           session: user.session,
           name: user.name.isEmpty ? existing.name : user.name,
@@ -280,7 +308,7 @@ class MumbleService extends ChangeNotifier {
   Future<void> setUserVolume(MumbleUser user, double volume) async {
     if (_settings != null) {
       await _settings!.setUserVolume(user.name, volume);
-      // Rust plugin doesn't support per-user volume in API yet, but we store it in settings
+      await _client.setUserVolume(sessionId: user.session, volume: volume);
       notifyListeners();
     }
   }

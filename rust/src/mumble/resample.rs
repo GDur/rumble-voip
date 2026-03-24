@@ -1,57 +1,39 @@
-use audioadapter_buffers::direct::InterleavedSlice;
-use rubato::{Fft, FixedSync, Resampler};
+use sonora_common_audio::push_sinc_resampler::PushSincResampler;
 
 pub struct AudioResampler {
-    resampler: Fft<f32>,
+    resampler: PushSincResampler,
     in_buffer: Vec<f32>,
     out_buffer: Vec<f32>,
+    input_samples: usize,
 }
 
 impl AudioResampler {
     pub fn new(in_rate: u32, out_rate: u32, frame_ms: u32) -> anyhow::Result<Self> {
-        // We use FixedSync::Input with a chunk size representing exactly the frame_ms of audio.
-        let chunk_size = (in_rate as f32 * (frame_ms as f32 / 1000.0)).ceil() as usize;
+        let input_samples = (in_rate as f32 * (frame_ms as f32 / 1000.0)).ceil() as usize;
+        let output_samples = (out_rate as f32 * (frame_ms as f32 / 1000.0)).ceil() as usize;
 
-        let resampler = Fft::<f32>::new(
-            in_rate as usize,
-            out_rate as usize,
-            chunk_size,
-            1, // sub_chunks
-            1, // nbr_channels
-            FixedSync::Input,
-        )
-        .map_err(|e| anyhow::anyhow!("Resampler error: {}", e))?;
+        let resampler = PushSincResampler::new(input_samples, output_samples);
 
         Ok(Self {
             resampler,
             in_buffer: Vec::with_capacity(8192),
-            out_buffer: vec![0.0; 8192],
+            out_buffer: vec![0.0; output_samples],
+            input_samples,
         })
     }
 
     pub fn process(&mut self, data: &[f32], accumulator: &mut Vec<f32>) {
+        // The in_buffer is required for frame alignment. Input data may arrive in
+        // chunks that don't match the resampler's expected frame size (input_samples).
+        // We accumulate data until we have at least one full frame, then process and
+        // drain it, keeping any leftovers for the next call.
         self.in_buffer.extend_from_slice(data);
 
-        while self.in_buffer.len() >= self.resampler.input_frames_next() {
-            let next = self.resampler.input_frames_next();
-            let input_adapter = InterleavedSlice::new(&self.in_buffer[..next], 1, next).unwrap();
-
-            let max_out = self.resampler.output_frames_max();
-            if self.out_buffer.len() < max_out {
-                self.out_buffer.resize(max_out, 0.0);
-            }
-
-            let mut output_adapter =
-                InterleavedSlice::new_mut(&mut self.out_buffer, 1, max_out).unwrap();
-
-            if let Ok((_, out_len)) =
-                self.resampler
-                    .process_into_buffer(&input_adapter, &mut output_adapter, None)
-            {
-                accumulator.extend_from_slice(&self.out_buffer[..out_len]);
-            }
-
-            self.in_buffer.drain(..next);
+        while self.in_buffer.len() >= self.input_samples {
+            self.resampler
+                .resample(&self.in_buffer[..self.input_samples], &mut self.out_buffer);
+            accumulator.extend_from_slice(&self.out_buffer);
+            self.in_buffer.drain(..self.input_samples);
         }
     }
 }

@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1154604481;
+  int get rustContentHash => 688507968;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -106,14 +106,30 @@ abstract class RustLibApi extends BaseApi {
     required bool deafen,
   });
 
+  Future<void> crateApiClientRustMumbleClientSetInputGain({
+    required RustMumbleClient that,
+    required double gain,
+  });
+
   Future<void> crateApiClientRustMumbleClientSetMute({
     required RustMumbleClient that,
     required bool mute,
   });
 
+  Future<void> crateApiClientRustMumbleClientSetOutputVolume({
+    required RustMumbleClient that,
+    required double volume,
+  });
+
   Future<void> crateApiClientRustMumbleClientSetPtt({
     required RustMumbleClient that,
     required bool active,
+  });
+
+  Future<void> crateApiClientRustMumbleClientSetUserVolume({
+    required RustMumbleClient that,
+    required int sessionId,
+    required double volume,
   });
 
   Future<void> crateApiClientInitApp();
@@ -358,6 +374,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiClientRustMumbleClientSetInputGain({
+    required RustMumbleClient that,
+    required double gain,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_f_32(gain, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetInputGainConstMeta,
+        argValues: [that, gain],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetInputGainConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_input_gain",
+        argNames: ["that", "gain"],
+      );
+
+  @override
   Future<void> crateApiClientRustMumbleClientSetMute({
     required RustMumbleClient that,
     required bool mute,
@@ -374,7 +428,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -396,6 +450,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiClientRustMumbleClientSetOutputVolume({
+    required RustMumbleClient that,
+    required double volume,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_f_32(volume, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetOutputVolumeConstMeta,
+        argValues: [that, volume],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetOutputVolumeConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_output_volume",
+        argNames: ["that", "volume"],
+      );
+
+  @override
   Future<void> crateApiClientRustMumbleClientSetPtt({
     required RustMumbleClient that,
     required bool active,
@@ -412,7 +504,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 10,
             port: port_,
           );
         },
@@ -434,6 +526,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiClientRustMumbleClientSetUserVolume({
+    required RustMumbleClient that,
+    required int sessionId,
+    required double volume,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_u_32(sessionId, serializer);
+          sse_encode_f_32(volume, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetUserVolumeConstMeta,
+        argValues: [that, sessionId, volume],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetUserVolumeConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_user_volume",
+        argNames: ["that", "sessionId", "volume"],
+      );
+
+  @override
   Future<void> crateApiClientInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -442,7 +574,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 12,
             port: port_,
           );
         },
@@ -469,7 +601,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 13,
             port: port_,
           );
         },
@@ -496,7 +628,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 14,
             port: port_,
           );
         },
@@ -1320,9 +1452,27 @@ class RustMumbleClientImpl extends RustOpaque implements RustMumbleClient {
   Future<void> setDeafen({required bool deafen}) => RustLib.instance.api
       .crateApiClientRustMumbleClientSetDeafen(that: this, deafen: deafen);
 
+  Future<void> setInputGain({required double gain}) => RustLib.instance.api
+      .crateApiClientRustMumbleClientSetInputGain(that: this, gain: gain);
+
   Future<void> setMute({required bool mute}) => RustLib.instance.api
       .crateApiClientRustMumbleClientSetMute(that: this, mute: mute);
 
+  Future<void> setOutputVolume({required double volume}) =>
+      RustLib.instance.api.crateApiClientRustMumbleClientSetOutputVolume(
+        that: this,
+        volume: volume,
+      );
+
   Future<void> setPtt({required bool active}) => RustLib.instance.api
       .crateApiClientRustMumbleClientSetPtt(that: this, active: active);
+
+  Future<void> setUserVolume({
+    required int sessionId,
+    required double volume,
+  }) => RustLib.instance.api.crateApiClientRustMumbleClientSetUserVolume(
+    that: this,
+    sessionId: sessionId,
+    volume: volume,
+  );
 }
