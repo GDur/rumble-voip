@@ -76,6 +76,8 @@ pub async fn run_loop(
     let mut volume_interval = tokio::time::interval(std::time::Duration::from_millis(200));
 
     let current_rms = Arc::new(AtomicU32::new(0.0f32.to_bits()));
+    let global_volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
+    let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
     loop {
         tokio::select! {
@@ -204,6 +206,8 @@ pub async fn run_loop(
                                     event_sink_clone.clone(),
                                     audio_streams.output_rate,
                                     config.clone(),
+                                    global_volume.clone(),
+                                    vol_cmd_rx.clone(),
                                 );
 
                                 _active_audio = Some(audio_streams);
@@ -270,6 +274,12 @@ pub async fn run_loop(
                         if let Some(v_tx) = &voice_cmd_tx {
                             let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
                         }
+                    }
+                    Some(MumbleCommand::SetUserVolume(sid, vol)) => {
+                        let _ = vol_cmd_tx.send((sid, vol));
+                    }
+                    Some(MumbleCommand::SetOutputVolume(vol)) => {
+                        global_volume.store(vol.to_bits(), std::sync::atomic::Ordering::Relaxed);
                     }
                 }
             }

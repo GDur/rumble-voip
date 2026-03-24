@@ -18,6 +18,8 @@ pub enum MumbleCommand {
     SetMute(bool),
     SetDeafen(bool),
     SetPtt(bool),
+    SetUserVolume(u32, f32),
+    SetOutputVolume(f32),
 }
 
 pub struct InternalMumbleClient {
