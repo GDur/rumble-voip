@@ -7,7 +7,9 @@ use crate::frb_generated::StreamSink;
 use crate::mumble::processing::input::InputPipeline;
 use crate::mumble::processing::output::OutputMixer;
 use crate::mumble::processing::user::RemoteUser;
-use crate::mumble::types::{AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer, MUMBLE_SAMPLE_RATE};
+use crate::mumble::types::{
+    AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer, MUMBLE_SAMPLE_RATE,
+};
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -69,7 +71,8 @@ pub fn spawn_decode_thread(
 ) {
     std::thread::spawn(move || {
         let mut mixer = OutputMixer::new(output_rate, &config, global_volume);
-        let target_latency_frames = (output_rate as f32 * (config.jitter_buffer_ms as f32 / 1000.0)) as usize;
+        let target_latency_frames =
+            (output_rate as f32 * (config.jitter_buffer_ms as f32 / 1000.0)) as usize;
 
         loop {
             select! {

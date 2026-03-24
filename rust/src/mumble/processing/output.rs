@@ -3,8 +3,8 @@ use crate::frb_generated::StreamSink;
 use crate::mumble::processing::user::RemoteUser;
 use crate::mumble::resample::AudioResampler;
 use crate::mumble::types::{MumbleConfig, MUMBLE_SAMPLE_RATE};
-use sonora::{AudioProcessing, Config, StreamConfig};
 use sonora::config::GainController2;
+use sonora::{AudioProcessing, Config, StreamConfig};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -88,13 +88,11 @@ impl OutputMixer {
         let master_gain = f32::from_bits(self.global_volume.load(Ordering::Relaxed));
 
         for user in self.users.values_mut() {
-            if user.is_talking || !user.jitter_buffer.is_empty() {
-                if user.decode_frame(self.frame_size, &mut self.user_frame) {
-                    for i in 0..self.frame_size {
-                        self.mixed_48k[i] += self.user_frame[i] * master_gain;
-                    }
-                    active_users += 1;
+            if user.has_audio() && user.decode_frame(self.frame_size, &mut self.user_frame) {
+                for i in 0..self.frame_size {
+                    self.mixed_48k[i] += self.user_frame[i] * master_gain;
                 }
+                active_users += 1;
             }
         }
 
@@ -105,10 +103,13 @@ impl OutputMixer {
         }
 
         // Master processing with Sonora
-        self.apm.process_render_f32(&[&self.mixed_48k], &mut [&mut self.leveled_frame]).unwrap();
+        self.apm
+            .process_render_f32(&[&self.mixed_48k], &mut [&mut self.leveled_frame])
+            .unwrap();
 
-        if let Some(res) = &mut self.resampler {
-            res.process(&self.leveled_frame, &mut self.final_out_buf);
+        if let Some(resampler) = &mut self.resampler {
+            self.final_out_buf.clear();
+            resampler.process(&self.leveled_frame, &mut self.final_out_buf);
             &self.final_out_buf
         } else {
             &self.leveled_frame

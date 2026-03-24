@@ -41,7 +41,7 @@ impl InternalMumbleClient {
         let event_sink_clone = event_sink.clone();
 
         // TODO: maybe refactor this to initialize the connection in this method and only start the task afterwards.
-        
+
         // Main loop runner
         tokio::spawn(async move {
             if let Err(e) = crate::mumble::control::run_loop(

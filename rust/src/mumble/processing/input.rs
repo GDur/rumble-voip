@@ -3,8 +3,8 @@ use crate::mumble::resample::AudioResampler;
 use crate::mumble::types::{AudioPacket, MumbleConfig, MUMBLE_SAMPLE_RATE};
 use bytes::BytesMut;
 use opus_head_sys::*;
+use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};
-use sonora::config::{GainController2, NoiseSuppression, HighPassFilter};
 
 pub struct InputPipeline {
     resampler: Option<AudioResampler>,
@@ -24,12 +24,16 @@ impl InputPipeline {
         let frame_ms = config.audio_frame_ms;
         let frame_size = (sample_rate * frame_ms / 1000) as usize;
 
-        let encoder = SafeOpusEncoder::new(sample_rate as i32, 1, OPUS_APPLICATION_VOIP as i32).unwrap();
+        let encoder =
+            SafeOpusEncoder::new(sample_rate as i32, 1, OPUS_APPLICATION_VOIP as i32).unwrap();
         encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
         encoder.ctl(OPUS_SET_BITRATE_REQUEST as i32, config.audio_bitrate as i32);
-        encoder.ctl(OPUS_SET_COMPLEXITY_REQUEST as i32, config.opus_complexity as i32);
+        encoder.ctl(
+            OPUS_SET_COMPLEXITY_REQUEST as i32,
+            config.opus_complexity as i32,
+        );
 
         let resampler = if input_rate != sample_rate {
             Some(AudioResampler::new(input_rate, sample_rate, config.audio_frame_ms).unwrap())
@@ -79,11 +83,16 @@ impl InputPipeline {
         let mut packets = Vec::new();
         while self.f32_48k_buffer.len() >= self.frame_size {
             let frame = &self.f32_48k_buffer[..self.frame_size];
-            
-            // Sonora APM processing
-            self.apm.process_capture_f32(&[frame], &mut [&mut self.processed_frame]).unwrap();
 
-            if let Ok(len) = self.encoder.encode(&self.processed_frame, self.frame_size, &mut self.opus_buf) {
+            // Sonora APM processing
+            self.apm
+                .process_capture_f32(&[frame], &mut [&mut self.processed_frame])
+                .unwrap();
+
+            if let Ok(len) =
+                self.encoder
+                    .encode(&self.processed_frame, self.frame_size, &mut self.opus_buf)
+            {
                 self.payload_buf.clear();
                 self.payload_buf.extend_from_slice(&self.opus_buf[..len]);
                 packets.push(AudioPacket {

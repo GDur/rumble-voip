@@ -1,6 +1,6 @@
 pub mod api;
-pub mod mumble;
 mod frb_generated;
+pub mod mumble;
 
 #[cfg(target_os = "android")]
 mod init_android_context {
@@ -26,7 +26,7 @@ mod init_android_context {
             unsafe {
                 ndk_context::initialize_android_context(vm_ptr, global_ref.as_obj().as_raw() as _);
             }
-            
+
             CTX.get_or_init(|| global_ref);
             Ok::<(), jni::errors::Error>(())
         });
