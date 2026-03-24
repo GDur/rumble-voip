@@ -38,12 +38,10 @@ pub async fn run_loop(
     let ssl = connector.configure()?.into_ssl(&host)?;
     let mut tls_stream = SslStream::new(ssl, tcp_stream)?;
 
-    println!("Starting TLS connect to {}", host);
     Pin::new(&mut tls_stream)
         .connect()
         .await
         .map_err(|e| anyhow::anyhow!("TLS connection failed: {}", e))?;
-    println!("TLS connect to {} complete", host);
 
     let mut framed = Framed::new(tls_stream, ControlCodec::<Serverbound, Clientbound>::new());
 
@@ -66,7 +64,6 @@ pub async fn run_loop(
     framed
         .send(ControlPacket::Authenticate(Box::new(auth)))
         .await?;
-    println!("Auth packet sent");
 
     let mut channels: HashMap<u32, MumbleChannel> = HashMap::new();
     let mut users: HashMap<u32, MumbleUser> = HashMap::new();
@@ -101,7 +98,6 @@ pub async fn run_loop(
             packet = framed.next() => {
                 match packet {
                     Some(Ok(ControlPacket::ServerSync(ss))) => {
-                        println!("Received ServerSync");
                         session_id = ss.session();
                         let _ = event_sink.add(MumbleEvent::Connected(session_id));
                     }
