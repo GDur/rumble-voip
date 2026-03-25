@@ -1,15 +1,16 @@
-use crate::api::client::MumbleEvent;
-use crate::frb_generated::StreamSink;
 use crate::mumble::types::{AudioPacket, IncomingAudio};
-use crate::mumble::MumbleCommand;
 use bytes::BytesMut;
 use crossbeam_channel::Sender as CrossSender;
 use mumble_protocol_2x::crypt::CryptState;
 use mumble_protocol_2x::voice::{Clientbound, Serverbound, VoicePacket, VoicePacketPayload};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc;
+
+pub enum VoiceCommand {
+    UpdateCryptState([u8; 16], [u8; 16], [u8; 16]),
+    Disconnect,
+}
 
 pub struct VoiceHandler;
 
@@ -17,11 +18,9 @@ impl VoiceHandler {
     pub async fn run(
         server_addr_str: String,
         mut crypt_state: CryptState<Serverbound, Clientbound>,
-        mut cmd_rx: mpsc::Receiver<MumbleCommand>,
+        mut cmd_rx: mpsc::Receiver<VoiceCommand>,
         mut network_rx: mpsc::Receiver<AudioPacket>,
         udp_tx: CrossSender<IncomingAudio>,
-        _event_sink: StreamSink<MumbleEvent>,
-        ptt_active: Arc<AtomicBool>,
     ) -> anyhow::Result<()> {
         let mut addrs = tokio::net::lookup_host(&server_addr_str).await?;
         let server_addr = addrs
@@ -44,11 +43,10 @@ impl VoiceHandler {
             tokio::select! {
                 cmd = cmd_rx.recv() => {
                     match cmd {
-                        Some(MumbleCommand::SetPtt(active)) => {
-                            ptt_active.store(active, Ordering::Relaxed);
+                        Some(VoiceCommand::UpdateCryptState(key, enc, dec)) => {
+                            crypt_state = CryptState::new_from(key, enc, dec);
                         }
-                        Some(MumbleCommand::Disconnect) | None => break,
-                        _ => {}
+                        Some(VoiceCommand::Disconnect) | None => break,
                     }
                 }
 

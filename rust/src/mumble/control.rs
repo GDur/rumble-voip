@@ -24,8 +24,10 @@ struct MumbleSession {
     users: HashMap<u32, MumbleUser>,
     session_id: u32,
     my_channel_id: u32,
-    voice_cmd_tx: Option<mpsc::Sender<MumbleCommand>>,
+    voice_cmd_tx: Option<mpsc::Sender<crate::mumble::voice::VoiceCommand>>,
     _active_audio: Option<AudioStreams>,
+    network_tx: Option<tokio::sync::mpsc::Sender<crate::mumble::types::AudioPacket>>,
+    udp_rx: Option<crossbeam_channel::Receiver<crate::mumble::types::IncomingAudio>>,
     event_sink: StreamSink<MumbleEvent>,
     config: MumbleConfig,
     current_rms: Arc<AtomicU32>,
@@ -55,6 +57,8 @@ impl MumbleSession {
             my_channel_id: 0,
             voice_cmd_tx: None,
             _active_audio: None,
+            network_tx: None,
+            udp_rx: None,
             event_sink,
             config,
             current_rms: Arc::new(AtomicU32::new(0.0f32.to_bits())),
@@ -70,21 +74,17 @@ impl MumbleSession {
     }
 
     fn init_audio_pipeline(&mut self) {
-        let (key, encrypt_nonce, decrypt_nonce) = match &self.crypt_setup {
-            Some(cs) => *cs,
+        self._active_audio = None;
+
+        let network_tx = match self.network_tx.as_ref() {
+            Some(tx) => tx.clone(),
+            None => return,
+        };
+        let udp_rx = match self.udp_rx.as_ref() {
+            Some(rx) => rx.clone(),
             None => return,
         };
 
-        if let Some(v_tx) = self.voice_cmd_tx.take() {
-            let _ = v_tx.try_send(MumbleCommand::Disconnect);
-        }
-        self._active_audio = None;
-
-        let crypt_state =
-            mumble_protocol_2x::crypt::CryptState::new_from(key, encrypt_nonce, decrypt_nonce);
-
-        let (v_tx, v_rx) = mpsc::channel(32);
-        self.voice_cmd_tx = Some(v_tx);
         let event_sink_clone = self.event_sink.clone();
 
         use ringbuf::traits::Split;
@@ -97,8 +97,6 @@ impl MumbleSession {
 
         let (in_notify_tx, in_notify_rx) = crossbeam_channel::bounded(10);
         let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(10);
-        let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
-        let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
 
         match setup_audio(
             prod_in,
@@ -123,7 +121,7 @@ impl MumbleSession {
                     prod_out,
                     out_notify_rx,
                     udp_rx,
-                    event_sink_clone.clone(),
+                    event_sink_clone,
                     audio_streams.output_rate(),
                     self.config.clone(),
                     self.global_volume.clone(),
@@ -131,26 +129,6 @@ impl MumbleSession {
                 );
 
                 self._active_audio = Some(audio_streams);
-
-                let host_clone = self.host.clone();
-                let port_clone = self.port;
-                let ptt_active = self.ptt_active.clone();
-
-                tokio::spawn(async move {
-                    if let Err(e) = crate::mumble::voice::VoiceHandler::run(
-                        format!("{}:{}", host_clone, port_clone),
-                        crypt_state,
-                        v_rx,
-                        network_rx,
-                        udp_tx,
-                        event_sink_clone,
-                        ptt_active,
-                    )
-                    .await
-                    {
-                        eprintln!("Voice handler error: {}", e);
-                    }
-                });
             }
             Err(e) => {
                 eprintln!("Failed to setup audio: {}", e);
@@ -250,7 +228,52 @@ impl MumbleSession {
                 }
 
                 self.crypt_setup = Some((key, encrypt_nonce, decrypt_nonce));
-                self.init_audio_pipeline();
+
+                if self.network_tx.is_none() {
+                    let (v_tx, v_rx) = mpsc::channel(32);
+                    self.voice_cmd_tx = Some(v_tx);
+
+                    let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
+                    let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
+
+                    self.network_tx = Some(network_tx);
+                    self.udp_rx = Some(udp_rx);
+
+                    let host_clone = self.host.clone();
+                    let port_clone = self.port;
+                    let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(
+                        key,
+                        encrypt_nonce,
+                        decrypt_nonce,
+                    );
+
+                    tokio::spawn(async move {
+                        if let Err(e) = crate::mumble::voice::VoiceHandler::run(
+                            format!("{}:{}", host_clone, port_clone),
+                            crypt_state,
+                            v_rx,
+                            network_rx,
+                            udp_tx,
+                        )
+                        .await
+                        {
+                            eprintln!("Voice handler error: {}", e);
+                        }
+                    });
+                } else {
+                    if let Some(v_tx) = &self.voice_cmd_tx {
+                        let _ =
+                            v_tx.try_send(crate::mumble::voice::VoiceCommand::UpdateCryptState(
+                                key,
+                                encrypt_nonce,
+                                decrypt_nonce,
+                            ));
+                    }
+                }
+
+                if self._active_audio.is_none() {
+                    self.init_audio_pipeline();
+                }
             }
             _ => {}
         }
@@ -287,9 +310,8 @@ impl MumbleSession {
                 let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
             }
             MumbleCommand::SetPtt(active) => {
-                if let Some(v_tx) = &self.voice_cmd_tx {
-                    let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
-                }
+                self.ptt_active
+                    .store(active, std::sync::atomic::Ordering::Relaxed);
             }
             MumbleCommand::SetUserVolume(sid, vol) => {
                 let _ = self.vol_cmd_tx.send((sid, vol));
