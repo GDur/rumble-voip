@@ -13,9 +13,9 @@ pub enum VoiceCommand {
 }
 
 /// Handles the UDP voice channel for the Mumble network protocol.
-pub struct VoiceNetworkHandler;
+pub struct VoiceChannel;
 
-impl VoiceNetworkHandler {
+impl VoiceChannel {
     pub async fn run(
         server_addr_str: String,
         mut crypt_state: CryptState<Serverbound, Clientbound>,

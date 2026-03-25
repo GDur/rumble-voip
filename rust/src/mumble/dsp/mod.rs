@@ -1,12 +1,13 @@
-pub mod input;
-pub mod output;
-pub mod user;
+pub mod capture;
+pub mod playback;
+pub mod resample;
+pub mod user_stream;
 
-use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
-use crate::mumble::processing::input::InputPipeline;
-use crate::mumble::processing::output::OutputMixer;
+use crate::mumble::dsp::playback::PlaybackMixer;
+use crate::mumble::dsp::capture::CapturePipeline;
 use crate::mumble::types::{AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer};
+use crate::mumble::MumbleEvent;
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -21,7 +22,7 @@ pub fn spawn_encode_thread(
     config: MumbleConfig,
 ) {
     std::thread::spawn(move || {
-        let mut pipeline = InputPipeline::new(input_rate, &config);
+        let mut pipeline = CapturePipeline::new(input_rate, &config);
         let mut was_ptt = false;
 
         loop {
@@ -64,7 +65,7 @@ pub fn spawn_decode_thread(
     vol_cmd_rx: Receiver<(u32, f32)>, // (session_id, volume)
 ) {
     std::thread::spawn(move || {
-        let mut mixer = OutputMixer::new(output_rate, &config, global_volume);
+        let mut mixer = PlaybackMixer::new(output_rate, &config, global_volume);
         let target_latency_frames =
             (output_rate as f32 * (config.jitter_buffer_ms as f32 / 1000.0)) as usize;
 

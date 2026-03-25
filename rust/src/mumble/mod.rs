@@ -1,11 +1,10 @@
-pub mod audio;
+pub mod codec;
+pub mod dsp;
+pub mod hardware;
 pub mod net;
-pub mod opus_codec;
-pub mod processing;
-pub mod resample;
 pub mod types;
 
-use crate::api::client::MumbleEvent;
+pub use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
 use crate::mumble::types::MumbleConfig;
 use tokio::sync::mpsc;
@@ -23,11 +22,11 @@ pub enum MumbleCommand {
     UpdateConfig(MumbleConfig),
 }
 
-pub struct InternalMumbleClient {
+pub struct MumbleClient {
     pub cmd_tx: mpsc::Sender<MumbleCommand>,
 }
 
-impl InternalMumbleClient {
+impl MumbleClient {
     pub async fn start(
         host: String,
         port: u16,
@@ -41,7 +40,7 @@ impl InternalMumbleClient {
         let event_sink_clone = event_sink.clone();
 
         // Perform connection and handshake in the current task so we can return errors
-        let framed = match crate::mumble::net::tcp::connect(&host, port, username, password).await {
+        let framed = match crate::mumble::net::control::connect(&host, port, username, password).await {
             Ok(f) => f,
             Err(e) => {
                 let err_msg = format!("Failed to connect to mumble server: {}", e);
@@ -52,7 +51,7 @@ impl InternalMumbleClient {
         // Main loop runner
         tokio::spawn(async move {
             if let Err(e) =
-                crate::mumble::net::tcp::run_loop(framed, host, port, cmd_rx, event_sink, config)
+                crate::mumble::net::control::run_loop(framed, host, port, cmd_rx, event_sink, config)
                     .await
             {
                 eprintln!("Mumble client loop error: {}", e);

@@ -1,9 +1,9 @@
 use opus_head_sys::*;
 use std::ptr;
 
-pub struct SafeOpusEncoder(*mut OpusEncoder);
+pub struct OpusEncoder(pub *mut opus_head_sys::OpusEncoder);
 
-impl SafeOpusEncoder {
+impl OpusEncoder {
     pub fn new(sample_rate: i32, channels: i32, application: i32) -> anyhow::Result<Self> {
         let mut err = 0;
         let ptr = unsafe { opus_encoder_create(sample_rate, channels, application, &mut err) };
@@ -34,15 +34,15 @@ impl SafeOpusEncoder {
     }
 }
 
-impl Drop for SafeOpusEncoder {
+impl Drop for OpusEncoder {
     fn drop(&mut self) {
         unsafe { opus_encoder_destroy(self.0) };
     }
 }
 
-pub struct SafeOpusDecoder(*mut OpusDecoder);
+pub struct OpusDecoder(pub *mut opus_head_sys::OpusDecoder);
 
-impl SafeOpusDecoder {
+impl OpusDecoder {
     pub fn new(sample_rate: i32, channels: i32) -> anyhow::Result<Self> {
         let mut err = 0;
         let ptr = unsafe { opus_decoder_create(sample_rate, channels, &mut err) };
@@ -79,7 +79,7 @@ impl SafeOpusDecoder {
     }
 }
 
-impl Drop for SafeOpusDecoder {
+impl Drop for OpusDecoder {
     fn drop(&mut self) {
         unsafe { opus_decoder_destroy(self.0) };
     }

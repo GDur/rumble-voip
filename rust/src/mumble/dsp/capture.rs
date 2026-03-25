@@ -1,14 +1,14 @@
-use crate::mumble::opus_codec::SafeOpusEncoder;
-use crate::mumble::resample::AudioResampler;
+use crate::mumble::codec::opus::OpusEncoder;
+use crate::mumble::dsp::resample::Resampler;
 use crate::mumble::types::{AudioPacket, MumbleConfig, MUMBLE_SAMPLE_RATE};
 use opus_head_sys::*;
 use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};
 
-pub struct InputPipeline {
-    resampler: Option<AudioResampler>,
+pub struct CapturePipeline {
+    resampler: Option<Resampler>,
     apm: AudioProcessing,
-    encoder: SafeOpusEncoder,
+    encoder: OpusEncoder,
     // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
     pcm_buffer: Box<heapless::Vec<f32, 8192>>,
     f32_48k_buffer: Box<heapless::Vec<f32, 8192>>,
@@ -18,14 +18,14 @@ pub struct InputPipeline {
     frame_size: usize,
 }
 
-impl InputPipeline {
+impl CapturePipeline {
     pub fn new(input_rate: u32, config: &MumbleConfig) -> Self {
         let sample_rate = MUMBLE_SAMPLE_RATE;
         let frame_ms = config.audio_frame_ms;
         let frame_size = (sample_rate * frame_ms / 1000) as usize;
 
         let encoder =
-            SafeOpusEncoder::new(sample_rate as i32, 1, OPUS_APPLICATION_VOIP as i32).unwrap();
+            OpusEncoder::new(sample_rate as i32, 1, OPUS_APPLICATION_VOIP as i32).unwrap();
         encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
         encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
@@ -36,7 +36,7 @@ impl InputPipeline {
         );
 
         let resampler = if input_rate != sample_rate {
-            Some(AudioResampler::new(input_rate, sample_rate, config.audio_frame_ms).unwrap())
+            Some(Resampler::new(input_rate, sample_rate, config.audio_frame_ms).unwrap())
         } else {
             None
         };
@@ -76,7 +76,7 @@ impl InputPipeline {
     pub fn push_pcm(&mut self, data: &[f32]) {
         self.pcm_buffer
             .extend_from_slice(data)
-            .expect("PCM buffer overflow in InputPipeline");
+            .expect("PCM buffer overflow in CapturePipeline");
     }
 
     pub fn process(&mut self) -> heapless::Vec<AudioPacket, 16> {
@@ -86,7 +86,7 @@ impl InputPipeline {
         } else {
             self.f32_48k_buffer
                 .extend_from_slice(&self.pcm_buffer)
-                .expect("Resampler buffer overflow in InputPipeline");
+                .expect("Resampler buffer overflow in CapturePipeline");
             self.pcm_buffer.clear();
         }
 

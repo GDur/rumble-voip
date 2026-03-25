@@ -1,7 +1,7 @@
-use crate::api::client::MumbleEvent;
+use crate::mumble::MumbleEvent;
 use crate::frb_generated::StreamSink;
-use crate::mumble::processing::user::RemoteUser;
-use crate::mumble::resample::AudioResampler;
+use crate::mumble::dsp::user_stream::UserVoiceStream;
+use crate::mumble::dsp::resample::Resampler;
 use crate::mumble::types::{MumbleConfig, MUMBLE_SAMPLE_RATE};
 use sonora::config::GainController2;
 use sonora::{AudioProcessing, Config, StreamConfig};
@@ -9,9 +9,9 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
-pub struct OutputMixer {
-    users: HashMap<u32, RemoteUser>,
-    resampler: Option<AudioResampler>,
+pub struct PlaybackMixer {
+    users: HashMap<u32, UserVoiceStream>,
+    resampler: Option<Resampler>,
     apm: AudioProcessing,
     global_volume: Arc<AtomicU32>,
     mixed_48k: Box<heapless::Vec<f32, 8192>>,
@@ -23,14 +23,14 @@ pub struct OutputMixer {
     out_frame_size: usize,
 }
 
-impl OutputMixer {
+impl PlaybackMixer {
     pub fn new(output_rate: u32, config: &MumbleConfig, global_volume: Arc<AtomicU32>) -> Self {
         let sample_rate = MUMBLE_SAMPLE_RATE;
         let frame_ms = config.audio_frame_ms;
         let frame_size = (sample_rate * frame_ms / 1000) as usize;
 
         let resampler = if output_rate != sample_rate {
-            Some(AudioResampler::new(sample_rate, output_rate, config.audio_frame_ms).unwrap())
+            Some(Resampler::new(sample_rate, output_rate, config.audio_frame_ms).unwrap())
         } else {
             None
         };
@@ -79,14 +79,14 @@ impl OutputMixer {
         }
     }
 
-    pub fn get_user_mut(&mut self, session_id: u32) -> Option<&mut RemoteUser> {
+    pub fn get_user_mut(&mut self, session_id: u32) -> Option<&mut UserVoiceStream> {
         self.users.get_mut(&session_id)
     }
 
-    pub fn get_or_insert_user(&mut self, session_id: u32) -> &mut RemoteUser {
+    pub fn get_or_insert_user(&mut self, session_id: u32) -> &mut UserVoiceStream {
         self.users
             .entry(session_id)
-            .or_insert_with(|| RemoteUser::new(MUMBLE_SAMPLE_RATE as i32, 1))
+            .or_insert_with(|| UserVoiceStream::new(MUMBLE_SAMPLE_RATE as i32, 1))
     }
 
     pub fn out_frame_size(&self) -> usize {

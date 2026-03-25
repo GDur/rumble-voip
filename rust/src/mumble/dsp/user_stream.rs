@@ -1,9 +1,9 @@
-use crate::mumble::opus_codec::SafeOpusDecoder;
+use crate::mumble::codec::opus::OpusDecoder;
 use crate::mumble::types::AudioPacket;
 use std::time::Instant;
 
-pub struct RemoteUser {
-    decoder: SafeOpusDecoder,
+pub struct UserVoiceStream {
+    decoder: OpusDecoder,
     // Size 64 allows buffering up to ~640ms of audio (at 10ms frames)
     jitter_buffer: Box<heapless::Deque<AudioPacket, 64>>,
     // 8192 capacity securely covers common decode buffer sizes
@@ -13,10 +13,10 @@ pub struct RemoteUser {
     volume: f32,
 }
 
-impl RemoteUser {
+impl UserVoiceStream {
     pub fn new(sample_rate: i32, channels: i32) -> Self {
         Self {
-            decoder: SafeOpusDecoder::new(sample_rate, channels).unwrap(),
+            decoder: OpusDecoder::new(sample_rate, channels).unwrap(),
             jitter_buffer: Box::new(heapless::Deque::new()),
             pcm_buffer: Box::new(heapless::Deque::new()),
             is_talking: false,

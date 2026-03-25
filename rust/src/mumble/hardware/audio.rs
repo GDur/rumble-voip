@@ -10,7 +10,7 @@ pub struct SendStream(pub cpal::Stream);
 // and let it run, we don't access it concurrently.
 unsafe impl Send for SendStream {}
 
-pub struct AudioStreams {
+pub struct AudioBackend {
     #[allow(dead_code)]
     input_stream: SendStream,
     #[allow(dead_code)]
@@ -19,7 +19,7 @@ pub struct AudioStreams {
     output_rate: u32,
 }
 
-impl AudioStreams {
+impl AudioBackend {
     pub fn new(
         input_stream: cpal::Stream,
         output_stream: cpal::Stream,
@@ -51,7 +51,7 @@ pub fn setup_audio(
     current_rms: Arc<AtomicU32>,
     input_gain: Arc<AtomicU32>,
     config: &crate::mumble::types::MumbleConfig,
-) -> anyhow::Result<AudioStreams> {
+) -> anyhow::Result<AudioBackend> {
     let host = cpal::default_host();
 
     let input_device = if let Some(id) = &config.input_device_id {
@@ -180,7 +180,7 @@ pub fn setup_audio(
     input_stream.play()?;
     output_stream.play()?;
 
-    Ok(AudioStreams::new(
+    Ok(AudioBackend::new(
         input_stream,
         output_stream,
         input_rate,

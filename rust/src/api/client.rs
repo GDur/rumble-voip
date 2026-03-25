@@ -1,7 +1,7 @@
 use crate::frb_generated::StreamSink;
-use crate::mumble::audio;
+use crate::mumble::hardware::audio;
 use crate::mumble::types::AudioDevice;
-use crate::mumble::{InternalMumbleClient, MumbleCommand};
+use crate::mumble::{MumbleClient, MumbleCommand};
 use flutter_rust_bridge::frb;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -53,7 +53,7 @@ pub struct MumbleTextMessage {
 
 pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
-    internal: Arc<Mutex<Option<InternalMumbleClient>>>,
+    internal: Arc<Mutex<Option<MumbleClient>>>,
     config: Arc<std::sync::Mutex<crate::mumble::types::MumbleConfig>>,
     event_sink: Arc<std::sync::Mutex<Option<StreamSink<MumbleEvent>>>>,
 }
@@ -98,7 +98,7 @@ impl RustMumbleClient {
 
         // Spawn on the dedicated tokio runtime so Mumble logic runs there
         let handle = self.runtime.spawn(async move {
-            InternalMumbleClient::start(host, port, username, password, event_sink, config).await
+            MumbleClient::start(host, port, username, password, event_sink, config).await
         });
 
         match handle.await.map_err(|e| e.to_string())? {

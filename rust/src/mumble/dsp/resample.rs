@@ -1,13 +1,13 @@
 use sonora_common_audio::push_sinc_resampler::PushSincResampler;
 
-pub struct AudioResampler {
+pub struct Resampler {
     resampler: PushSincResampler,
     in_buffer: Box<heapless::Vec<f32, 8192>>,
     out_buffer: Box<heapless::Vec<f32, 8192>>,
     input_samples: usize,
 }
 
-impl AudioResampler {
+impl Resampler {
     pub fn new(in_rate: u32, out_rate: u32, frame_ms: u32) -> anyhow::Result<Self> {
         let input_samples = (in_rate as f32 * (frame_ms as f32 / 1000.0)).ceil() as usize;
         let output_samples = (out_rate as f32 * (frame_ms as f32 / 1000.0)).ceil() as usize;
