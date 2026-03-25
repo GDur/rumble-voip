@@ -9,63 +9,63 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 class MumbleConfig {
   /// Target bitrate for the Opus encoder in bits per second (e.g. 72000).
-  final int audioBitrate;
+  final int outgoingAudioBitrate;
 
   /// The size of audio chunks sent over the network in milliseconds (e.g. 10ms or 20ms).
-  final int audioFrameMs;
+  final int outgoingAudioMsPerPacket;
 
   /// Algorithm complexity of the Opus encoder (0-10, default 10).
-  final int opusComplexity;
+  final int outgoingOpusComplexity;
 
   /// The size of the software jitter buffer in milliseconds.
   /// This intentionally delays playback to handle uneven network packet arrival.
-  final int jitterBufferMs;
-
-  /// The requested size of the operating system's hardware audio output buffer.
-  final AudioBufferSize outputBufferSize;
-
-  /// The requested size of the operating system's hardware audio input buffer.
-  final AudioBufferSize inputBufferSize;
-
-  /// The ID of the audio input device to use. If None, the default device is used.
-  final String? inputDeviceId;
+  final int incomingJitterBufferMs;
 
   /// The ID of the audio output device to use. If None, the default device is used.
-  final String? outputDeviceId;
+  final String? playbackDeviceId;
+
+  /// The requested size of the operating system's hardware playback output buffer.
+  final AudioBufferSize playbackHwBufferSize;
+
+  /// The requested size of the operating system's hardware capture input buffer.
+  final AudioBufferSize captureHwBufferSize;
+
+  /// The ID of the audio input device to use. If None, the default device is used.
+  final String? captureDeviceId;
 
   const MumbleConfig({
-    required this.audioBitrate,
-    required this.audioFrameMs,
-    required this.opusComplexity,
-    required this.jitterBufferMs,
-    required this.outputBufferSize,
-    required this.inputBufferSize,
-    this.inputDeviceId,
-    this.outputDeviceId,
+    required this.outgoingAudioBitrate,
+    required this.outgoingAudioMsPerPacket,
+    required this.outgoingOpusComplexity,
+    required this.incomingJitterBufferMs,
+    this.playbackDeviceId,
+    required this.playbackHwBufferSize,
+    required this.captureHwBufferSize,
+    this.captureDeviceId,
   });
 
   @override
   int get hashCode =>
-      audioBitrate.hashCode ^
-      audioFrameMs.hashCode ^
-      opusComplexity.hashCode ^
-      jitterBufferMs.hashCode ^
-      outputBufferSize.hashCode ^
-      inputBufferSize.hashCode ^
-      inputDeviceId.hashCode ^
-      outputDeviceId.hashCode;
+      outgoingAudioBitrate.hashCode ^
+      outgoingAudioMsPerPacket.hashCode ^
+      outgoingOpusComplexity.hashCode ^
+      incomingJitterBufferMs.hashCode ^
+      playbackDeviceId.hashCode ^
+      playbackHwBufferSize.hashCode ^
+      captureHwBufferSize.hashCode ^
+      captureDeviceId.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is MumbleConfig &&
           runtimeType == other.runtimeType &&
-          audioBitrate == other.audioBitrate &&
-          audioFrameMs == other.audioFrameMs &&
-          opusComplexity == other.opusComplexity &&
-          jitterBufferMs == other.jitterBufferMs &&
-          outputBufferSize == other.outputBufferSize &&
-          inputBufferSize == other.inputBufferSize &&
-          inputDeviceId == other.inputDeviceId &&
-          outputDeviceId == other.outputDeviceId;
+          outgoingAudioBitrate == other.outgoingAudioBitrate &&
+          outgoingAudioMsPerPacket == other.outgoingAudioMsPerPacket &&
+          outgoingOpusComplexity == other.outgoingOpusComplexity &&
+          incomingJitterBufferMs == other.incomingJitterBufferMs &&
+          playbackDeviceId == other.playbackDeviceId &&
+          playbackHwBufferSize == other.playbackHwBufferSize &&
+          captureHwBufferSize == other.captureHwBufferSize &&
+          captureDeviceId == other.captureDeviceId;
 }

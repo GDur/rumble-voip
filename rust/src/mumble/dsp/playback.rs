@@ -1,7 +1,8 @@
 use crate::frb_generated::StreamSink;
-use crate::mumble::config::{MumbleConfig, MUMBLE_SAMPLE_RATE};
+use crate::mumble::config::MumbleConfig;
 use crate::mumble::dsp::resample::Resampler;
 use crate::mumble::dsp::user_stream::UserVoiceStream;
+use crate::mumble::dsp::{INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE};
 use crate::mumble::MumbleEvent;
 use sonora::config::GainController2;
 use sonora::{AudioProcessing, Config, StreamConfig};
@@ -14,31 +15,36 @@ pub struct PlaybackMixer {
     resampler: Option<Resampler>,
     apm: AudioProcessing,
     global_volume: Arc<AtomicU32>,
-    mixed_48k: Box<heapless::Vec<f32, 8192>>,
-    user_frame: Box<heapless::Vec<f32, 8192>>,
-    leveled_frame: Box<heapless::Vec<f32, 8192>>,
-    // Size 8192 is used safely to keep mixed outgoing streams
-    final_out_buf: Box<heapless::Vec<f32, 8192>>,
-    frame_size: usize,
-    out_frame_size: usize,
+    // Processed PCM pre resampling (48k).
+    // Stored in struct because it's returned as a reference.
+    processed_pcm_48k_buffer: [f32; INTERNAL_FRAME_SIZE],
+    // Resampled outgoing pcm in output_rate.
+    // Stored in struct because it's returned as a reference and used as an accumulator.
+    output_pcm_buffer: Box<heapless::Vec<f32, 8192>>,
+    // Number of samples per output frame
+    output_frame_sample_count: usize,
 }
 
 impl PlaybackMixer {
     pub fn new(output_rate: u32, config: &MumbleConfig, global_volume: Arc<AtomicU32>) -> Self {
-        let sample_rate = MUMBLE_SAMPLE_RATE;
-        let frame_ms = config.audio_frame_ms;
-        let frame_size = (sample_rate * frame_ms / 1000) as usize;
-
-        let resampler = if output_rate != sample_rate {
-            Some(Resampler::new(sample_rate, output_rate, config.audio_frame_ms).unwrap())
+        let resampler = if output_rate != INTERNAL_SAMPLE_RATE {
+            Some(
+                Resampler::new(
+                    INTERNAL_SAMPLE_RATE,
+                    output_rate,
+                    config.outgoing_audio_ms_per_packet,
+                )
+                .unwrap(),
+            )
         } else {
             None
         };
 
-        let out_frame_size = if output_rate == sample_rate {
-            frame_size
+        let output_frame_sample_count = if output_rate == INTERNAL_SAMPLE_RATE {
+            INTERNAL_FRAME_SIZE
         } else {
-            (frame_size as f32 * (output_rate as f32 / sample_rate as f32)).ceil() as usize
+            (INTERNAL_FRAME_SIZE as f32 * (output_rate as f32 / INTERNAL_SAMPLE_RATE as f32)).ceil()
+                as usize
         };
 
         let apm_config = Config {
@@ -48,34 +54,18 @@ impl PlaybackMixer {
 
         let apm = AudioProcessing::builder()
             .config(apm_config)
-            .capture_config(StreamConfig::new(sample_rate, 1))
-            .render_config(StreamConfig::new(sample_rate, 1))
+            .capture_config(StreamConfig::new(INTERNAL_SAMPLE_RATE, 1))
+            .render_config(StreamConfig::new(INTERNAL_SAMPLE_RATE, 1))
             .build();
-
-        let mut mixed_48k = Box::new(heapless::Vec::new());
-        mixed_48k
-            .resize(frame_size, 0.0)
-            .expect("mixed_48k resize failed");
-        let mut user_frame = Box::new(heapless::Vec::new());
-        user_frame
-            .resize(frame_size, 0.0)
-            .expect("user_frame resize failed");
-        let mut leveled_frame = Box::new(heapless::Vec::new());
-        leveled_frame
-            .resize(frame_size, 0.0)
-            .expect("leveled_frame resize failed");
 
         Self {
             users: HashMap::with_capacity(64),
             resampler,
             apm,
             global_volume,
-            mixed_48k,
-            user_frame,
-            leveled_frame,
-            final_out_buf: Box::new(heapless::Vec::new()),
-            frame_size,
-            out_frame_size,
+            processed_pcm_48k_buffer: [0.0; INTERNAL_FRAME_SIZE],
+            output_pcm_buffer: Box::new(heapless::Vec::new()),
+            output_frame_sample_count,
         }
     }
 
@@ -86,18 +76,15 @@ impl PlaybackMixer {
     pub fn get_or_insert_user(&mut self, session_id: u32) -> &mut UserVoiceStream {
         self.users
             .entry(session_id)
-            .or_insert_with(|| UserVoiceStream::new(MUMBLE_SAMPLE_RATE as i32, 1))
+            .or_insert_with(|| UserVoiceStream::new(INTERNAL_SAMPLE_RATE as i32, 1))
     }
 
-    pub fn out_frame_size(&self) -> usize {
-        self.out_frame_size
+    pub fn output_frame_sample_count(&self) -> usize {
+        self.output_frame_sample_count
     }
 
     pub fn mix_frame(&mut self, event_sink: &StreamSink<MumbleEvent>) -> &[f32] {
-        self.mixed_48k.fill(0.0);
-        let mut active_users = 0;
-
-        // Clean up inactive users and mix
+        // Clean up inactive users
         self.users.retain(|sid, user| {
             if user.is_talking() && user.time_since_last_packet().as_millis() > 500 {
                 user.set_talking(false);
@@ -106,36 +93,44 @@ impl PlaybackMixer {
             user.time_since_last_packet().as_secs() < 10
         });
 
+        // Scratch buffers on the stack for internal processing
+        let mut mixed_pcm_48k = [0.0f32; INTERNAL_FRAME_SIZE];
+        let mut user_pcm_frame = [0.0f32; INTERNAL_FRAME_SIZE];
+
+        let mut active_users = 0;
         let master_gain = f32::from_bits(self.global_volume.load(Ordering::Relaxed));
 
+        // Mix audio from all users
         for user in self.users.values_mut() {
-            if user.has_audio() && user.decode_frame(self.frame_size, &mut self.user_frame) {
-                for i in 0..self.frame_size {
-                    self.mixed_48k[i] += self.user_frame[i] * master_gain;
+            if user.has_audio() && user.decode_frame(INTERNAL_FRAME_SIZE, &mut user_pcm_frame) {
+                for i in 0..INTERNAL_FRAME_SIZE {
+                    mixed_pcm_48k[i] += user_pcm_frame[i] * master_gain;
                 }
                 active_users += 1;
             }
         }
 
+        // Return silence if no audio is present
         if active_users == 0 {
-            self.final_out_buf.clear();
-            self.final_out_buf
-                .resize(self.out_frame_size, 0.0)
-                .expect("Final out buffer resize failed");
-            return &self.final_out_buf;
+            self.output_pcm_buffer.clear();
+            self.output_pcm_buffer
+                .resize(self.output_frame_sample_count, 0.0)
+                .expect("Output buffer resize failed");
+            return &self.output_pcm_buffer;
         }
 
-        // Master processing with Sonora
+        // Master processing
         self.apm
-            .process_render_f32(&[&self.mixed_48k], &mut [&mut self.leveled_frame])
+            .process_render_f32(&[&mixed_pcm_48k], &mut [&mut self.processed_pcm_48k_buffer])
             .expect("APM render processing failed");
 
+        // Resample for output
         if let Some(resampler) = &mut self.resampler {
-            self.final_out_buf.clear();
-            resampler.process(&self.leveled_frame, &mut self.final_out_buf);
-            &self.final_out_buf
+            self.output_pcm_buffer.clear();
+            resampler.process(&self.processed_pcm_48k_buffer, &mut self.output_pcm_buffer);
+            &self.output_pcm_buffer
         } else {
-            &self.leveled_frame
+            &self.processed_pcm_48k_buffer
         }
     }
 }

@@ -68,7 +68,7 @@ pub fn setup_audio(
 ) -> anyhow::Result<AudioBackend> {
     let host = cpal::default_host();
 
-    let input_device = if let Some(id) = &config.input_device_id {
+    let input_device = if let Some(id) = &config.capture_device_id {
         host.input_devices()?
             .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
             .ok_or_else(|| anyhow::anyhow!("Input device with ID '{}' not found", id))?
@@ -77,7 +77,7 @@ pub fn setup_audio(
             .ok_or_else(|| anyhow::anyhow!("No input device found"))?
     };
 
-    let output_device = if let Some(id) = &config.output_device_id {
+    let output_device = if let Some(id) = &config.playback_device_id {
         host.output_devices()?
             .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
             .ok_or_else(|| anyhow::anyhow!("Output device with ID '{}' not found", id))?
@@ -92,12 +92,12 @@ pub fn setup_audio(
     let mut input_config = input_config_full.config();
     let mut output_config = output_config_full.config();
 
-    input_config.buffer_size = match config.input_buffer_size {
+    input_config.buffer_size = match config.capture_hw_buffer_size {
         AudioBufferSize::Default => cpal::BufferSize::Default,
         AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
     };
 
-    output_config.buffer_size = match config.output_buffer_size {
+    output_config.buffer_size = match config.playback_hw_buffer_size {
         AudioBufferSize::Default => cpal::BufferSize::Default,
         AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
     };

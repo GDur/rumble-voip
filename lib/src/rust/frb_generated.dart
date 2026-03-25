@@ -894,14 +894,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (arr.length != 8)
       throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return MumbleConfig(
-      audioBitrate: dco_decode_u_32(arr[0]),
-      audioFrameMs: dco_decode_u_32(arr[1]),
-      opusComplexity: dco_decode_u_32(arr[2]),
-      jitterBufferMs: dco_decode_u_32(arr[3]),
-      outputBufferSize: dco_decode_audio_buffer_size(arr[4]),
-      inputBufferSize: dco_decode_audio_buffer_size(arr[5]),
-      inputDeviceId: dco_decode_opt_String(arr[6]),
-      outputDeviceId: dco_decode_opt_String(arr[7]),
+      outgoingAudioBitrate: dco_decode_u_32(arr[0]),
+      outgoingAudioMsPerPacket: dco_decode_u_32(arr[1]),
+      outgoingOpusComplexity: dco_decode_u_32(arr[2]),
+      incomingJitterBufferMs: dco_decode_u_32(arr[3]),
+      playbackDeviceId: dco_decode_opt_String(arr[4]),
+      playbackHwBufferSize: dco_decode_audio_buffer_size(arr[5]),
+      captureHwBufferSize: dco_decode_audio_buffer_size(arr[6]),
+      captureDeviceId: dco_decode_opt_String(arr[7]),
     );
   }
 
@@ -1188,23 +1188,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   MumbleConfig sse_decode_mumble_config(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_audioBitrate = sse_decode_u_32(deserializer);
-    var var_audioFrameMs = sse_decode_u_32(deserializer);
-    var var_opusComplexity = sse_decode_u_32(deserializer);
-    var var_jitterBufferMs = sse_decode_u_32(deserializer);
-    var var_outputBufferSize = sse_decode_audio_buffer_size(deserializer);
-    var var_inputBufferSize = sse_decode_audio_buffer_size(deserializer);
-    var var_inputDeviceId = sse_decode_opt_String(deserializer);
-    var var_outputDeviceId = sse_decode_opt_String(deserializer);
+    var var_outgoingAudioBitrate = sse_decode_u_32(deserializer);
+    var var_outgoingAudioMsPerPacket = sse_decode_u_32(deserializer);
+    var var_outgoingOpusComplexity = sse_decode_u_32(deserializer);
+    var var_incomingJitterBufferMs = sse_decode_u_32(deserializer);
+    var var_playbackDeviceId = sse_decode_opt_String(deserializer);
+    var var_playbackHwBufferSize = sse_decode_audio_buffer_size(deserializer);
+    var var_captureHwBufferSize = sse_decode_audio_buffer_size(deserializer);
+    var var_captureDeviceId = sse_decode_opt_String(deserializer);
     return MumbleConfig(
-      audioBitrate: var_audioBitrate,
-      audioFrameMs: var_audioFrameMs,
-      opusComplexity: var_opusComplexity,
-      jitterBufferMs: var_jitterBufferMs,
-      outputBufferSize: var_outputBufferSize,
-      inputBufferSize: var_inputBufferSize,
-      inputDeviceId: var_inputDeviceId,
-      outputDeviceId: var_outputDeviceId,
+      outgoingAudioBitrate: var_outgoingAudioBitrate,
+      outgoingAudioMsPerPacket: var_outgoingAudioMsPerPacket,
+      outgoingOpusComplexity: var_outgoingOpusComplexity,
+      incomingJitterBufferMs: var_incomingJitterBufferMs,
+      playbackDeviceId: var_playbackDeviceId,
+      playbackHwBufferSize: var_playbackHwBufferSize,
+      captureHwBufferSize: var_captureHwBufferSize,
+      captureDeviceId: var_captureDeviceId,
     );
   }
 
@@ -1519,14 +1519,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_mumble_config(MumbleConfig self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.audioBitrate, serializer);
-    sse_encode_u_32(self.audioFrameMs, serializer);
-    sse_encode_u_32(self.opusComplexity, serializer);
-    sse_encode_u_32(self.jitterBufferMs, serializer);
-    sse_encode_audio_buffer_size(self.outputBufferSize, serializer);
-    sse_encode_audio_buffer_size(self.inputBufferSize, serializer);
-    sse_encode_opt_String(self.inputDeviceId, serializer);
-    sse_encode_opt_String(self.outputDeviceId, serializer);
+    sse_encode_u_32(self.outgoingAudioBitrate, serializer);
+    sse_encode_u_32(self.outgoingAudioMsPerPacket, serializer);
+    sse_encode_u_32(self.outgoingOpusComplexity, serializer);
+    sse_encode_u_32(self.incomingJitterBufferMs, serializer);
+    sse_encode_opt_String(self.playbackDeviceId, serializer);
+    sse_encode_audio_buffer_size(self.playbackHwBufferSize, serializer);
+    sse_encode_audio_buffer_size(self.captureHwBufferSize, serializer);
+    sse_encode_opt_String(self.captureDeviceId, serializer);
   }
 
   @protected

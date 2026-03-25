@@ -92,8 +92,8 @@ impl VoiceChannel {
                     if let Ok(len) = res {
                         let mut data_to_decrypt = BytesMut::from(&udp_recv_buf[..len]);
                         if let Ok(Ok(VoicePacket::Audio { session_id, payload: VoicePacketPayload::Opus(data, last), .. })) = crypt_state.decrypt(&mut data_to_decrypt) {
-                            let mut p = heapless::Vec::<u8, 512>::new();
-                            p.extend_from_slice(&data[..data.len().min(512)]).expect("UDP receive Opus payload overflow");
+                            let mut p = heapless::Vec::<u8, 8192>::new();
+                            p.extend_from_slice(&data[..data.len().min(8192)]).expect("UDP receive Opus payload overflow");
                             let _ = udp_tx.try_send(IncomingAudio::new(
                                 session_id,
                                 AudioPacket::new(p, last),

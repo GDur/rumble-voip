@@ -13,14 +13,20 @@ use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 
+/// Internally and on the wire the sample rate is always 48khz
+pub const INTERNAL_SAMPLE_RATE: u32 = 48000;
+/// For internal processing the frame size is always 10ms. Can be different on the wire.
+pub const INTERNAL_FRAME_MS: u32 = 10;
+pub const INTERNAL_FRAME_SIZE: usize = (INTERNAL_SAMPLE_RATE * INTERNAL_FRAME_MS / 1000) as usize;
+
 #[derive(Debug, Clone)]
 pub struct AudioPacket {
-    payload: heapless::Vec<u8, 512>,
+    payload: heapless::Vec<u8, 8192>,
     is_last: bool,
 }
 
 impl AudioPacket {
-    pub fn new(payload: heapless::Vec<u8, 512>, is_last: bool) -> Self {
+    pub fn new(payload: heapless::Vec<u8, 8192>, is_last: bool) -> Self {
         Self { payload, is_last }
     }
 
@@ -111,7 +117,7 @@ pub fn spawn_decode_thread(
     std::thread::spawn(move || {
         let mut mixer = PlaybackMixer::new(output_rate, &config, global_volume);
         let target_latency_frames =
-            (output_rate as f32 * (config.jitter_buffer_ms as f32 / 1000.0)) as usize;
+            (output_rate as f32 * (config.incoming_jitter_buffer_ms as f32 / 1000.0)) as usize;
 
         loop {
             select! {
@@ -154,7 +160,7 @@ pub fn spawn_decode_thread(
                         let frame = mixer.mix_frame(&event_sink);
                         let _ = prod_out.push_slice(frame);
 
-                        if prod_out.vacant_len() < mixer.out_frame_size() {
+                        if prod_out.vacant_len() < mixer.output_frame_sample_count() {
                             break;
                         }
                     }

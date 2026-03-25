@@ -994,25 +994,25 @@ impl SseDecode for crate::api::client::MumbleChannel {
 impl SseDecode for crate::mumble::config::MumbleConfig {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_audioBitrate = <u32>::sse_decode(deserializer);
-        let mut var_audioFrameMs = <u32>::sse_decode(deserializer);
-        let mut var_opusComplexity = <u32>::sse_decode(deserializer);
-        let mut var_jitterBufferMs = <u32>::sse_decode(deserializer);
-        let mut var_outputBufferSize =
+        let mut var_outgoingAudioBitrate = <u32>::sse_decode(deserializer);
+        let mut var_outgoingAudioMsPerPacket = <u32>::sse_decode(deserializer);
+        let mut var_outgoingOpusComplexity = <u32>::sse_decode(deserializer);
+        let mut var_incomingJitterBufferMs = <u32>::sse_decode(deserializer);
+        let mut var_playbackDeviceId = <Option<String>>::sse_decode(deserializer);
+        let mut var_playbackHwBufferSize =
             <crate::mumble::hardware::audio::AudioBufferSize>::sse_decode(deserializer);
-        let mut var_inputBufferSize =
+        let mut var_captureHwBufferSize =
             <crate::mumble::hardware::audio::AudioBufferSize>::sse_decode(deserializer);
-        let mut var_inputDeviceId = <Option<String>>::sse_decode(deserializer);
-        let mut var_outputDeviceId = <Option<String>>::sse_decode(deserializer);
+        let mut var_captureDeviceId = <Option<String>>::sse_decode(deserializer);
         return crate::mumble::config::MumbleConfig {
-            audio_bitrate: var_audioBitrate,
-            audio_frame_ms: var_audioFrameMs,
-            opus_complexity: var_opusComplexity,
-            jitter_buffer_ms: var_jitterBufferMs,
-            output_buffer_size: var_outputBufferSize,
-            input_buffer_size: var_inputBufferSize,
-            input_device_id: var_inputDeviceId,
-            output_device_id: var_outputDeviceId,
+            outgoing_audio_bitrate: var_outgoingAudioBitrate,
+            outgoing_audio_ms_per_packet: var_outgoingAudioMsPerPacket,
+            outgoing_opus_complexity: var_outgoingOpusComplexity,
+            incoming_jitter_buffer_ms: var_incomingJitterBufferMs,
+            playback_device_id: var_playbackDeviceId,
+            playback_hw_buffer_size: var_playbackHwBufferSize,
+            capture_hw_buffer_size: var_captureHwBufferSize,
+            capture_device_id: var_captureDeviceId,
         };
     }
 }
@@ -1354,14 +1354,16 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::client::MumbleChannel>
 impl flutter_rust_bridge::IntoDart for crate::mumble::config::MumbleConfig {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.audio_bitrate.into_into_dart().into_dart(),
-            self.audio_frame_ms.into_into_dart().into_dart(),
-            self.opus_complexity.into_into_dart().into_dart(),
-            self.jitter_buffer_ms.into_into_dart().into_dart(),
-            self.output_buffer_size.into_into_dart().into_dart(),
-            self.input_buffer_size.into_into_dart().into_dart(),
-            self.input_device_id.into_into_dart().into_dart(),
-            self.output_device_id.into_into_dart().into_dart(),
+            self.outgoing_audio_bitrate.into_into_dart().into_dart(),
+            self.outgoing_audio_ms_per_packet
+                .into_into_dart()
+                .into_dart(),
+            self.outgoing_opus_complexity.into_into_dart().into_dart(),
+            self.incoming_jitter_buffer_ms.into_into_dart().into_dart(),
+            self.playback_device_id.into_into_dart().into_dart(),
+            self.playback_hw_buffer_size.into_into_dart().into_dart(),
+            self.capture_hw_buffer_size.into_into_dart().into_dart(),
+            self.capture_device_id.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1597,20 +1599,20 @@ impl SseEncode for crate::api::client::MumbleChannel {
 impl SseEncode for crate::mumble::config::MumbleConfig {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u32>::sse_encode(self.audio_bitrate, serializer);
-        <u32>::sse_encode(self.audio_frame_ms, serializer);
-        <u32>::sse_encode(self.opus_complexity, serializer);
-        <u32>::sse_encode(self.jitter_buffer_ms, serializer);
+        <u32>::sse_encode(self.outgoing_audio_bitrate, serializer);
+        <u32>::sse_encode(self.outgoing_audio_ms_per_packet, serializer);
+        <u32>::sse_encode(self.outgoing_opus_complexity, serializer);
+        <u32>::sse_encode(self.incoming_jitter_buffer_ms, serializer);
+        <Option<String>>::sse_encode(self.playback_device_id, serializer);
         <crate::mumble::hardware::audio::AudioBufferSize>::sse_encode(
-            self.output_buffer_size,
+            self.playback_hw_buffer_size,
             serializer,
         );
         <crate::mumble::hardware::audio::AudioBufferSize>::sse_encode(
-            self.input_buffer_size,
+            self.capture_hw_buffer_size,
             serializer,
         );
-        <Option<String>>::sse_encode(self.input_device_id, serializer);
-        <Option<String>>::sse_encode(self.output_device_id, serializer);
+        <Option<String>>::sse_encode(self.capture_device_id, serializer);
     }
 }
 
