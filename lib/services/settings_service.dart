@@ -21,6 +21,8 @@ class SettingsService extends ChangeNotifier {
   static const String _kIgnoreAccessibility = 'ignore_accessibility';
   static const String _kUserVolumes = 'user_volumes';
   static const String _kShowVolumeIndicator = 'show_volume_indicator';
+  static const String _kAudioBitrate = 'audio_bitrate';
+  static const String _kAudioFrameMs = 'audio_frame_ms';
 
   final SharedPreferences _prefs;
 
@@ -37,6 +39,8 @@ class SettingsService extends ChangeNotifier {
   bool _ignoreAccessibility;
   bool _showVolumeIndicator;
   final Map<String, double> _userVolumes;
+  int _audioBitrate;
+  int _audioFrameMs;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -50,6 +54,8 @@ class SettingsService extends ChangeNotifier {
       _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
       _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false,
       _showVolumeIndicator = _prefs.getBool(_kShowVolumeIndicator) ?? true,
+      _audioBitrate = _prefs.getInt(_kAudioBitrate) ?? 72000,
+      _audioFrameMs = _prefs.getInt(_kAudioFrameMs) ?? 10,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -88,6 +94,8 @@ class SettingsService extends ChangeNotifier {
   double get outputVolume => _outputVolume;
   bool get ignoreAccessibility => _ignoreAccessibility;
   bool get showVolumeIndicator => _showVolumeIndicator;
+  int get audioBitrate => _audioBitrate;
+  int get audioFrameMs => _audioFrameMs;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -214,5 +222,17 @@ class SettingsService extends ChangeNotifier {
 
   double getUserVolume(String name) {
     return _userVolumes[name] ?? 1.0;
+  }
+
+  Future<void> setAudioBitrate(int bitrate) async {
+    _audioBitrate = bitrate;
+    await _prefs.setInt(_kAudioBitrate, bitrate);
+    notifyListeners();
+  }
+
+  Future<void> setAudioFrameMs(int frameMs) async {
+    _audioFrameMs = frameMs;
+    await _prefs.setInt(_kAudioFrameMs, frameMs);
+    notifyListeners();
   }
 }

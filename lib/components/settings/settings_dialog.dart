@@ -83,9 +83,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
       padding: EdgeInsets.zero,
       radius: const BorderRadius.all(Radius.circular(16)),
       closeIconPosition: const ShadPosition(top: 12, right: 12),
-      constraints: isMobile
-          ? null
-          : BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
+      // constraints: isMobile
+      //     ? null
+      //     : BoxConstraints(
+      //         maxWidth: MediaQuery.of(context).size.width * 0.9,
+      //         maxHeight: MediaQuery.of(context).size.height * 0.9,
+      //       ),
       title: title,
       child: SafeArea(
         top: isMobile,
@@ -93,8 +96,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         child: SizedBox(
           width: isMobile
               ? MediaQuery.of(context).size.width * 0.95
-              : (MediaQuery.of(context).size.width * 0.69).clamp(700, 1200),
-          height: isMobile ? MediaQuery.of(context).size.height * 0.7 : 600,
+              : MediaQuery.of(context).size.width * 0.85,
+          height: isMobile
+              ? MediaQuery.of(context).size.height * 0.8
+              : MediaQuery.of(context).size.height * 0.85,
           child: isMobile
               ? _buildMobileContent(effectiveTab, sideBarItems)
               : Row(
@@ -145,9 +150,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     // Content
                     Expanded(
                       child: Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(12),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(child: _buildTabContent(effectiveTab!)),
                             const SizedBox(height: 16),

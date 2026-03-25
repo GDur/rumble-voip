@@ -96,8 +96,8 @@ class MumbleService extends ChangeNotifier {
   ) async {
     _settings = settings;
     _config = MumbleConfig(
-      audioBitrate: 72000,
-      audioFrameMs: 10,
+      audioBitrate: settings.audioBitrate,
+      audioFrameMs: settings.audioFrameMs,
       opusComplexity: 10,
       jitterBufferMs: 40,
       outputBufferSize: const AudioBufferSize.default_(),
@@ -150,6 +150,8 @@ class MumbleService extends ChangeNotifier {
     String? outputDeviceId,
     double? inputGain,
     double? outputVolume,
+    int? audioBitrate,
+    int? audioFrameMs,
   }) async {
     if (inputDeviceId != null) {
       await setInputDevice(inputDeviceId);
@@ -162,6 +164,19 @@ class MumbleService extends ChangeNotifier {
     }
     if (outputVolume != null) {
       await _client.setOutputVolume(volume: outputVolume);
+    }
+    if (audioBitrate != null || audioFrameMs != null) {
+      _config = MumbleConfig(
+        audioBitrate: audioBitrate ?? _config.audioBitrate,
+        audioFrameMs: audioFrameMs ?? _config.audioFrameMs,
+        opusComplexity: _config.opusComplexity,
+        jitterBufferMs: _config.jitterBufferMs,
+        outputBufferSize: _config.outputBufferSize,
+        inputBufferSize: _config.inputBufferSize,
+        inputDeviceId: _config.inputDeviceId,
+        outputDeviceId: _config.outputDeviceId,
+      );
+      await _client.setConfig(config: _config);
     }
     notifyListeners();
   }
