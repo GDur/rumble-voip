@@ -1,6 +1,6 @@
 {
-    "name": "rumble",
-    "short_name": "rumble",
+    "name": "Rumble",
+    "short_name": "Rumble",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
