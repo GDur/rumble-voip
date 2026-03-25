@@ -1,10 +1,9 @@
 pub mod audio;
-pub mod control;
+pub mod net;
 pub mod opus_codec;
 pub mod processing;
 pub mod resample;
 pub mod types;
-pub mod voice;
 
 use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
@@ -42,7 +41,7 @@ impl InternalMumbleClient {
         let event_sink_clone = event_sink.clone();
 
         // Perform connection and handshake in the current task so we can return errors
-        let framed = match crate::mumble::control::connect(&host, port, username, password).await {
+        let framed = match crate::mumble::net::tcp::connect(&host, port, username, password).await {
             Ok(f) => f,
             Err(e) => {
                 let err_msg = format!("Failed to connect to mumble server: {}", e);
@@ -53,7 +52,7 @@ impl InternalMumbleClient {
         // Main loop runner
         tokio::spawn(async move {
             if let Err(e) =
-                crate::mumble::control::run_loop(framed, host, port, cmd_rx, event_sink, config)
+                crate::mumble::net::tcp::run_loop(framed, host, port, cmd_rx, event_sink, config)
                     .await
             {
                 eprintln!("Mumble client loop error: {}", e);

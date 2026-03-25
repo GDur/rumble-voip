@@ -24,7 +24,7 @@ struct MumbleSession {
     users: HashMap<u32, MumbleUser>,
     session_id: u32,
     my_channel_id: u32,
-    voice_cmd_tx: Option<mpsc::Sender<crate::mumble::voice::VoiceCommand>>,
+    voice_cmd_tx: Option<mpsc::Sender<crate::mumble::net::udp::VoiceCommand>>,
     _active_audio: Option<AudioStreams>,
     network_tx: Option<tokio::sync::mpsc::Sender<crate::mumble::types::AudioPacket>>,
     udp_rx: Option<crossbeam_channel::Receiver<crate::mumble::types::IncomingAudio>>,
@@ -230,13 +230,13 @@ impl MumbleSession {
                 self.crypt_setup = Some((key, encrypt_nonce, decrypt_nonce));
 
                 if self.network_tx.is_none() {
-                    let (v_tx, v_rx) = mpsc::channel(32);
-                    self.voice_cmd_tx = Some(v_tx);
+                    let (voice_cmd_sender, voice_cmd_receiver) = mpsc::channel(32);
+                    self.voice_cmd_tx = Some(voice_cmd_sender);
 
-                    let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
+                    let (out_audio_sender, out_audio_receiver) = tokio::sync::mpsc::channel(100);
                     let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
 
-                    self.network_tx = Some(network_tx);
+                    self.network_tx = Some(out_audio_sender);
                     self.udp_rx = Some(udp_rx);
 
                     let host_clone = self.host.clone();
@@ -248,11 +248,11 @@ impl MumbleSession {
                     );
 
                     tokio::spawn(async move {
-                        if let Err(e) = crate::mumble::voice::VoiceHandler::run(
+                        if let Err(e) = crate::mumble::net::udp::VoiceNetworkHandler::run(
                             format!("{}:{}", host_clone, port_clone),
                             crypt_state,
-                            v_rx,
-                            network_rx,
+                            voice_cmd_receiver,
+                            out_audio_receiver,
                             udp_tx,
                         )
                         .await
@@ -263,7 +263,7 @@ impl MumbleSession {
                 } else {
                     if let Some(v_tx) = &self.voice_cmd_tx {
                         let _ =
-                            v_tx.try_send(crate::mumble::voice::VoiceCommand::UpdateCryptState(
+                            v_tx.try_send(crate::mumble::net::udp::VoiceCommand::UpdateCryptState(
                                 key,
                                 encrypt_nonce,
                                 decrypt_nonce,
