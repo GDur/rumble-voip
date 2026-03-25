@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
-import 'package:rumble/src/rust/mumble/types.dart';
+import 'package:rumble/src/rust/mumble/hardware/audio.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 // Component: audio-tab
 class AudioTab extends StatelessWidget {

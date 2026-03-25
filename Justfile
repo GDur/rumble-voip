@@ -6,7 +6,7 @@ default:
 
 # Regenerate the Flutter-Rust bridge code
 gen:
-    flutter_rust_bridge_codegen generate
+    rm -rf lib/src/rust && flutter_rust_bridge_codegen generate
 
 # Clean Flutter and Rust build artifacts
 clean:

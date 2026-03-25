@@ -1,12 +1,13 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:rumble/models/certificate.dart';
 import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
-import 'package:rumble/models/certificate.dart';
-import 'package:rumble/src/rust/api/client.dart';
-import 'package:rumble/src/rust/mumble/types.dart';
-import 'package:rumble/src/rust/frb_generated.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/src/rust/api/client.dart';
+import 'package:rumble/src/rust/mumble/config.dart';
+import 'package:rumble/src/rust/mumble/hardware/audio.dart';
 import 'package:rumble/utils/html_utils.dart';
 
 class MumbleService extends ChangeNotifier {
