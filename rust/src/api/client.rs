@@ -55,6 +55,7 @@ pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
     internal: Arc<Mutex<Option<InternalMumbleClient>>>,
     config: Arc<std::sync::Mutex<crate::mumble::types::MumbleConfig>>,
+    event_sink: Arc<std::sync::Mutex<Option<StreamSink<MumbleEvent>>>>,
 }
 
 impl RustMumbleClient {
@@ -72,7 +73,13 @@ impl RustMumbleClient {
             config: Arc::new(std::sync::Mutex::new(
                 crate::mumble::types::MumbleConfig::default(),
             )),
+            event_sink: Arc::new(std::sync::Mutex::new(None)),
         }
+    }
+
+    pub fn get_event_stream(&self, sink: StreamSink<MumbleEvent>) {
+        let mut event_sink = self.event_sink.lock().unwrap();
+        *event_sink = Some(sink);
     }
 
     pub async fn connect(
@@ -81,9 +88,13 @@ impl RustMumbleClient {
         port: u16,
         username: String,
         password: Option<String>,
-        event_sink: StreamSink<MumbleEvent>,
     ) -> Result<(), String> {
         let config = self.config.lock().unwrap().clone();
+        let event_sink = {
+            let sink = self.event_sink.lock().unwrap();
+            sink.clone()
+                .ok_or_else(|| "Event sink not set".to_string())?
+        };
 
         // Spawn on the dedicated tokio runtime so Mumble logic runs there
         let handle = self.runtime.spawn(async move {

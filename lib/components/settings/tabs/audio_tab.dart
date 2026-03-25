@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/src/rust/mumble/types.dart';
 
 // Component: audio-tab
 class AudioTab extends StatelessWidget {
@@ -37,7 +38,7 @@ class AudioTab extends StatelessWidget {
               final inputDeviceId = settings.inputDeviceId;
               final hasCurrent =
                   inputDeviceId == null ||
-                  devices.any((d) => d == inputDeviceId);
+                  devices.any((d) => d.id == inputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
@@ -58,14 +59,18 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d,
-                      child: Text(d),
+                      value: d.id,
+                      child: Text(d.name),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Input');
-                  return Text(value);
+                  final device = devices.cast<AudioDevice?>().firstWhere(
+                        (d) => d?.id == value,
+                        orElse: () => null,
+                      );
+                  return Text(device?.name ?? value);
                 },
               );
             },
@@ -83,7 +88,7 @@ class AudioTab extends StatelessWidget {
               final outputDeviceId = settings.outputDeviceId;
               final hasCurrent =
                   outputDeviceId == null ||
-                  devices.any((d) => d == outputDeviceId);
+                  devices.any((d) => d.id == outputDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Output'),
@@ -107,14 +112,18 @@ class AudioTab extends StatelessWidget {
                     ),
                   ...devices.map(
                     (d) => ShadOption<String?>(
-                      value: d,
-                      child: Text(d),
+                      value: d.id,
+                      child: Text(d.name),
                     ),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Output');
-                  return Text(value);
+                  final device = devices.cast<AudioDevice?>().firstWhere(
+                        (d) => d?.id == value,
+                        orElse: () => null,
+                      );
+                  return Text(device?.name ?? value);
                 },
               );
             },

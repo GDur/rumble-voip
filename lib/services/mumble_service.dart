@@ -4,6 +4,7 @@ import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/models/certificate.dart';
 import 'package:rumble/src/rust/api/client.dart';
+import 'package:rumble/src/rust/mumble/types.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/utils/html_utils.dart';
@@ -18,11 +19,19 @@ class MumbleService extends ChangeNotifier {
 
   final Map<int, bool> _talkingUsers = {};
   final ValueNotifier<double> volumeNotifier = ValueNotifier(0.0);
-  final List<ChatMessage> _messages = [];
+  List<ChatMessage> _messages = [];
   String? _pttErrorMessage;
-  List<String> _inputDevices = [];
-  List<String> _outputDevices = [];
+  List<AudioDevice> _inputDevices = [];
+  List<AudioDevice> _outputDevices = [];
   SettingsService? _settings;
+  MumbleConfig _config = const MumbleConfig(
+    audioBitrate: 72000,
+    audioFrameMs: 10,
+    opusComplexity: 10,
+    jitterBufferMs: 40,
+    outputBufferSize: AudioBufferSize.default_(),
+    inputBufferSize: AudioBufferSize.default_(),
+  );
 
   bool get isConnected => _isConnected;
   String? get error => _error;
@@ -31,8 +40,8 @@ class MumbleService extends ChangeNotifier {
   double get currentVolume => volumeNotifier.value;
   Map<int, bool> get talkingUsers => _talkingUsers;
   List<MumbleUser> get users => _users.values.toList();
-  List<String> get inputDevices => _inputDevices;
-  List<String> get outputDevices => _outputDevices;
+  List<AudioDevice> get inputDevices => _inputDevices;
+  List<AudioDevice> get outputDevices => _outputDevices;
   String? get pttErrorMessage => _pttErrorMessage;
   List<ChatMessage> get messages => List.unmodifiable(_messages);
 
@@ -85,9 +94,54 @@ class MumbleService extends ChangeNotifier {
     String? outputId,
   ) async {
     _settings = settings;
+    _config = MumbleConfig(
+      audioBitrate: 72000,
+      audioFrameMs: 10,
+      opusComplexity: 10,
+      jitterBufferMs: 40,
+      outputBufferSize: const AudioBufferSize.default_(),
+      inputBufferSize: const AudioBufferSize.default_(),
+      inputDeviceId: inputId,
+      outputDeviceId: outputId,
+    );
+    _client.setConfig(config: _config);
     await _refreshDevices();
-    // In Rust-based plugin, we might need to pass these settings to Rust eventually
-    // For now, we just store them.
+  }
+
+  Future<void> setInputDevice(String? deviceId) async {
+    _config = MumbleConfig(
+      audioBitrate: _config.audioBitrate,
+      audioFrameMs: _config.audioFrameMs,
+      opusComplexity: _config.opusComplexity,
+      jitterBufferMs: _config.jitterBufferMs,
+      outputBufferSize: _config.outputBufferSize,
+      inputBufferSize: _config.inputBufferSize,
+      inputDeviceId: deviceId,
+      outputDeviceId: _config.outputDeviceId,
+    );
+    await _client.setConfig(config: _config);
+    if (_settings != null) {
+      await _settings!.setInputDeviceId(deviceId);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setOutputDevice(String? deviceId) async {
+    _config = MumbleConfig(
+      audioBitrate: _config.audioBitrate,
+      audioFrameMs: _config.audioFrameMs,
+      opusComplexity: _config.opusComplexity,
+      jitterBufferMs: _config.jitterBufferMs,
+      outputBufferSize: _config.outputBufferSize,
+      inputBufferSize: _config.inputBufferSize,
+      inputDeviceId: _config.inputDeviceId,
+      outputDeviceId: deviceId,
+    );
+    await _client.setConfig(config: _config);
+    if (_settings != null) {
+      await _settings!.setOutputDeviceId(deviceId);
+    }
+    notifyListeners();
   }
 
   Future<void> updateAudioSettings({
@@ -96,6 +150,12 @@ class MumbleService extends ChangeNotifier {
     double? inputGain,
     double? outputVolume,
   }) async {
+    if (inputDeviceId != null) {
+      await setInputDevice(inputDeviceId);
+    }
+    if (outputDeviceId != null) {
+      await setOutputDevice(outputDeviceId);
+    }
     if (inputGain != null) {
       await _client.setInputGain(gain: inputGain);
     }
@@ -117,40 +177,19 @@ class MumbleService extends ChangeNotifier {
     _selfSession = null;
     notifyListeners();
 
-    final completer = Completer<void>();
-
     try {
-      final events = _client.connect(
+      _eventSubscription?.cancel();
+      _eventSubscription = _client.getEventStream().listen(_handleEvent, onError: (e) {
+        _error = e.toString();
+        _isConnected = false;
+        notifyListeners();
+      });
+
+      await _client.connect(
         host: server.host,
         port: server.port,
         username: server.username,
         password: server.password.isEmpty ? null : server.password,
-      );
-      
-      _eventSubscription = events.listen((event) {
-        _handleEvent(event);
-        if (!completer.isCompleted) {
-          if (event is MumbleEvent_Connected) {
-            completer.complete();
-          } else if (event is MumbleEvent_Disconnected) {
-            completer.completeError(Exception(event.field0));
-          }
-        }
-      }, onError: (e) {
-        _error = e.toString();
-        _isConnected = false;
-        notifyListeners();
-        if (!completer.isCompleted) completer.completeError(e);
-      });
-
-      await completer.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          if (!completer.isCompleted) {
-            completer.completeError(Exception('Connection timed out'));
-            disconnect();
-          }
-        },
       );
     } catch (e) {
       _error = e.toString();

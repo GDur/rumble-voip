@@ -20,7 +20,7 @@ Future<List<AudioDevice>> listAudioOutputDevices() =>
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustMumbleClient>>
 abstract class RustMumbleClient implements RustOpaqueInterface {
-  Stream<MumbleEvent> connect({
+  Future<void> connect({
     required String host,
     required int port,
     required String username,
@@ -28,6 +28,8 @@ abstract class RustMumbleClient implements RustOpaqueInterface {
   });
 
   void disconnect();
+
+  Stream<MumbleEvent> getEventStream();
 
   Future<void> joinChannel({required int channelId});
 

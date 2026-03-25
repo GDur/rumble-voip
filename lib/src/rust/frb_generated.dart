@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1675689438;
+  int get rustContentHash => -34741574;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -78,7 +78,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
-  Stream<MumbleEvent> crateApiClientRustMumbleClientConnect({
+  Future<void> crateApiClientRustMumbleClientConnect({
     required RustMumbleClient that,
     required String host,
     required int port,
@@ -87,6 +87,10 @@ abstract class RustLibApi extends BaseApi {
   });
 
   void crateApiClientRustMumbleClientDisconnect({
+    required RustMumbleClient that,
+  });
+
+  Stream<MumbleEvent> crateApiClientRustMumbleClientGetEventStream({
     required RustMumbleClient that,
   });
 
@@ -163,52 +167,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
-  Stream<MumbleEvent> crateApiClientRustMumbleClientConnect({
+  Future<void> crateApiClientRustMumbleClientConnect({
     required RustMumbleClient that,
     required String host,
     required int port,
     required String username,
     String? password,
   }) {
-    final eventSink = RustStreamSink<MumbleEvent>();
-    unawaited(
-      handler.executeNormal(
-        NormalTask(
-          callFfi: (port_) {
-            final serializer = SseSerializer(generalizedFrbRustBinding);
-            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
-              that,
-              serializer,
-            );
-            sse_encode_String(host, serializer);
-            sse_encode_u_16(port, serializer);
-            sse_encode_String(username, serializer);
-            sse_encode_opt_String(password, serializer);
-            sse_encode_StreamSink_mumble_event_Sse(eventSink, serializer);
-            pdeCallFfi(
-              generalizedFrbRustBinding,
-              serializer,
-              funcId: 1,
-              port: port_,
-            );
-          },
-          codec: SseCodec(
-            decodeSuccessData: sse_decode_unit,
-            decodeErrorData: sse_decode_String,
-          ),
-          constMeta: kCrateApiClientRustMumbleClientConnectConstMeta,
-          argValues: [that, host, port, username, password, eventSink],
-          apiImpl: this,
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_String(host, serializer);
+          sse_encode_u_16(port, serializer);
+          sse_encode_String(username, serializer);
+          sse_encode_opt_String(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
         ),
+        constMeta: kCrateApiClientRustMumbleClientConnectConstMeta,
+        argValues: [that, host, port, username, password],
+        apiImpl: this,
       ),
     );
-    return eventSink.stream;
   }
 
   TaskConstMeta get kCrateApiClientRustMumbleClientConnectConstMeta =>
       const TaskConstMeta(
         debugName: "RustMumbleClient_connect",
-        argNames: ["that", "host", "port", "username", "password", "eventSink"],
+        argNames: ["that", "host", "port", "username", "password"],
       );
 
   @override
@@ -243,6 +242,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<MumbleEvent> crateApiClientRustMumbleClientGetEventStream({
+    required RustMumbleClient that,
+  }) {
+    final sink = RustStreamSink<MumbleEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_mumble_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 3,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: null,
+          ),
+          constMeta: kCrateApiClientRustMumbleClientGetEventStreamConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientGetEventStreamConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_get_event_stream",
+        argNames: ["that", "sink"],
+      );
+
+  @override
   Future<void> crateApiClientRustMumbleClientJoinChannel({
     required RustMumbleClient that,
     required int channelId,
@@ -259,7 +299,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -286,7 +326,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -320,7 +360,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 6,
             port: port_,
           );
         },
@@ -358,7 +398,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 7,
             port: port_,
           );
         },
@@ -396,7 +436,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -434,7 +474,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -472,7 +512,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 10,
             port: port_,
           );
         },
@@ -510,7 +550,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 11,
             port: port_,
           );
         },
@@ -548,7 +588,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -588,7 +628,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -618,7 +658,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -645,7 +685,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -672,7 +712,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 16,
             port: port_,
           );
         },
@@ -1616,7 +1656,7 @@ class RustMumbleClientImpl extends RustOpaque implements RustMumbleClient {
         .rust_arc_decrement_strong_count_RustMumbleClientPtr,
   );
 
-  Stream<MumbleEvent> connect({
+  Future<void> connect({
     required String host,
     required int port,
     required String username,
@@ -1631,6 +1671,9 @@ class RustMumbleClientImpl extends RustOpaque implements RustMumbleClient {
 
   void disconnect() =>
       RustLib.instance.api.crateApiClientRustMumbleClientDisconnect(that: this);
+
+  Stream<MumbleEvent> getEventStream() => RustLib.instance.api
+      .crateApiClientRustMumbleClientGetEventStream(that: this);
 
   Future<void> joinChannel({required int channelId}) =>
       RustLib.instance.api.crateApiClientRustMumbleClientJoinChannel(
