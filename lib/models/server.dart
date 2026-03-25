@@ -1,3 +1,7 @@
+import 'dart:math';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class MumbleServer {
   final String id;
   final String name;
@@ -70,8 +74,51 @@ class MumbleServer {
     isArchived: isArchived ?? this.isArchived,
     ping: ping ?? this.ping,
     userCount: userCount ?? this.userCount,
-    maxUsers: maxUsers ?? this.maxUsers,
   );
+}
+
+String _generateDefaultUsername() {
+  // Current branch: rust-plugin
+  const branch = 'RustPlugin';
+  String platform;
+  if (kIsWeb) {
+    platform = 'Web';
+  } else if (Platform.isAndroid) {
+    platform = 'Android';
+  } else if (Platform.isIOS) {
+    platform = 'Ios';
+  } else if (Platform.isMacOS) {
+    platform = 'Macos';
+  } else if (Platform.isWindows) {
+    platform = 'Windows';
+  } else if (Platform.isLinux) {
+    platform = 'Linux';
+  } else {
+    platform = 'Unknown';
+  }
+
+  const gameNames = [
+    'Glados',
+    'MasterChief',
+    'Chell',
+    'Cortana',
+    'DoomSlayer',
+    'Geralt',
+    'Triss',
+    'Yennefer',
+    'Arthur',
+    'Ellie',
+    'Joel',
+    'DrStrange',
+    'SonGoku',
+    'Vegeta',
+    'Frieza',
+    'TonyStark',
+    'Thor',
+    'Loki',
+  ];
+  final randomName = gameNames[Random().nextInt(gameNames.length)];
+  return 'Rumble$branch$platform$randomName';
 }
 
 final List<MumbleServer> initialServers = [
@@ -79,18 +126,18 @@ final List<MumbleServer> initialServers = [
     name: 'chat.revslair.net',
     host: 'chat.revslair.net',
     port: 64738,
-    username: 'RumbleUser',
+    username: _generateDefaultUsername(),
   ),
   MumbleServer(
     name: 'Rogue Server',
     host: 'mumble.rogueserver.com',
     port: 64738,
-    username: 'RumbleUser',
+    username: _generateDefaultUsername(),
   ),
   MumbleServer(
     name: 'TWC Server',
     host: 'mumble.twcclan.org',
     port: 64738,
-    username: 'RumbleUser',
+    username: _generateDefaultUsername(),
   ),
 ];
