@@ -23,7 +23,6 @@ dependencies:
   window_manager: ^0.5.1
   basic_utils: ^5.8.2
   file_picker: ^10.3.10
-  flutter_widget_from_html: ^0.17.1
   flutter_widget_from_html_core: ^0.17.0
   url_launcher: ^6.3.2
   intl: ^0.20.2
