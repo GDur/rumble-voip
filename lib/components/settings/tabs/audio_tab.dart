@@ -40,17 +40,17 @@ class AudioTab extends StatelessWidget {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.inputDevices;
-              final inputDeviceId = settings.inputDeviceId;
+              final captureDeviceId = settings.inputDeviceId;
               final hasCurrent =
-                  inputDeviceId == null ||
-                  devices.any((d) => d.id == inputDeviceId);
+                  captureDeviceId == null ||
+                  devices.any((d) => d.id == captureDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
-                initialValue: inputDeviceId,
+                initialValue: captureDeviceId,
                 onChanged: (value) async {
                   settings.setInputDeviceId(value);
-                  await mumbleService.updateAudioSettings(inputDeviceId: value);
+                  await mumbleService.updateAudioSettings(captureDeviceId: value);
                 },
                 options: [
                   const ShadOption<String?>(
@@ -59,7 +59,7 @@ class AudioTab extends StatelessWidget {
                   ),
                   if (!hasCurrent)
                     ShadOption<String?>(
-                      value: inputDeviceId,
+                      value: captureDeviceId,
                       child: const Text('Unknown Device'),
                     ),
                   ...devices.map(
@@ -91,7 +91,7 @@ class AudioTab extends StatelessWidget {
                   onChanged: (v) {
                     final bitrate = (v * 1000).round();
                     settings.setAudioBitrate(bitrate);
-                    mumbleService.updateAudioSettings(audioBitrate: bitrate);
+                    mumbleService.updateAudioSettings(outgoingAudioBitrate: bitrate);
                     onUpdate(() {});
                   },
                 ),
@@ -123,7 +123,7 @@ class AudioTab extends StatelessWidget {
                   onChanged: (v) {
                     final frameMs = v.round();
                     settings.setAudioFrameMs(frameMs);
-                    mumbleService.updateAudioSettings(audioFrameMs: frameMs);
+                    mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: frameMs);
                     onUpdate(() {});
                   },
                 ),
@@ -224,18 +224,18 @@ class AudioTab extends StatelessWidget {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.outputDevices;
-              final outputDeviceId = settings.outputDeviceId;
+              final playbackDeviceId = settings.outputDeviceId;
               final hasCurrent =
-                  outputDeviceId == null ||
-                  devices.any((d) => d.id == outputDeviceId);
+                  playbackDeviceId == null ||
+                  devices.any((d) => d.id == playbackDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Output'),
-                initialValue: outputDeviceId,
+                initialValue: playbackDeviceId,
                 onChanged: (value) async {
                   settings.setOutputDeviceId(value);
                   await mumbleService.updateAudioSettings(
-                    outputDeviceId: value,
+                    playbackDeviceId: value,
                   );
                   onUpdate(() {});
                 },
@@ -246,7 +246,7 @@ class AudioTab extends StatelessWidget {
                   ),
                   if (!hasCurrent)
                     ShadOption<String?>(
-                      value: outputDeviceId,
+                      value: playbackDeviceId,
                       child: const Text('Current Device'),
                     ),
                   ...devices.map(

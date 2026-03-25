@@ -26,12 +26,12 @@ class MumbleService extends ChangeNotifier {
   List<AudioDevice> _outputDevices = [];
   SettingsService? _settings;
   MumbleConfig _config = const MumbleConfig(
-    audioBitrate: 72000,
-    audioFrameMs: 10,
-    opusComplexity: 10,
-    jitterBufferMs: 40,
-    outputBufferSize: AudioBufferSize.default_(),
-    inputBufferSize: AudioBufferSize.default_(),
+    outgoingAudioBitrate: 72000,
+    outgoingAudioMsPerPacket: 10,
+    outgoingOpusComplexity: 10,
+    incomingJitterBufferMs: 40,
+    playbackHwBufferSize: AudioBufferSize.default_(),
+    captureHwBufferSize: AudioBufferSize.default_(),
   );
 
   bool get isConnected => _isConnected;
@@ -91,73 +91,73 @@ class MumbleService extends ChangeNotifier {
     SettingsService settings,
     double inputGain,
     double outputVolume,
-    String? inputId,
-    String? outputId,
+    String? captureDeviceId,
+    String? playbackDeviceId,
   ) async {
     _settings = settings;
     _config = MumbleConfig(
-      audioBitrate: settings.audioBitrate,
-      audioFrameMs: settings.audioFrameMs,
-      opusComplexity: 10,
-      jitterBufferMs: 40,
-      outputBufferSize: const AudioBufferSize.default_(),
-      inputBufferSize: const AudioBufferSize.default_(),
-      inputDeviceId: inputId,
-      outputDeviceId: outputId,
+      outgoingAudioBitrate: settings.audioBitrate,
+      outgoingAudioMsPerPacket: settings.audioFrameMs,
+      outgoingOpusComplexity: 10,
+      incomingJitterBufferMs: 40,
+      playbackHwBufferSize: const AudioBufferSize.default_(),
+      captureHwBufferSize: const AudioBufferSize.default_(),
+      captureDeviceId: captureDeviceId,
+      playbackDeviceId: playbackDeviceId,
     );
     _client.setConfig(config: _config);
     await _refreshDevices();
   }
 
-  Future<void> setInputDevice(String? deviceId) async {
+  Future<void> setCaptureDevice(String? captureDeviceId) async {
     _config = MumbleConfig(
-      audioBitrate: _config.audioBitrate,
-      audioFrameMs: _config.audioFrameMs,
-      opusComplexity: _config.opusComplexity,
-      jitterBufferMs: _config.jitterBufferMs,
-      outputBufferSize: _config.outputBufferSize,
-      inputBufferSize: _config.inputBufferSize,
-      inputDeviceId: deviceId,
-      outputDeviceId: _config.outputDeviceId,
+      outgoingAudioBitrate: _config.outgoingAudioBitrate,
+      outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
+      outgoingOpusComplexity: _config.outgoingOpusComplexity,
+      incomingJitterBufferMs: _config.incomingJitterBufferMs,
+      playbackHwBufferSize: _config.playbackHwBufferSize,
+      captureHwBufferSize: _config.captureHwBufferSize,
+      captureDeviceId: captureDeviceId,
+      playbackDeviceId: _config.playbackDeviceId,
     );
     await _client.setConfig(config: _config);
     if (_settings != null) {
-      await _settings!.setInputDeviceId(deviceId);
+      await _settings!.setInputDeviceId(captureDeviceId);
     }
     notifyListeners();
   }
 
-  Future<void> setOutputDevice(String? deviceId) async {
+  Future<void> setPlaybackDevice(String? playbackDeviceId) async {
     _config = MumbleConfig(
-      audioBitrate: _config.audioBitrate,
-      audioFrameMs: _config.audioFrameMs,
-      opusComplexity: _config.opusComplexity,
-      jitterBufferMs: _config.jitterBufferMs,
-      outputBufferSize: _config.outputBufferSize,
-      inputBufferSize: _config.inputBufferSize,
-      inputDeviceId: _config.inputDeviceId,
-      outputDeviceId: deviceId,
+      outgoingAudioBitrate: _config.outgoingAudioBitrate,
+      outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
+      outgoingOpusComplexity: _config.outgoingOpusComplexity,
+      incomingJitterBufferMs: _config.incomingJitterBufferMs,
+      playbackHwBufferSize: _config.playbackHwBufferSize,
+      captureHwBufferSize: _config.captureHwBufferSize,
+      captureDeviceId: _config.captureDeviceId,
+      playbackDeviceId: playbackDeviceId,
     );
     await _client.setConfig(config: _config);
     if (_settings != null) {
-      await _settings!.setOutputDeviceId(deviceId);
+      await _settings!.setOutputDeviceId(playbackDeviceId);
     }
     notifyListeners();
   }
 
   Future<void> updateAudioSettings({
-    String? inputDeviceId,
-    String? outputDeviceId,
+    String? captureDeviceId,
+    String? playbackDeviceId,
     double? inputGain,
     double? outputVolume,
-    int? audioBitrate,
-    int? audioFrameMs,
+    int? outgoingAudioBitrate,
+    int? outgoingAudioMsPerPacket,
   }) async {
-    if (inputDeviceId != null) {
-      await setInputDevice(inputDeviceId);
+    if (captureDeviceId != null) {
+      await setCaptureDevice(captureDeviceId);
     }
-    if (outputDeviceId != null) {
-      await setOutputDevice(outputDeviceId);
+    if (playbackDeviceId != null) {
+      await setPlaybackDevice(playbackDeviceId);
     }
     if (inputGain != null) {
       await _client.setInputGain(gain: inputGain);
@@ -165,16 +165,16 @@ class MumbleService extends ChangeNotifier {
     if (outputVolume != null) {
       await _client.setOutputVolume(volume: outputVolume);
     }
-    if (audioBitrate != null || audioFrameMs != null) {
+    if (outgoingAudioBitrate != null || outgoingAudioMsPerPacket != null) {
       _config = MumbleConfig(
-        audioBitrate: audioBitrate ?? _config.audioBitrate,
-        audioFrameMs: audioFrameMs ?? _config.audioFrameMs,
-        opusComplexity: _config.opusComplexity,
-        jitterBufferMs: _config.jitterBufferMs,
-        outputBufferSize: _config.outputBufferSize,
-        inputBufferSize: _config.inputBufferSize,
-        inputDeviceId: _config.inputDeviceId,
-        outputDeviceId: _config.outputDeviceId,
+        outgoingAudioBitrate: outgoingAudioBitrate ?? _config.outgoingAudioBitrate,
+        outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? _config.outgoingAudioMsPerPacket,
+        outgoingOpusComplexity: _config.outgoingOpusComplexity,
+        incomingJitterBufferMs: _config.incomingJitterBufferMs,
+        playbackHwBufferSize: _config.playbackHwBufferSize,
+        captureHwBufferSize: _config.captureHwBufferSize,
+        captureDeviceId: _config.captureDeviceId,
+        playbackDeviceId: _config.playbackDeviceId,
       );
       await _client.setConfig(config: _config);
     }
