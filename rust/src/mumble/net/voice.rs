@@ -1,4 +1,4 @@
-use crate::mumble::types::{AudioPacket, IncomingAudio};
+use crate::mumble::dsp::{AudioPacket, IncomingAudio};
 use bytes::BytesMut;
 use crossbeam_channel::Sender as CrossSender;
 use mumble_protocol_2x::crypt::CryptState;

@@ -4,14 +4,58 @@ pub mod resample;
 pub mod user_stream;
 
 use crate::frb_generated::StreamSink;
-use crate::mumble::dsp::playback::PlaybackMixer;
+use crate::mumble::config::{MumbleConfig, RbConsumer, RbProducer};
 use crate::mumble::dsp::capture::CapturePipeline;
-use crate::mumble::types::{AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer};
+use crate::mumble::dsp::playback::PlaybackMixer;
 use crate::mumble::MumbleEvent;
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+pub struct AudioPacket {
+    payload: heapless::Vec<u8, 512>,
+    is_last: bool,
+}
+
+impl AudioPacket {
+    pub fn new(payload: heapless::Vec<u8, 512>, is_last: bool) -> Self {
+        Self { payload, is_last }
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.payload
+    }
+
+    pub fn is_last(&self) -> bool {
+        self.is_last
+    }
+}
+
+#[derive(Debug)]
+pub struct IncomingAudio {
+    session_id: u32,
+    packet: AudioPacket,
+}
+
+impl IncomingAudio {
+    pub fn new(session_id: u32, packet: AudioPacket) -> Self {
+        Self { session_id, packet }
+    }
+
+    pub fn session_id(&self) -> u32 {
+        self.session_id
+    }
+
+    pub fn packet(&self) -> &AudioPacket {
+        &self.packet
+    }
+
+    pub fn into_packet(self) -> AudioPacket {
+        self.packet
+    }
+}
 
 pub fn spawn_encode_thread(
     mut cons_in: RbConsumer,

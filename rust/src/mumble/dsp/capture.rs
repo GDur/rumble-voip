@@ -1,6 +1,7 @@
 use crate::mumble::codec::opus::OpusEncoder;
+use crate::mumble::config::{MumbleConfig, MUMBLE_SAMPLE_RATE};
 use crate::mumble::dsp::resample::Resampler;
-use crate::mumble::types::{AudioPacket, MumbleConfig, MUMBLE_SAMPLE_RATE};
+use crate::mumble::dsp::AudioPacket;
 use opus_head_sys::*;
 use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};

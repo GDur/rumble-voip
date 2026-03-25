@@ -1,3 +1,4 @@
+use crate::mumble::hardware::audio::AudioBufferSize;
 use ringbuf::{storage::Heap, SharedRb};
 use std::sync::Arc;
 
@@ -5,20 +6,6 @@ pub type RbProducer = ringbuf::wrap::caching::Caching<Arc<SharedRb<Heap<f32>>>, 
 pub type RbConsumer = ringbuf::wrap::caching::Caching<Arc<SharedRb<Heap<f32>>>, false, true>;
 
 pub const MUMBLE_SAMPLE_RATE: u32 = 48000;
-
-#[derive(Debug, Clone)]
-pub enum AudioBufferSize {
-    /// Use the operating system's default hardware buffer size.
-    Default,
-    /// Request a specific hardware buffer size (in frames).
-    Fixed(u32),
-}
-
-#[derive(Debug, Clone)]
-pub struct AudioDevice {
-    pub name: String,
-    pub id: String,
-}
 
 #[derive(Debug, Clone)]
 pub struct MumbleConfig {
@@ -48,54 +35,10 @@ impl Default for MumbleConfig {
             audio_frame_ms: 10,
             opus_complexity: 10,
             jitter_buffer_ms: 40,
-            output_buffer_size: AudioBufferSize::Default,
-            input_buffer_size: AudioBufferSize::Default,
+            output_buffer_size: super::hardware::audio::AudioBufferSize::Default,
+            input_buffer_size: super::hardware::audio::AudioBufferSize::Default,
             input_device_id: None,
             output_device_id: None,
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct AudioPacket {
-    payload: heapless::Vec<u8, 512>,
-    is_last: bool,
-}
-
-impl AudioPacket {
-    pub fn new(payload: heapless::Vec<u8, 512>, is_last: bool) -> Self {
-        Self { payload, is_last }
-    }
-
-    pub fn payload(&self) -> &[u8] {
-        &self.payload
-    }
-
-    pub fn is_last(&self) -> bool {
-        self.is_last
-    }
-}
-
-#[derive(Debug)]
-pub struct IncomingAudio {
-    session_id: u32,
-    packet: AudioPacket,
-}
-
-impl IncomingAudio {
-    pub fn new(session_id: u32, packet: AudioPacket) -> Self {
-        Self { session_id, packet }
-    }
-
-    pub fn session_id(&self) -> u32 {
-        self.session_id
-    }
-
-    pub fn packet(&self) -> &AudioPacket {
-        &self.packet
-    }
-
-    pub fn into_packet(self) -> AudioPacket {
-        self.packet
     }
 }

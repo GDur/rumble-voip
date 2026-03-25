@@ -1,9 +1,23 @@
-use crate::mumble::types::{AudioDevice, RbConsumer, RbProducer};
+use crate::mumble::config::{RbConsumer, RbProducer};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crossbeam_channel::Sender;
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+pub enum AudioBufferSize {
+    /// Use the operating system's default hardware buffer size.
+    Default,
+    /// Request a specific hardware buffer size (in frames).
+    Fixed(u32),
+}
+
+#[derive(Debug, Clone)]
+pub struct AudioDevice {
+    pub name: String,
+    pub id: String,
+}
 
 pub struct SendStream(pub cpal::Stream);
 // Safety: cpal::Stream is not Send on all platforms, but for our usage we only store it
@@ -50,7 +64,7 @@ pub fn setup_audio(
     output_notify: Sender<()>,
     current_rms: Arc<AtomicU32>,
     input_gain: Arc<AtomicU32>,
-    config: &crate::mumble::types::MumbleConfig,
+    config: &crate::mumble::config::MumbleConfig,
 ) -> anyhow::Result<AudioBackend> {
     let host = cpal::default_host();
 
@@ -79,13 +93,13 @@ pub fn setup_audio(
     let mut output_config = output_config_full.config();
 
     input_config.buffer_size = match config.input_buffer_size {
-        crate::mumble::types::AudioBufferSize::Default => cpal::BufferSize::Default,
-        crate::mumble::types::AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
+        AudioBufferSize::Default => cpal::BufferSize::Default,
+        AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
     };
 
     output_config.buffer_size = match config.output_buffer_size {
-        crate::mumble::types::AudioBufferSize::Default => cpal::BufferSize::Default,
-        crate::mumble::types::AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
+        AudioBufferSize::Default => cpal::BufferSize::Default,
+        AudioBufferSize::Fixed(frames) => cpal::BufferSize::Fixed(frames),
     };
 
     let input_rate = input_config.sample_rate;

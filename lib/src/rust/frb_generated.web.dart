@@ -10,7 +10,8 @@ import 'api/client.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
-import 'mumble/types.dart';
+import 'mumble/config.dart';
+import 'mumble/hardware/audio.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {

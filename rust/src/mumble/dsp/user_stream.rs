@@ -1,5 +1,4 @@
-use crate::mumble::codec::opus::OpusDecoder;
-use crate::mumble::types::AudioPacket;
+use crate::mumble::{codec::opus::OpusDecoder, dsp::AudioPacket};
 use std::time::Instant;
 
 pub struct UserVoiceStream {

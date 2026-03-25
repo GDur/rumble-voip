@@ -1,6 +1,5 @@
 use crate::frb_generated::StreamSink;
-use crate::mumble::hardware::audio;
-use crate::mumble::types::AudioDevice;
+use crate::mumble::hardware::audio::{self, AudioDevice};
 use crate::mumble::{MumbleClient, MumbleCommand};
 use flutter_rust_bridge::frb;
 use std::sync::Arc;
@@ -54,7 +53,7 @@ pub struct MumbleTextMessage {
 pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
     internal: Arc<Mutex<Option<MumbleClient>>>,
-    config: Arc<std::sync::Mutex<crate::mumble::types::MumbleConfig>>,
+    config: Arc<std::sync::Mutex<crate::mumble::config::MumbleConfig>>,
     event_sink: Arc<std::sync::Mutex<Option<StreamSink<MumbleEvent>>>>,
 }
 
@@ -71,7 +70,7 @@ impl RustMumbleClient {
             runtime,
             internal: Arc::new(Mutex::new(None)),
             config: Arc::new(std::sync::Mutex::new(
-                crate::mumble::types::MumbleConfig::default(),
+                crate::mumble::config::MumbleConfig::default(),
             )),
             event_sink: Arc::new(std::sync::Mutex::new(None)),
         }
@@ -122,7 +121,7 @@ impl RustMumbleClient {
         });
     }
 
-    pub fn set_config(&self, config: crate::mumble::types::MumbleConfig) {
+    pub fn set_config(&self, config: crate::mumble::config::MumbleConfig) {
         if let Ok(mut cfg) = self.config.lock() {
             *cfg = config.clone();
         }

@@ -1,8 +1,8 @@
-use crate::mumble::MumbleEvent;
 use crate::frb_generated::StreamSink;
-use crate::mumble::dsp::user_stream::UserVoiceStream;
+use crate::mumble::config::{MumbleConfig, MUMBLE_SAMPLE_RATE};
 use crate::mumble::dsp::resample::Resampler;
-use crate::mumble::types::{MumbleConfig, MUMBLE_SAMPLE_RATE};
+use crate::mumble::dsp::user_stream::UserVoiceStream;
+use crate::mumble::MumbleEvent;
 use sonora::config::GainController2;
 use sonora::{AudioProcessing, Config, StreamConfig};
 use std::collections::HashMap;
