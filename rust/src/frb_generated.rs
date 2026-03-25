@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 688507968;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1675689438;
 
 // Section: executor
 
@@ -52,7 +52,7 @@ fn wire__crate__api__client__RustMumbleClient_connect_impl(
     rust_vec_len_: i32,
     data_len_: i32,
 ) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
             debug_name: "RustMumbleClient_connect",
             port: Some(port_),
@@ -80,32 +80,39 @@ fn wire__crate__api__client__RustMumbleClient_connect_impl(
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
             deserializer.end();
-            move |context| {
-                transform_result_sse::<_, String>((move || {
-                    let mut api_that_guard = None;
-                    let decode_indices_ =
-                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
-                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                &api_that, 0, false,
-                            ),
-                        ]);
-                    for i in decode_indices_ {
-                        match i {
-                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
-                            _ => unreachable!(),
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
                         }
-                    }
-                    let api_that_guard = api_that_guard.unwrap();
-                    let output_ok = crate::api::client::RustMumbleClient::connect(
-                        &*api_that_guard,
-                        api_host,
-                        api_port,
-                        api_username,
-                        api_password,
-                        api_event_sink,
-                    )?;
-                    Ok(output_ok)
-                })())
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::client::RustMumbleClient::connect(
+                            &*api_that_guard,
+                            api_host,
+                            api_port,
+                            api_username,
+                            api_password,
+                            api_event_sink,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
             }
         },
     )
@@ -289,6 +296,61 @@ fn wire__crate__api__client__RustMumbleClient_send_text_message_impl(
                         crate::api::client::RustMumbleClient::send_text_message(
                             &*api_that_guard,
                             api_message,
+                        );
+                    })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__client__RustMumbleClient_set_config_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustMumbleClient_set_config",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustMumbleClient>,
+            >>::sse_decode(&mut deserializer);
+            let api_config = <crate::mumble::types::MumbleConfig>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::client::RustMumbleClient::set_config(
+                            &*api_that_guard,
+                            api_config,
                         );
                     })?;
                     Ok(output_ok)
@@ -778,6 +840,25 @@ impl SseDecode for String {
     }
 }
 
+impl SseDecode for crate::mumble::types::AudioBufferSize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                return crate::mumble::types::AudioBufferSize::Default;
+            }
+            1 => {
+                let mut var_field0 = <u32>::sse_decode(deserializer);
+                return crate::mumble::types::AudioBufferSize::Fixed(var_field0);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseDecode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -839,6 +920,28 @@ impl SseDecode for crate::api::client::MumbleChannel {
             position: var_position,
             description: var_description,
             is_enter_restricted: var_isEnterRestricted,
+        };
+    }
+}
+
+impl SseDecode for crate::mumble::types::MumbleConfig {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_audioBitrate = <u32>::sse_decode(deserializer);
+        let mut var_audioFrameMs = <u32>::sse_decode(deserializer);
+        let mut var_opusComplexity = <u32>::sse_decode(deserializer);
+        let mut var_jitterBufferMs = <u32>::sse_decode(deserializer);
+        let mut var_outputBufferSize =
+            <crate::mumble::types::AudioBufferSize>::sse_decode(deserializer);
+        let mut var_inputBufferSize =
+            <crate::mumble::types::AudioBufferSize>::sse_decode(deserializer);
+        return crate::mumble::types::MumbleConfig {
+            audio_bitrate: var_audioBitrate,
+            audio_frame_ms: var_audioFrameMs,
+            opus_complexity: var_opusComplexity,
+            jitter_buffer_ms: var_jitterBufferMs,
+            output_buffer_size: var_outputBufferSize,
+            input_buffer_size: var_inputBufferSize,
         };
     }
 }
@@ -1007,50 +1110,56 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__client__RustMumbleClient_set_deafen_impl(
+        6 => wire__crate__api__client__RustMumbleClient_set_config_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        7 => wire__crate__api__client__RustMumbleClient_set_input_gain_impl(
+        7 => wire__crate__api__client__RustMumbleClient_set_deafen_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__client__RustMumbleClient_set_mute_impl(
+        8 => wire__crate__api__client__RustMumbleClient_set_input_gain_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__client__RustMumbleClient_set_output_volume_impl(
+        9 => wire__crate__api__client__RustMumbleClient_set_mute_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__client__RustMumbleClient_set_ptt_impl(
+        10 => wire__crate__api__client__RustMumbleClient_set_output_volume_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__client__RustMumbleClient_set_user_volume_impl(
+        11 => wire__crate__api__client__RustMumbleClient_set_ptt_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__client__init_app_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__client__list_audio_input_devices_impl(
+        12 => wire__crate__api__client__RustMumbleClient_set_user_volume_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__client__list_audio_output_devices_impl(
+        13 => wire__crate__api__client__init_app_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__client__list_audio_input_devices_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        15 => wire__crate__api__client__list_audio_output_devices_impl(
             port,
             ptr,
             rust_vec_len,
@@ -1094,6 +1203,31 @@ impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<RustMumbleClient>> for RustMum
 }
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::mumble::types::AudioBufferSize {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::mumble::types::AudioBufferSize::Default => [0.into_dart()].into_dart(),
+            crate::mumble::types::AudioBufferSize::Fixed(field0) => {
+                [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::mumble::types::AudioBufferSize
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::mumble::types::AudioBufferSize>
+    for crate::mumble::types::AudioBufferSize
+{
+    fn into_into_dart(self) -> crate::mumble::types::AudioBufferSize {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::client::MumbleChannel {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -1115,6 +1249,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::client::MumbleChannel>
     for crate::api::client::MumbleChannel
 {
     fn into_into_dart(self) -> crate::api::client::MumbleChannel {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::mumble::types::MumbleConfig {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.audio_bitrate.into_into_dart().into_dart(),
+            self.audio_frame_ms.into_into_dart().into_dart(),
+            self.opus_complexity.into_into_dart().into_dart(),
+            self.jitter_buffer_ms.into_into_dart().into_dart(),
+            self.output_buffer_size.into_into_dart().into_dart(),
+            self.input_buffer_size.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::mumble::types::MumbleConfig
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::mumble::types::MumbleConfig>
+    for crate::mumble::types::MumbleConfig
+{
+    fn into_into_dart(self) -> crate::mumble::types::MumbleConfig {
         self
     }
 }
@@ -1256,6 +1415,24 @@ impl SseEncode for String {
     }
 }
 
+impl SseEncode for crate::mumble::types::AudioBufferSize {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::mumble::types::AudioBufferSize::Default => {
+                <i32>::sse_encode(0, serializer);
+            }
+            crate::mumble::types::AudioBufferSize::Fixed(field0) => {
+                <i32>::sse_encode(1, serializer);
+                <u32>::sse_encode(field0, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1306,6 +1483,18 @@ impl SseEncode for crate::api::client::MumbleChannel {
         <i32>::sse_encode(self.position, serializer);
         <Option<String>>::sse_encode(self.description, serializer);
         <bool>::sse_encode(self.is_enter_restricted, serializer);
+    }
+}
+
+impl SseEncode for crate::mumble::types::MumbleConfig {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.audio_bitrate, serializer);
+        <u32>::sse_encode(self.audio_frame_ms, serializer);
+        <u32>::sse_encode(self.opus_complexity, serializer);
+        <u32>::sse_encode(self.jitter_buffer_ms, serializer);
+        <crate::mumble::types::AudioBufferSize>::sse_encode(self.output_buffer_size, serializer);
+        <crate::mumble::types::AudioBufferSize>::sse_encode(self.input_buffer_size, serializer);
     }
 }
 

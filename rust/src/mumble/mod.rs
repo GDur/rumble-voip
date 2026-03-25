@@ -21,6 +21,7 @@ pub enum MumbleCommand {
     SetUserVolume(u32, f32),
     SetOutputVolume(f32),
     SetInputGain(f32),
+    UpdateConfig(MumbleConfig),
 }
 
 pub struct InternalMumbleClient {
@@ -35,19 +36,25 @@ impl InternalMumbleClient {
         password: Option<String>,
         event_sink: StreamSink<MumbleEvent>,
         config: MumbleConfig,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, String> {
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
 
         let event_sink_clone = event_sink.clone();
 
-        // TODO: maybe refactor this to initialize the connection in this method and only start the task afterwards.
+        // Perform connection and handshake in the current task so we can return errors
+        let framed = match crate::mumble::control::connect(&host, port, username, password).await {
+            Ok(f) => f,
+            Err(e) => {
+                let err_msg = format!("Failed to connect to mumble server: {}", e);
+                return Err(err_msg);
+            }
+        };
 
         // Main loop runner
         tokio::spawn(async move {
-            if let Err(e) = crate::mumble::control::run_loop(
-                host, port, username, password, cmd_rx, event_sink, config,
-            )
-            .await
+            if let Err(e) =
+                crate::mumble::control::run_loop(framed, host, port, cmd_rx, event_sink, config)
+                    .await
             {
                 eprintln!("Mumble client loop error: {}", e);
                 let _ = event_sink_clone.add(MumbleEvent::Disconnected(e.to_string()));

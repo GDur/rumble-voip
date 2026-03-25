@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'mumble/types.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 /// Main entrypoint of the Rust API
@@ -66,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 688507968;
+  int get rustContentHash => -1675689438;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -99,6 +100,11 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiClientRustMumbleClientSendTextMessage({
     required RustMumbleClient that,
     required String message,
+  });
+
+  Future<void> crateApiClientRustMumbleClientSetConfig({
+    required RustMumbleClient that,
+    required MumbleConfig config,
   });
 
   Future<void> crateApiClientRustMumbleClientSetDeafen({
@@ -336,6 +342,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiClientRustMumbleClientSetConfig({
+    required RustMumbleClient that,
+    required MumbleConfig config,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_mumble_config(config, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiClientRustMumbleClientSetConfigConstMeta,
+        argValues: [that, config],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClientRustMumbleClientSetConfigConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustMumbleClient_set_config",
+        argNames: ["that", "config"],
+      );
+
+  @override
   Future<void> crateApiClientRustMumbleClientSetDeafen({
     required RustMumbleClient that,
     required bool deafen,
@@ -352,7 +396,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 7,
             port: port_,
           );
         },
@@ -390,7 +434,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -428,7 +472,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -466,7 +510,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 10,
             port: port_,
           );
         },
@@ -504,7 +548,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 11,
             port: port_,
           );
         },
@@ -544,7 +588,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -574,7 +618,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -601,7 +645,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -628,7 +672,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -702,6 +746,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AudioBufferSize dco_decode_audio_buffer_size(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return AudioBufferSize_Default();
+      case 1:
+        return AudioBufferSize_Fixed(dco_decode_u_32(raw[1]));
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
@@ -711,6 +768,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MumbleChannel dco_decode_box_autoadd_mumble_channel(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_mumble_channel(raw);
+  }
+
+  @protected
+  MumbleConfig dco_decode_box_autoadd_mumble_config(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_mumble_config(raw);
   }
 
   @protected
@@ -768,6 +831,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       position: dco_decode_i_32(arr[3]),
       description: dco_decode_opt_String(arr[4]),
       isEnterRestricted: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  MumbleConfig dco_decode_mumble_config(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return MumbleConfig(
+      audioBitrate: dco_decode_u_32(arr[0]),
+      audioFrameMs: dco_decode_u_32(arr[1]),
+      opusComplexity: dco_decode_u_32(arr[2]),
+      jitterBufferMs: dco_decode_u_32(arr[3]),
+      outputBufferSize: dco_decode_audio_buffer_size(arr[4]),
+      inputBufferSize: dco_decode_audio_buffer_size(arr[5]),
     );
   }
 
@@ -936,6 +1015,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AudioBufferSize sse_decode_audio_buffer_size(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        return AudioBufferSize_Default();
+      case 1:
+        var var_field0 = sse_decode_u_32(deserializer);
+        return AudioBufferSize_Fixed(var_field0);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
@@ -947,6 +1042,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_mumble_channel(deserializer));
+  }
+
+  @protected
+  MumbleConfig sse_decode_box_autoadd_mumble_config(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_mumble_config(deserializer));
   }
 
   @protected
@@ -1016,6 +1119,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       position: var_position,
       description: var_description,
       isEnterRestricted: var_isEnterRestricted,
+    );
+  }
+
+  @protected
+  MumbleConfig sse_decode_mumble_config(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_audioBitrate = sse_decode_u_32(deserializer);
+    var var_audioFrameMs = sse_decode_u_32(deserializer);
+    var var_opusComplexity = sse_decode_u_32(deserializer);
+    var var_jitterBufferMs = sse_decode_u_32(deserializer);
+    var var_outputBufferSize = sse_decode_audio_buffer_size(deserializer);
+    var var_inputBufferSize = sse_decode_audio_buffer_size(deserializer);
+    return MumbleConfig(
+      audioBitrate: var_audioBitrate,
+      audioFrameMs: var_audioFrameMs,
+      opusComplexity: var_opusComplexity,
+      jitterBufferMs: var_jitterBufferMs,
+      outputBufferSize: var_outputBufferSize,
+      inputBufferSize: var_inputBufferSize,
     );
   }
 
@@ -1213,6 +1335,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_audio_buffer_size(
+    AudioBufferSize self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case AudioBufferSize_Default():
+        sse_encode_i_32(0, serializer);
+      case AudioBufferSize_Fixed(field0: final field0):
+        sse_encode_i_32(1, serializer);
+        sse_encode_u_32(field0, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
@@ -1225,6 +1362,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_mumble_channel(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_mumble_config(
+    MumbleConfig self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_mumble_config(self, serializer);
   }
 
   @protected
@@ -1291,6 +1437,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.position, serializer);
     sse_encode_opt_String(self.description, serializer);
     sse_encode_bool(self.isEnterRestricted, serializer);
+  }
+
+  @protected
+  void sse_encode_mumble_config(MumbleConfig self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.audioBitrate, serializer);
+    sse_encode_u_32(self.audioFrameMs, serializer);
+    sse_encode_u_32(self.opusComplexity, serializer);
+    sse_encode_u_32(self.jitterBufferMs, serializer);
+    sse_encode_audio_buffer_size(self.outputBufferSize, serializer);
+    sse_encode_audio_buffer_size(self.inputBufferSize, serializer);
   }
 
   @protected
@@ -1448,6 +1605,9 @@ class RustMumbleClientImpl extends RustOpaque implements RustMumbleClient {
         that: this,
         message: message,
       );
+
+  Future<void> setConfig({required MumbleConfig config}) => RustLib.instance.api
+      .crateApiClientRustMumbleClientSetConfig(that: this, config: config);
 
   Future<void> setDeafen({required bool deafen}) => RustLib.instance.api
       .crateApiClientRustMumbleClientSetDeafen(that: this, deafen: deafen);

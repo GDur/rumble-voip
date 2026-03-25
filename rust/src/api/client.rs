@@ -8,9 +8,6 @@ use tokio::sync::Mutex;
 #[frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
-
-    println!("Rust initialised");
-    println!("--- RUST: initialised ---");
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +53,7 @@ pub struct MumbleTextMessage {
 pub struct RustMumbleClient {
     runtime: tokio::runtime::Runtime,
     internal: Arc<Mutex<Option<InternalMumbleClient>>>,
-    config: crate::mumble::types::MumbleConfig,
+    config: Arc<std::sync::Mutex<crate::mumble::types::MumbleConfig>>,
 }
 
 impl RustMumbleClient {
@@ -71,11 +68,13 @@ impl RustMumbleClient {
         Self {
             runtime,
             internal: Arc::new(Mutex::new(None)),
-            config: crate::mumble::types::MumbleConfig::default(),
+            config: Arc::new(std::sync::Mutex::new(
+                crate::mumble::types::MumbleConfig::default(),
+            )),
         }
     }
 
-    pub fn connect(
+    pub async fn connect(
         &self,
         host: String,
         port: u16,
@@ -83,22 +82,21 @@ impl RustMumbleClient {
         password: Option<String>,
         event_sink: StreamSink<MumbleEvent>,
     ) -> Result<(), String> {
-        let internal_arc = self.internal.clone();
-        let config = self.config.clone();
-        self.runtime.spawn(async move {
-            match InternalMumbleClient::start(host, port, username, password, event_sink, config)
-                .await
-            {
-                Ok(client) => {
-                    let mut internal = internal_arc.lock().await;
-                    *internal = Some(client);
-                }
-                Err(e) => {
-                    eprintln!("Failed to start mumble client: {}", e);
-                }
-            }
+        let config = self.config.lock().unwrap().clone();
+
+        // Spawn on the dedicated tokio runtime so Mumble logic runs there
+        let handle = self.runtime.spawn(async move {
+            InternalMumbleClient::start(host, port, username, password, event_sink, config).await
         });
-        Ok(())
+
+        match handle.await.map_err(|e| e.to_string())? {
+            Ok(client) => {
+                let mut internal = self.internal.lock().await;
+                *internal = Some(client);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     #[frb(sync)]
@@ -112,6 +110,13 @@ impl RustMumbleClient {
         });
     }
 
+    pub fn set_config(&self, config: crate::mumble::types::MumbleConfig) {
+        if let Ok(mut cfg) = self.config.lock() {
+            *cfg = config.clone();
+        }
+        self.send_command(MumbleCommand::UpdateConfig(config));
+    }
+    
     pub fn join_channel(&self, channel_id: u32) {
         self.send_command(MumbleCommand::JoinChannel(channel_id));
     }

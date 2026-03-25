@@ -8,6 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 import 'frb_generated.dart';
+import 'mumble/types.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
@@ -52,10 +53,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  AudioBufferSize dco_decode_audio_buffer_size(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
   MumbleChannel dco_decode_box_autoadd_mumble_channel(dynamic raw);
+
+  @protected
+  MumbleConfig dco_decode_box_autoadd_mumble_config(dynamic raw);
 
   @protected
   MumbleTextMessage dco_decode_box_autoadd_mumble_text_message(dynamic raw);
@@ -80,6 +87,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MumbleChannel dco_decode_mumble_channel(dynamic raw);
+
+  @protected
+  MumbleConfig dco_decode_mumble_config(dynamic raw);
 
   @protected
   MumbleEvent dco_decode_mumble_event(dynamic raw);
@@ -141,10 +151,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  AudioBufferSize sse_decode_audio_buffer_size(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   MumbleChannel sse_decode_box_autoadd_mumble_channel(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  MumbleConfig sse_decode_box_autoadd_mumble_config(
     SseDeserializer deserializer,
   );
 
@@ -173,6 +191,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MumbleChannel sse_decode_mumble_channel(SseDeserializer deserializer);
+
+  @protected
+  MumbleConfig sse_decode_mumble_config(SseDeserializer deserializer);
 
   @protected
   MumbleEvent sse_decode_mumble_event(SseDeserializer deserializer);
@@ -243,11 +264,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_audio_buffer_size(
+    AudioBufferSize self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_mumble_channel(
     MumbleChannel self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_mumble_config(
+    MumbleConfig self,
     SseSerializer serializer,
   );
 
@@ -283,6 +316,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_mumble_channel(MumbleChannel self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_mumble_config(MumbleConfig self, SseSerializer serializer);
 
   @protected
   void sse_encode_mumble_event(MumbleEvent self, SseSerializer serializer);
