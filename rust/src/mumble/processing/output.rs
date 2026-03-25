@@ -14,9 +14,9 @@ pub struct OutputMixer {
     resampler: Option<AudioResampler>,
     apm: AudioProcessing,
     global_volume: Arc<AtomicU32>,
-    mixed_48k: Vec<f32>,
-    user_frame: Vec<f32>,
-    leveled_frame: Vec<f32>,
+    mixed_48k: Box<heapless::Vec<f32, 8192>>,
+    user_frame: Box<heapless::Vec<f32, 8192>>,
+    leveled_frame: Box<heapless::Vec<f32, 8192>>,
     // Size 8192 is used safely to keep mixed outgoing streams
     final_out_buf: Box<heapless::Vec<f32, 8192>>,
     frame_size: usize,
@@ -52,14 +52,27 @@ impl OutputMixer {
             .render_config(StreamConfig::new(sample_rate, 1))
             .build();
 
+        let mut mixed_48k = Box::new(heapless::Vec::new());
+        mixed_48k
+            .resize(frame_size, 0.0)
+            .expect("mixed_48k resize failed");
+        let mut user_frame = Box::new(heapless::Vec::new());
+        user_frame
+            .resize(frame_size, 0.0)
+            .expect("user_frame resize failed");
+        let mut leveled_frame = Box::new(heapless::Vec::new());
+        leveled_frame
+            .resize(frame_size, 0.0)
+            .expect("leveled_frame resize failed");
+
         Self {
             users: HashMap::with_capacity(64),
             resampler,
             apm,
             global_volume,
-            mixed_48k: vec![0.0; frame_size],
-            user_frame: vec![0.0; frame_size],
-            leveled_frame: vec![0.0; frame_size],
+            mixed_48k,
+            user_frame,
+            leveled_frame,
             final_out_buf: Box::new(heapless::Vec::new()),
             frame_size,
             out_frame_size,

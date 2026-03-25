@@ -84,8 +84,14 @@ pub fn setup_audio(
 
     // Buffer size of 8192 is used as it safely covers roughly ~170ms of audio at 48kHz,
     // which is more than enough to handle our typical 10-20ms chunks.
-    let mut mono_buf_in = vec![0.0f32; 8192];
-    let mut mono_buf_out = vec![0.0f32; 8192];
+    let mut mono_buf_in = Box::new(heapless::Vec::<f32, 8192>::new());
+    mono_buf_in
+        .resize(8192, 0.0)
+        .expect("mono_buf_in resize failed");
+    let mut mono_buf_out = Box::new(heapless::Vec::<f32, 8192>::new());
+    mono_buf_out
+        .resize(8192, 0.0)
+        .expect("mono_buf_out resize failed");
 
     let mut prod_in_cache = prod_in;
 
@@ -97,7 +103,8 @@ pub fn setup_audio(
             let gain = f32::from_bits(input_gain.load(Ordering::Relaxed));
 
             if frames > mono_buf_in.len() {
-                mono_buf_in.resize(frames, 0.0);
+                eprintln!("Input audio frame count {} exceeds buffer capacity", frames);
+                return;
             }
 
             for i in 0..frames {
@@ -130,7 +137,11 @@ pub fn setup_audio(
             let frames = data.len() / output_channels;
 
             if frames > mono_buf_out.len() {
-                mono_buf_out.resize(frames, 0.0);
+                eprintln!(
+                    "Output audio frame count {} exceeds buffer capacity",
+                    frames
+                );
+                return;
             }
 
             let popped = cons_out.pop_slice(&mut mono_buf_out[..frames]);

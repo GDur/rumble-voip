@@ -12,9 +12,9 @@ pub struct InputPipeline {
     // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
     pcm_buffer: Box<heapless::Vec<f32, 8192>>,
     f32_48k_buffer: Box<heapless::Vec<f32, 8192>>,
-    processed_frame: Vec<f32>,
+    processed_frame: Box<heapless::Vec<f32, 8192>>,
     // 1024 bytes is the maximum expected Opus payload for a single frame.
-    opus_buf: Vec<u8>,
+    opus_buf: Box<heapless::Vec<u8, 1024>>,
     frame_size: usize,
 }
 
@@ -54,14 +54,21 @@ impl InputPipeline {
             .render_config(StreamConfig::new(sample_rate, 1))
             .build();
 
+        let mut processed_frame = Box::new(heapless::Vec::new());
+        processed_frame
+            .resize(frame_size, 0.0)
+            .expect("Processed frame resize failed");
+        let mut opus_buf = Box::new(heapless::Vec::new());
+        opus_buf.resize(1024, 0).expect("Opus buf resize failed");
+
         Self {
             resampler,
             apm,
             encoder,
             pcm_buffer: Box::new(heapless::Vec::new()),
             f32_48k_buffer: Box::new(heapless::Vec::new()),
-            processed_frame: vec![0.0; frame_size],
-            opus_buf: vec![0u8; 1024],
+            processed_frame,
+            opus_buf,
             frame_size,
         }
     }
@@ -72,7 +79,7 @@ impl InputPipeline {
             .expect("PCM buffer overflow in InputPipeline");
     }
 
-    pub fn process(&mut self) -> Vec<AudioPacket> {
+    pub fn process(&mut self) -> heapless::Vec<AudioPacket, 16> {
         if let Some(res) = &mut self.resampler {
             res.process(&self.pcm_buffer, &mut self.f32_48k_buffer);
             self.pcm_buffer.clear();
@@ -83,7 +90,7 @@ impl InputPipeline {
             self.pcm_buffer.clear();
         }
 
-        let mut packets = Vec::new();
+        let mut packets = heapless::Vec::new();
         while self.f32_48k_buffer.len() >= self.frame_size {
             let frame = &self.f32_48k_buffer[..self.frame_size];
 
@@ -100,7 +107,9 @@ impl InputPipeline {
                 payload
                     .extend_from_slice(&self.opus_buf[..len.min(512)])
                     .expect("Opus payload buffer overflow");
-                packets.push(AudioPacket::new(payload, false));
+                packets
+                    .push(AudioPacket::new(payload, false))
+                    .expect("Too many packets generated");
             }
 
             self.f32_48k_buffer.rotate_left(self.frame_size);
