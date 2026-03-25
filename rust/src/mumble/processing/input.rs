@@ -1,7 +1,6 @@
 use crate::mumble::opus_codec::SafeOpusEncoder;
 use crate::mumble::resample::AudioResampler;
 use crate::mumble::types::{AudioPacket, MumbleConfig, MUMBLE_SAMPLE_RATE};
-use bytes::BytesMut;
 use opus_head_sys::*;
 use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};
@@ -10,11 +9,12 @@ pub struct InputPipeline {
     resampler: Option<AudioResampler>,
     apm: AudioProcessing,
     encoder: SafeOpusEncoder,
+    // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
     pcm_buffer: Box<heapless::Vec<f32, 8192>>,
     f32_48k_buffer: Box<heapless::Vec<f32, 8192>>,
     processed_frame: Vec<f32>,
+    // 1024 bytes is the maximum expected Opus payload for a single frame.
     opus_buf: Vec<u8>,
-    payload_buf: BytesMut,
     frame_size: usize,
 }
 
@@ -62,13 +62,14 @@ impl InputPipeline {
             f32_48k_buffer: Box::new(heapless::Vec::new()),
             processed_frame: vec![0.0; frame_size],
             opus_buf: vec![0u8; 1024],
-            payload_buf: BytesMut::with_capacity(4096),
             frame_size,
         }
     }
 
     pub fn push_pcm(&mut self, data: &[f32]) {
-        self.pcm_buffer.extend_from_slice(data).unwrap();
+        self.pcm_buffer
+            .extend_from_slice(data)
+            .expect("PCM buffer overflow in InputPipeline");
     }
 
     pub fn process(&mut self) -> Vec<AudioPacket> {
@@ -78,7 +79,7 @@ impl InputPipeline {
         } else {
             self.f32_48k_buffer
                 .extend_from_slice(&self.pcm_buffer)
-                .unwrap();
+                .expect("Resampler buffer overflow in InputPipeline");
             self.pcm_buffer.clear();
         }
 
@@ -89,7 +90,7 @@ impl InputPipeline {
             // Sonora APM processing
             self.apm
                 .process_capture_f32(&[frame], &mut [&mut self.processed_frame])
-                .unwrap();
+                .expect("APM capture processing failed");
 
             if let Ok(len) =
                 self.encoder
@@ -98,12 +99,8 @@ impl InputPipeline {
                 let mut payload = heapless::Vec::new();
                 payload
                     .extend_from_slice(&self.opus_buf[..len.min(512)])
-                    .unwrap();
-
-                packets.push(AudioPacket {
-                    payload,
-                    is_last: false,
-                });
+                    .expect("Opus payload buffer overflow");
+                packets.push(AudioPacket::new(payload, false));
             }
 
             self.f32_48k_buffer.rotate_left(self.frame_size);

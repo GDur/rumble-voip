@@ -6,13 +6,41 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 pub struct SendStream(pub cpal::Stream);
+// Safety: cpal::Stream is not Send on all platforms, but for our usage we only store it
+// and let it run, we don't access it concurrently.
 unsafe impl Send for SendStream {}
 
 pub struct AudioStreams {
-    pub input_stream: SendStream,
-    pub output_stream: SendStream,
-    pub input_rate: u32,
-    pub output_rate: u32,
+    #[allow(dead_code)]
+    input_stream: SendStream,
+    #[allow(dead_code)]
+    output_stream: SendStream,
+    input_rate: u32,
+    output_rate: u32,
+}
+
+impl AudioStreams {
+    pub fn new(
+        input_stream: cpal::Stream,
+        output_stream: cpal::Stream,
+        input_rate: u32,
+        output_rate: u32,
+    ) -> Self {
+        Self {
+            input_stream: SendStream(input_stream),
+            output_stream: SendStream(output_stream),
+            input_rate,
+            output_rate,
+        }
+    }
+
+    pub fn input_rate(&self) -> u32 {
+        self.input_rate
+    }
+
+    pub fn output_rate(&self) -> u32 {
+        self.output_rate
+    }
 }
 
 pub fn setup_audio(
@@ -54,6 +82,8 @@ pub fn setup_audio(
     let input_channels = input_config.channels as usize;
     let output_channels = output_config.channels as usize;
 
+    // Buffer size of 8192 is used as it safely covers roughly ~170ms of audio at 48kHz,
+    // which is more than enough to handle our typical 10-20ms chunks.
     let mut mono_buf_in = vec![0.0f32; 8192];
     let mut mono_buf_out = vec![0.0f32; 8192];
 
@@ -76,7 +106,11 @@ pub fn setup_audio(
                 sum_sq += sample * sample;
             }
 
-            let rms = (sum_sq / frames as f32).sqrt();
+            let rms = if frames > 0 {
+                (sum_sq / frames as f32).sqrt()
+            } else {
+                0.0
+            };
             current_rms.store(rms.to_bits(), Ordering::Relaxed);
 
             let _ = prod_in_cache.push_slice(&mono_buf_in[..frames]);
@@ -124,12 +158,12 @@ pub fn setup_audio(
     input_stream.play()?;
     output_stream.play()?;
 
-    Ok(AudioStreams {
-        input_stream: SendStream(input_stream),
-        output_stream: SendStream(output_stream),
+    Ok(AudioStreams::new(
+        input_stream,
+        output_stream,
         input_rate,
         output_rate,
-    })
+    ))
 }
 
 pub fn list_input_devices() -> Vec<String> {

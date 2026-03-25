@@ -46,12 +46,44 @@ impl Default for MumbleConfig {
 
 #[derive(Debug, Clone)]
 pub struct AudioPacket {
-    pub payload: heapless::Vec<u8, 512>,
-    pub is_last: bool,
+    payload: heapless::Vec<u8, 512>,
+    is_last: bool,
+}
+
+impl AudioPacket {
+    pub fn new(payload: heapless::Vec<u8, 512>, is_last: bool) -> Self {
+        Self { payload, is_last }
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.payload
+    }
+
+    pub fn is_last(&self) -> bool {
+        self.is_last
+    }
 }
 
 #[derive(Debug)]
 pub struct IncomingAudio {
-    pub session_id: u32,
-    pub packet: AudioPacket,
+    session_id: u32,
+    packet: AudioPacket,
+}
+
+impl IncomingAudio {
+    pub fn new(session_id: u32, packet: AudioPacket) -> Self {
+        Self { session_id, packet }
+    }
+
+    pub fn session_id(&self) -> u32 {
+        self.session_id
+    }
+
+    pub fn packet(&self) -> &AudioPacket {
+        &self.packet
+    }
+
+    pub fn into_packet(self) -> AudioPacket {
+        self.packet
+    }
 }

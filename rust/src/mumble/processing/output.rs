@@ -10,20 +10,17 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 pub struct OutputMixer {
-    pub users: HashMap<u32, RemoteUser>,
+    users: HashMap<u32, RemoteUser>,
     resampler: Option<AudioResampler>,
     apm: AudioProcessing,
     global_volume: Arc<AtomicU32>,
     mixed_48k: Vec<f32>,
     user_frame: Vec<f32>,
     leveled_frame: Vec<f32>,
+    // Size 8192 is used safely to keep mixed outgoing streams
     final_out_buf: Box<heapless::Vec<f32, 8192>>,
-    pub frame_size: usize,
-    pub out_frame_size: usize,
-    #[allow(dead_with_capacity)]
-    sample_rate: u32,
-    #[allow(dead_with_capacity)]
-    output_rate: u32,
+    frame_size: usize,
+    out_frame_size: usize,
 }
 
 impl OutputMixer {
@@ -66,23 +63,34 @@ impl OutputMixer {
             final_out_buf: Box::new(heapless::Vec::new()),
             frame_size,
             out_frame_size,
-            sample_rate,
-            output_rate,
         }
+    }
+
+    pub fn get_user_mut(&mut self, session_id: u32) -> Option<&mut RemoteUser> {
+        self.users.get_mut(&session_id)
+    }
+
+    pub fn get_or_insert_user(&mut self, session_id: u32) -> &mut RemoteUser {
+        self.users
+            .entry(session_id)
+            .or_insert_with(|| RemoteUser::new(MUMBLE_SAMPLE_RATE as i32, 1))
+    }
+
+    pub fn out_frame_size(&self) -> usize {
+        self.out_frame_size
     }
 
     pub fn mix_frame(&mut self, event_sink: &StreamSink<MumbleEvent>) -> &[f32] {
         self.mixed_48k.fill(0.0);
         let mut active_users = 0;
-        let now = std::time::Instant::now();
 
         // Clean up inactive users and mix
         self.users.retain(|sid, user| {
-            if user.is_talking && now.duration_since(user.last_packet_time).as_millis() > 500 {
-                user.is_talking = false;
+            if user.is_talking() && user.time_since_last_packet().as_millis() > 500 {
+                user.set_talking(false);
                 let _ = event_sink.add(MumbleEvent::UserTalking(*sid, false));
             }
-            now.duration_since(user.last_packet_time).as_secs() < 10
+            user.time_since_last_packet().as_secs() < 10
         });
 
         let master_gain = f32::from_bits(self.global_volume.load(Ordering::Relaxed));
@@ -98,14 +106,16 @@ impl OutputMixer {
 
         if active_users == 0 {
             self.final_out_buf.clear();
-            self.final_out_buf.resize(self.out_frame_size, 0.0).unwrap();
+            self.final_out_buf
+                .resize(self.out_frame_size, 0.0)
+                .expect("Final out buffer resize failed");
             return &self.final_out_buf;
         }
 
         // Master processing with Sonora
         self.apm
             .process_render_f32(&[&self.mixed_48k], &mut [&mut self.leveled_frame])
-            .unwrap();
+            .expect("APM render processing failed");
 
         if let Some(resampler) = &mut self.resampler {
             self.final_out_buf.clear();

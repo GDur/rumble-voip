@@ -55,8 +55,8 @@ impl VoiceHandler {
                 // Process outgoing network packets from encode thread
                 packet = network_rx.recv() => {
                     if let Some(audio_packet) = packet {
-                        let is_last = audio_packet.is_last;
-                        let payload = VoicePacketPayload::Opus(bytes::Bytes::copy_from_slice(&audio_packet.payload), is_last);
+                        let is_last = audio_packet.is_last();
+                        let payload = VoicePacketPayload::Opus(bytes::Bytes::copy_from_slice(audio_packet.payload()), is_last);
                         let voice_packet = VoicePacket::Audio {
                             _dst: std::marker::PhantomData,
                             target: 0,
@@ -92,22 +92,13 @@ impl VoiceHandler {
                 res = socket_recv.recv(&mut udp_recv_buf) => {
                     if let Ok(len) = res {
                         let mut data_to_decrypt = BytesMut::from(&udp_recv_buf[..len]);
-                        if let Ok(Ok(packet)) = crypt_state.decrypt(&mut data_to_decrypt) {
-                            if let VoicePacket::Audio { session_id, payload, .. } = packet {
-                                if let VoicePacketPayload::Opus(data, last) = payload {
-                                    let mut p = heapless::Vec::<u8, 512>::new();
-                                    p.extend_from_slice(&data[..data.len().min(512)])
-                                        .unwrap();
-
-                                    let _ = udp_tx.try_send(IncomingAudio {
-                                        session_id,
-                                        packet: AudioPacket {
-                                            payload: p,
-                                            is_last: last,
-                                        },
-                                    });
-                                }
-                            }
+                        if let Ok(Ok(VoicePacket::Audio { session_id, payload: VoicePacketPayload::Opus(data, last), .. })) = crypt_state.decrypt(&mut data_to_decrypt) {
+                            let mut p = heapless::Vec::<u8, 512>::new();
+                            p.extend_from_slice(&data[..data.len().min(512)]).expect("UDP receive Opus payload overflow");
+                            let _ = udp_tx.try_send(IncomingAudio::new(
+                                session_id,
+                                AudioPacket::new(p, last),
+                            ));
                         }
                     }
                 }

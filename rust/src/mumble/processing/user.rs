@@ -1,13 +1,16 @@
 use crate::mumble::opus_codec::SafeOpusDecoder;
 use crate::mumble::types::AudioPacket;
 use std::time::Instant;
+
 pub struct RemoteUser {
-    pub decoder: SafeOpusDecoder,
-    pub jitter_buffer: Box<heapless::Deque<AudioPacket, 64>>,
-    pub pcm_buffer: Box<heapless::Deque<f32, 8192>>,
-    pub is_talking: bool,
-    pub last_packet_time: Instant,
-    pub volume: f32,
+    decoder: SafeOpusDecoder,
+    // Size 64 allows buffering up to ~640ms of audio (at 10ms frames)
+    jitter_buffer: Box<heapless::Deque<AudioPacket, 64>>,
+    // 8192 capacity securely covers common decode buffer sizes
+    pcm_buffer: Box<heapless::Deque<f32, 8192>>,
+    is_talking: bool,
+    last_packet_time: Instant,
+    volume: f32,
 }
 
 impl RemoteUser {
@@ -26,17 +29,48 @@ impl RemoteUser {
         self.is_talking || !self.jitter_buffer.is_empty() || !self.pcm_buffer.is_empty()
     }
 
+    pub fn set_volume(&mut self, volume: f32) {
+        self.volume = volume;
+    }
+
+    pub fn set_talking(&mut self, is_talking: bool) {
+        self.is_talking = is_talking;
+    }
+
+    pub fn is_talking(&self) -> bool {
+        self.is_talking
+    }
+
+    pub fn update_last_packet_time(&mut self) {
+        self.last_packet_time = Instant::now();
+    }
+
+    pub fn time_since_last_packet(&self) -> std::time::Duration {
+        self.last_packet_time.elapsed()
+    }
+
+    pub fn push_packet(&mut self, packet: AudioPacket) {
+        self.jitter_buffer
+            .push_back(packet)
+            .expect("Jitter buffer overflow");
+    }
+
     pub fn decode_frame(&mut self, frame_size: usize, out: &mut [f32]) -> bool {
-        // Max Opus frame size: 120ms at 48kHz
+        // Max Opus frame size: 120ms at 48kHz (5760 samples)
         let mut decode_buf = [0.0f32; 5760];
 
         while self.pcm_buffer.len() < frame_size {
             let packet = self.jitter_buffer.pop_front();
             match packet {
                 Some(p) => {
-                    if let Ok(len) = self.decoder.decode(Some(&p.payload), 5760, &mut decode_buf) {
+                    if let Ok(len) = self
+                        .decoder
+                        .decode(Some(p.payload()), 5760, &mut decode_buf)
+                    {
                         for &sample in &decode_buf[..len] {
-                            self.pcm_buffer.push_back(sample).unwrap();
+                            self.pcm_buffer
+                                .push_back(sample)
+                                .expect("PCM buffer overflow during decode");
                         }
                     } else {
                         break;
@@ -46,7 +80,9 @@ impl RemoteUser {
                     // PLC: synthesize exactly frame_size samples
                     if let Ok(len) = self.decoder.decode(None, frame_size, &mut decode_buf) {
                         for &sample in &decode_buf[..len] {
-                            self.pcm_buffer.push_back(sample).unwrap();
+                            self.pcm_buffer
+                                .push_back(sample)
+                                .expect("PCM buffer overflow during decode (PLC)");
                         }
                     } else {
                         break;
@@ -57,8 +93,8 @@ impl RemoteUser {
         }
 
         if self.pcm_buffer.len() >= frame_size {
-            for i in 0..frame_size {
-                out[i] = self.pcm_buffer.pop_front().unwrap() * self.volume;
+            for item in out.iter_mut().take(frame_size) {
+                *item = self.pcm_buffer.pop_front().unwrap() * self.volume;
             }
             true
         } else {

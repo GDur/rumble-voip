@@ -19,6 +19,283 @@ use tokio::sync::mpsc;
 use tokio_openssl::SslStream;
 use tokio_util::codec::Framed;
 
+struct MumbleSession {
+    channels: HashMap<u32, MumbleChannel>,
+    users: HashMap<u32, MumbleUser>,
+    session_id: u32,
+    my_channel_id: u32,
+    voice_cmd_tx: Option<mpsc::Sender<MumbleCommand>>,
+    _active_audio: Option<AudioStreams>,
+    event_sink: StreamSink<MumbleEvent>,
+    config: MumbleConfig,
+    current_rms: Arc<AtomicU32>,
+    global_volume: Arc<AtomicU32>,
+    input_gain: Arc<AtomicU32>,
+    vol_cmd_tx: crossbeam_channel::Sender<(u32, f32)>,
+    vol_cmd_rx: crossbeam_channel::Receiver<(u32, f32)>,
+    host: String,
+    port: u16,
+}
+
+impl MumbleSession {
+    fn new(
+        event_sink: StreamSink<MumbleEvent>,
+        config: MumbleConfig,
+        vol_cmd_tx: crossbeam_channel::Sender<(u32, f32)>,
+        vol_cmd_rx: crossbeam_channel::Receiver<(u32, f32)>,
+        host: String,
+        port: u16,
+    ) -> Self {
+        Self {
+            channels: HashMap::new(),
+            users: HashMap::new(),
+            session_id: 0,
+            my_channel_id: 0,
+            voice_cmd_tx: None,
+            _active_audio: None,
+            event_sink,
+            config,
+            current_rms: Arc::new(AtomicU32::new(0.0f32.to_bits())),
+            global_volume: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+            input_gain: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+            vol_cmd_tx,
+            vol_cmd_rx,
+            host,
+            port,
+        }
+    }
+
+    async fn handle_packet(
+        &mut self,
+        packet: ControlPacket<Clientbound>,
+        framed: &mut Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+    ) {
+        match packet {
+            ControlPacket::ServerSync(ss) => {
+                self.session_id = ss.session();
+                let _ = self.event_sink.add(MumbleEvent::Connected(self.session_id));
+            }
+            ControlPacket::ChannelState(cs) => {
+                let id = cs.channel_id();
+                let channel = MumbleChannel {
+                    id,
+                    name: cs.name().to_string(),
+                    parent_id: if cs.has_parent() {
+                        Some(cs.parent())
+                    } else {
+                        None
+                    },
+                    position: cs.position(),
+                    description: if cs.has_description() {
+                        Some(cs.description().to_string())
+                    } else {
+                        None
+                    },
+                    is_enter_restricted: false,
+                };
+                self.channels.insert(id, channel.clone());
+                let _ = self.event_sink.add(MumbleEvent::ChannelUpdate(channel));
+            }
+            ControlPacket::UserState(us) => {
+                let session = us.session();
+                if session == self.session_id {
+                    self.my_channel_id = us.channel_id();
+                }
+                let user = MumbleUser {
+                    session,
+                    name: us.name().to_string(),
+                    channel_id: us.channel_id(),
+                    is_talking: false,
+                    is_muted: us.self_mute() || us.mute(),
+                    is_deafened: us.self_deaf() || us.deaf(),
+                    is_suppressed: us.suppress(),
+                    comment: if us.has_comment() {
+                        Some(us.comment().to_string())
+                    } else {
+                        None
+                    },
+                };
+                self.users.insert(session, user.clone());
+                let _ = self.event_sink.add(MumbleEvent::UserUpdate(user));
+            }
+            ControlPacket::UserRemove(ur) => {
+                self.users.remove(&ur.session());
+                let _ = self.event_sink.add(MumbleEvent::UserRemoved(ur.session()));
+            }
+            ControlPacket::Ping(ping) => {
+                let _ = framed.send(ControlPacket::Ping(ping)).await;
+            }
+            ControlPacket::TextMessage(tm) => {
+                let sender_name = self
+                    .users
+                    .get(&tm.actor())
+                    .map(|u| u.name.clone())
+                    .unwrap_or_else(|| "Unknown".to_string());
+                let _ = self
+                    .event_sink
+                    .add(MumbleEvent::TextMessage(MumbleTextMessage {
+                        sender_name,
+                        message: tm.message().to_string(),
+                    }));
+            }
+            ControlPacket::CryptSetup(cs) => {
+                if let Some(v_tx) = self.voice_cmd_tx.take() {
+                    let _ = v_tx.send(MumbleCommand::Disconnect).await;
+                }
+
+                let mut key = [0u8; 16];
+                let mut encrypt_nonce = [0u8; 16];
+                let mut decrypt_nonce = [0u8; 16];
+
+                if let Some(k) = &cs.key {
+                    let len = k.len().min(16);
+                    key[..len].copy_from_slice(&k[..len]);
+                }
+                if let Some(cn) = &cs.client_nonce {
+                    let len = cn.len().min(16);
+                    encrypt_nonce[..len].copy_from_slice(&cn[..len]);
+                }
+                if let Some(sn) = &cs.server_nonce {
+                    let len = sn.len().min(16);
+                    decrypt_nonce[..len].copy_from_slice(&sn[..len]);
+                }
+
+                let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(
+                    key,
+                    encrypt_nonce,
+                    decrypt_nonce,
+                );
+
+                let (v_tx, v_rx) = mpsc::channel(32);
+                self.voice_cmd_tx = Some(v_tx);
+                let event_sink_clone = self.event_sink.clone();
+
+                use ringbuf::traits::Split;
+                use ringbuf::HeapRb;
+
+                let rb_in = HeapRb::<f32>::new(8192);
+                let rb_out = HeapRb::<f32>::new(8192);
+                let (prod_in, cons_in) = rb_in.split();
+                let (prod_out, cons_out) = rb_out.split();
+
+                let (in_notify_tx, in_notify_rx) = crossbeam_channel::bounded(10);
+                let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(10);
+                let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
+                let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
+
+                let ptt_active = Arc::new(AtomicBool::new(false));
+
+                match setup_audio(
+                    prod_in,
+                    cons_out,
+                    in_notify_tx,
+                    out_notify_tx,
+                    self.current_rms.clone(),
+                    self.input_gain.clone(),
+                    &self.config,
+                ) {
+                    Ok(audio_streams) => {
+                        spawn_encode_thread(
+                            cons_in,
+                            in_notify_rx,
+                            network_tx,
+                            ptt_active.clone(),
+                            audio_streams.input_rate(),
+                            self.config.clone(),
+                        );
+
+                        spawn_decode_thread(
+                            prod_out,
+                            out_notify_rx,
+                            udp_rx,
+                            event_sink_clone.clone(),
+                            audio_streams.output_rate(),
+                            self.config.clone(),
+                            self.global_volume.clone(),
+                            self.vol_cmd_rx.clone(),
+                        );
+
+                        self._active_audio = Some(audio_streams);
+
+                        let host_clone = self.host.clone();
+                        let port_clone = self.port;
+
+                        tokio::spawn(async move {
+                            if let Err(e) = crate::mumble::voice::VoiceHandler::run(
+                                format!("{}:{}", host_clone, port_clone),
+                                crypt_state,
+                                v_rx,
+                                network_rx,
+                                udp_tx,
+                                event_sink_clone,
+                                ptt_active,
+                            )
+                            .await
+                            {
+                                eprintln!("Voice handler error: {}", e);
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to setup audio: {}", e);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    async fn handle_command(
+        &mut self,
+        cmd: MumbleCommand,
+        framed: &mut Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+    ) {
+        match cmd {
+            MumbleCommand::JoinChannel(id) => {
+                let mut us = msgs::UserState::new();
+                us.set_channel_id(id);
+                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+            }
+            MumbleCommand::SendTextMessage(msg) => {
+                let mut tm = msgs::TextMessage::new();
+                tm.set_message(msg);
+                tm.channel_id.push(self.my_channel_id);
+                let _ = framed.send(ControlPacket::TextMessage(Box::new(tm))).await;
+            }
+            MumbleCommand::SetMute(mute) => {
+                let mut us = msgs::UserState::new();
+                us.set_self_mute(mute);
+                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+            }
+            MumbleCommand::SetDeafen(deafen) => {
+                let mut us = msgs::UserState::new();
+                us.set_self_deaf(deafen);
+                if deafen {
+                    us.set_self_mute(true);
+                }
+                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+            }
+            MumbleCommand::SetPtt(active) => {
+                if let Some(v_tx) = &self.voice_cmd_tx {
+                    let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
+                }
+            }
+            MumbleCommand::SetUserVolume(sid, vol) => {
+                let _ = self.vol_cmd_tx.send((sid, vol));
+            }
+            MumbleCommand::SetOutputVolume(vol) => {
+                self.global_volume
+                    .store(vol.to_bits(), std::sync::atomic::Ordering::Relaxed);
+            }
+            MumbleCommand::SetInputGain(gain) => {
+                self.input_gain
+                    .store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
+            }
+            MumbleCommand::Disconnect => {} // Handled by loop breaker
+        }
+    }
+}
+
 pub async fn run_loop(
     host: String,
     port: u16,
@@ -65,20 +342,12 @@ pub async fn run_loop(
         .send(ControlPacket::Authenticate(Box::new(auth)))
         .await?;
 
-    let mut channels: HashMap<u32, MumbleChannel> = HashMap::new();
-    let mut users: HashMap<u32, MumbleUser> = HashMap::new();
-    let mut voice_cmd_tx: Option<mpsc::Sender<MumbleCommand>> = None;
-    let mut _active_audio: Option<AudioStreams> = None;
+    let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
-    let mut session_id = 0;
-    let mut my_channel_id = 0;
+    let mut session = MumbleSession::new(event_sink, config, vol_cmd_tx, vol_cmd_rx, host, port);
+
     let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(15));
     let mut volume_interval = tokio::time::interval(std::time::Duration::from_millis(200));
-
-    let current_rms = Arc::new(AtomicU32::new(0.0f32.to_bits()));
-    let global_volume = Arc::new(AtomicU32::new(1.0f32.to_bits()));
-    let input_gain = Arc::new(AtomicU32::new(1.0f32.to_bits()));
-    let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
     loop {
         tokio::select! {
@@ -92,199 +361,28 @@ pub async fn run_loop(
                 let _ = framed.send(ControlPacket::Ping(Box::new(ping))).await;
             }
             _ = volume_interval.tick() => {
-                let rms = f32::from_bits(current_rms.load(std::sync::atomic::Ordering::Relaxed));
-                let _ = event_sink.add(MumbleEvent::AudioVolume(rms));
+                let rms = f32::from_bits(session.current_rms.load(std::sync::atomic::Ordering::Relaxed));
+                let _ = session.event_sink.add(MumbleEvent::AudioVolume(rms));
             }
             packet = framed.next() => {
                 match packet {
-                    Some(Ok(ControlPacket::ServerSync(ss))) => {
-                        session_id = ss.session();
-                        let _ = event_sink.add(MumbleEvent::Connected(session_id));
-                    }
-                    Some(Ok(ControlPacket::ChannelState(cs))) => {
-                        let id = cs.channel_id();
-                        let channel = MumbleChannel {
-                            id,
-                            name: cs.name().to_string(),
-                            parent_id: if cs.has_parent() { Some(cs.parent()) } else { None },
-                            position: cs.position(),
-                            description: if cs.has_description() { Some(cs.description().to_string()) } else { None },
-                            is_enter_restricted: false,
-                        };
-                        channels.insert(id, channel.clone());
-                        let _ = event_sink.add(MumbleEvent::ChannelUpdate(channel));
-                    }
-                    Some(Ok(ControlPacket::UserState(us))) => {
-                        let session = us.session();
-                        if session == session_id {
-                            my_channel_id = us.channel_id();
-                        }
-                        let user = MumbleUser {
-                            session,
-                            name: us.name().to_string(),
-                            channel_id: us.channel_id(),
-                            is_talking: false,
-                            is_muted: us.self_mute() || us.mute(),
-                            is_deafened: us.self_deaf() || us.deaf(),
-                            is_suppressed: us.suppress(),
-                            comment: if us.has_comment() { Some(us.comment().to_string()) } else { None },
-                        };
-                        users.insert(session, user.clone());
-                        let _ = event_sink.add(MumbleEvent::UserUpdate(user));
-                    }
-                    Some(Ok(ControlPacket::UserRemove(ur))) => {
-                        users.remove(&ur.session());
-                        let _ = event_sink.add(MumbleEvent::UserRemoved(ur.session()));
-                    }
-                    Some(Ok(ControlPacket::Ping(ping))) => {
-                        let _ = framed.send(ControlPacket::Ping(ping)).await;
-                    }
-                    Some(Ok(ControlPacket::TextMessage(tm))) => {
-                        let sender_name = users.get(&tm.actor()).map(|u| u.name.clone()).unwrap_or_else(|| "Unknown".to_string());
-                        let _ = event_sink.add(MumbleEvent::TextMessage(MumbleTextMessage {
-                            sender_name,
-                            message: tm.message().to_string(),
-                        }));
-                    }
-                    Some(Ok(ControlPacket::CryptSetup(cs))) => {
-                        if let Some(v_tx) = voice_cmd_tx.take() {
-                            let _ = v_tx.send(MumbleCommand::Disconnect).await;
-                        }
-
-                        let mut key = [0u8; 16];
-                        let mut encrypt_nonce = [0u8; 16];
-                        let mut decrypt_nonce = [0u8; 16];
-
-                        if let Some(k) = &cs.key {
-                            let len = k.len().min(16);
-                            key[..len].copy_from_slice(&k[..len]);
-                        }
-                        if let Some(cn) = &cs.client_nonce {
-                            let len = cn.len().min(16);
-                            encrypt_nonce[..len].copy_from_slice(&cn[..len]);
-                        }
-                        if let Some(sn) = &cs.server_nonce {
-                            let len = sn.len().min(16);
-                            decrypt_nonce[..len].copy_from_slice(&sn[..len]);
-                        }
-
-                        let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(key, encrypt_nonce, decrypt_nonce);
-
-                        let (v_tx, v_rx) = mpsc::channel(32);
-                        voice_cmd_tx = Some(v_tx);
-                        let event_sink_clone = event_sink.clone();
-
-                        use ringbuf::traits::Split;
-                        use ringbuf::HeapRb;
-
-                        let rb_in = HeapRb::<f32>::new(8192);
-                        let rb_out = HeapRb::<f32>::new(8192);
-                        let (prod_in, cons_in) = rb_in.split();
-                        let (prod_out, cons_out) = rb_out.split();
-
-                        let (in_notify_tx, in_notify_rx) = crossbeam_channel::bounded(10);
-                        let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(10);
-                        let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
-                        let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
-
-                        let ptt_active = Arc::new(AtomicBool::new(false));
-
-                        match setup_audio(prod_in, cons_out, in_notify_tx, out_notify_tx, current_rms.clone(), input_gain.clone(), &config) {
-                            Ok(audio_streams) => {
-                                spawn_encode_thread(
-                                    cons_in,
-                                    in_notify_rx,
-                                    network_tx,
-                                    ptt_active.clone(),
-                                    audio_streams.input_rate,
-                                    config.clone(),
-                                );
-
-                                spawn_decode_thread(
-                                    prod_out,
-                                    out_notify_rx,
-                                    udp_rx,
-                                    event_sink_clone.clone(),
-                                    audio_streams.output_rate,
-                                    config.clone(),
-                                    global_volume.clone(),
-                                    vol_cmd_rx.clone(),
-                                );
-
-                                _active_audio = Some(audio_streams);
-
-                                let host_clone = host.clone();
-                                let port_clone = port;
-
-                                tokio::spawn(async move {
-                                    if let Err(e) = crate::mumble::voice::VoiceHandler::run(
-                                        format!("{}:{}", host_clone, port_clone),
-                                        crypt_state,
-                                        v_rx,
-                                        network_rx,
-                                        udp_tx,
-                                        event_sink_clone,
-                                        ptt_active,
-                                    ).await {
-                                        eprintln!("Voice handler error: {}", e);
-                                    }
-                                });
-                            }
-                            Err(e) => {
-                                eprintln!("Failed to setup audio: {}", e);
-                            }
-                        }
+                    Some(Ok(packet)) => {
+                        session.handle_packet(packet, &mut framed).await;
                     }
                     Some(Err(e)) => {
-                        let _ = event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));
+                        let _ = session.event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));
                         break;
                     }
                     None => {
-                        let _ = event_sink.add(MumbleEvent::Disconnected("Server closed connection".to_string()));
+                        let _ = session.event_sink.add(MumbleEvent::Disconnected("Server closed connection".to_string()));
                         break;
                     }
-                    _ => {}
                 }
             }
             cmd = cmd_rx.recv() => {
                 match cmd {
                     Some(MumbleCommand::Disconnect) | None => break,
-                    Some(MumbleCommand::JoinChannel(id)) => {
-                        let mut us = msgs::UserState::new();
-                        us.set_channel_id(id);
-                        let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
-                    }
-                    Some(MumbleCommand::SendTextMessage(msg)) => {
-                        let mut tm = msgs::TextMessage::new();
-                        tm.set_message(msg);
-                        tm.channel_id.push(my_channel_id);
-                        let _ = framed.send(ControlPacket::TextMessage(Box::new(tm))).await;
-                    }
-                    Some(MumbleCommand::SetMute(mute)) => {
-                        let mut us = msgs::UserState::new();
-                        us.set_self_mute(mute);
-                        let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
-                    }
-                    Some(MumbleCommand::SetDeafen(deafen)) => {
-                        let mut us = msgs::UserState::new();
-                        us.set_self_deaf(deafen);
-                        if deafen { us.set_self_mute(true); }
-                        let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
-                    }
-                    Some(MumbleCommand::SetPtt(active)) => {
-                        if let Some(v_tx) = &voice_cmd_tx {
-                            let _ = v_tx.send(MumbleCommand::SetPtt(active)).await;
-                        }
-                    }
-                    Some(MumbleCommand::SetUserVolume(sid, vol)) => {
-                        let _ = vol_cmd_tx.send((sid, vol));
-                    }
-                    Some(MumbleCommand::SetOutputVolume(vol)) => {
-                        global_volume.store(vol.to_bits(), std::sync::atomic::Ordering::Relaxed);
-                    }
-                    Some(MumbleCommand::SetInputGain(gain)) => {
-                        input_gain.store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
-                    }
+                    Some(cmd) => session.handle_command(cmd, &mut framed).await,
                 }
             }
         }

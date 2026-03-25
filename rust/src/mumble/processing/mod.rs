@@ -6,10 +6,7 @@ use crate::api::client::MumbleEvent;
 use crate::frb_generated::StreamSink;
 use crate::mumble::processing::input::InputPipeline;
 use crate::mumble::processing::output::OutputMixer;
-use crate::mumble::processing::user::RemoteUser;
-use crate::mumble::types::{
-    AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer, MUMBLE_SAMPLE_RATE,
-};
+use crate::mumble::types::{AudioPacket, IncomingAudio, MumbleConfig, RbConsumer, RbProducer};
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -42,10 +39,7 @@ pub fn spawn_encode_thread(
             if !ptt {
                 if was_ptt {
                     was_ptt = false;
-                    let _ = network_tx.try_send(AudioPacket {
-                        payload: heapless::Vec::new(),
-                        is_last: true,
-                    });
+                    let _ = network_tx.try_send(AudioPacket::new(heapless::Vec::new(), true));
                 }
                 pipeline.clear();
                 continue;
@@ -78,29 +72,31 @@ pub fn spawn_decode_thread(
             select! {
                 recv(vol_cmd_rx) -> msg => {
                     if let Ok((sid, vol)) = msg {
-                        if let Some(user) = mixer.users.get_mut(&sid) {
-                            user.volume = vol;
+                        if let Some(user) = mixer.get_user_mut(sid) {
+                            user.set_volume(vol);
                         }
                     }
                 }
                 recv(udp_rx) -> msg => {
                     if let Ok(incoming) = msg {
-                        let sid = incoming.session_id;
-                        let user = mixer.users.entry(sid).or_insert_with(|| {
-                            RemoteUser::new(MUMBLE_SAMPLE_RATE as i32, 1)
-                        });
+                        let sid = incoming.session_id();
+                        let packet = incoming.into_packet();
+                        let is_last = packet.is_last();
+                        let is_empty = packet.payload().is_empty();
 
-                        user.last_packet_time = std::time::Instant::now();
-                        if !user.is_talking && !incoming.packet.payload.is_empty() {
-                            user.is_talking = true;
+                        let user = mixer.get_or_insert_user(sid);
+
+                        user.update_last_packet_time();
+                        if !user.is_talking() && !is_empty {
+                            user.set_talking(true);
                             let _ = event_sink.add(MumbleEvent::UserTalking(sid, true));
                         }
 
-                        if incoming.packet.is_last {
-                            user.is_talking = false;
+                        if is_last {
+                            user.set_talking(false);
                             let _ = event_sink.add(MumbleEvent::UserTalking(sid, false));
                         } else {
-                            user.jitter_buffer.push_back(incoming.packet).unwrap();
+                            user.push_packet(packet);
                         }
                     } else {
                         break;
@@ -113,7 +109,7 @@ pub fn spawn_decode_thread(
                         let frame = mixer.mix_frame(&event_sink);
                         let _ = prod_out.push_slice(frame);
 
-                        if prod_out.vacant_len() < mixer.out_frame_size {
+                        if prod_out.vacant_len() < mixer.out_frame_size() {
                             break;
                         }
                     }
