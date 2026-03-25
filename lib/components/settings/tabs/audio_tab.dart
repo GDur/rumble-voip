@@ -119,6 +119,7 @@ class AudioTab extends StatelessWidget {
                   initialValue: settings.audioFrameMs.toDouble(),
                   min: 10.0,
                   max: 60.0,
+                  divisions: 5,
                   onChanged: (v) {
                     final frameMs = v.round();
                     settings.setAudioFrameMs(frameMs);
