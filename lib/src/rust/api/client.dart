@@ -12,10 +12,10 @@ part 'client.freezed.dart';
 // These functions are ignored because they are not marked as `pub`: `send_command`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<List<String>> listAudioInputDevices() =>
+Future<List<AudioDevice>> listAudioInputDevices() =>
     RustLib.instance.api.crateApiClientListAudioInputDevices();
 
-Future<List<String>> listAudioOutputDevices() =>
+Future<List<AudioDevice>> listAudioOutputDevices() =>
     RustLib.instance.api.crateApiClientListAudioOutputDevices();
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustMumbleClient>>

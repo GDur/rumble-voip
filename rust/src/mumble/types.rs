@@ -15,6 +15,12 @@ pub enum AudioBufferSize {
 }
 
 #[derive(Debug, Clone)]
+pub struct AudioDevice {
+    pub name: String,
+    pub id: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct MumbleConfig {
     /// Target bitrate for the Opus encoder in bits per second (e.g. 72000).
     pub audio_bitrate: u32,
@@ -29,6 +35,10 @@ pub struct MumbleConfig {
     pub output_buffer_size: AudioBufferSize,
     /// The requested size of the operating system's hardware audio input buffer.
     pub input_buffer_size: AudioBufferSize,
+    /// The ID of the audio input device to use. If None, the default device is used.
+    pub input_device_id: Option<String>,
+    /// The ID of the audio output device to use. If None, the default device is used.
+    pub output_device_id: Option<String>,
 }
 
 impl Default for MumbleConfig {
@@ -40,6 +50,8 @@ impl Default for MumbleConfig {
             jitter_buffer_ms: 40,
             output_buffer_size: AudioBufferSize::Default,
             input_buffer_size: AudioBufferSize::Default,
+            input_device_id: None,
+            output_device_id: None,
         }
     }
 }

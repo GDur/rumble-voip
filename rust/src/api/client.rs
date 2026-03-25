@@ -1,5 +1,6 @@
 use crate::frb_generated::StreamSink;
-use crate::mumble::audio::{list_input_devices as list_in, list_output_devices as list_out};
+use crate::mumble::audio;
+use crate::mumble::types::AudioDevice;
 use crate::mumble::{InternalMumbleClient, MumbleCommand};
 use flutter_rust_bridge::frb;
 use std::sync::Arc;
@@ -116,7 +117,7 @@ impl RustMumbleClient {
         }
         self.send_command(MumbleCommand::UpdateConfig(config));
     }
-    
+
     pub fn join_channel(&self, channel_id: u32) {
         self.send_command(MumbleCommand::JoinChannel(channel_id));
     }
@@ -160,10 +161,10 @@ impl RustMumbleClient {
     }
 }
 
-pub fn list_audio_input_devices() -> Vec<String> {
-    list_in()
+pub fn list_audio_input_devices() -> Vec<AudioDevice> {
+    audio::list_input_devices()
 }
 
-pub fn list_audio_output_devices() -> Vec<String> {
-    list_out()
+pub fn list_audio_output_devices() -> Vec<AudioDevice> {
+    audio::list_output_devices()
 }

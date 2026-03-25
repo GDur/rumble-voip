@@ -140,9 +140,9 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiClientInitApp();
 
-  Future<List<String>> crateApiClientListAudioInputDevices();
+  Future<List<AudioDevice>> crateApiClientListAudioInputDevices();
 
-  Future<List<String>> crateApiClientListAudioOutputDevices();
+  Future<List<AudioDevice>> crateApiClientListAudioOutputDevices();
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_RustMumbleClient;
@@ -637,7 +637,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Future<List<String>> crateApiClientListAudioInputDevices() {
+  Future<List<AudioDevice>> crateApiClientListAudioInputDevices() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -650,7 +650,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
+          decodeSuccessData: sse_decode_list_audio_device,
           decodeErrorData: null,
         ),
         constMeta: kCrateApiClientListAudioInputDevicesConstMeta,
@@ -664,7 +664,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "list_audio_input_devices", argNames: []);
 
   @override
-  Future<List<String>> crateApiClientListAudioOutputDevices() {
+  Future<List<AudioDevice>> crateApiClientListAudioOutputDevices() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -677,7 +677,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_list_String,
+          decodeSuccessData: sse_decode_list_audio_device,
           decodeErrorData: null,
         ),
         constMeta: kCrateApiClientListAudioOutputDevicesConstMeta,
@@ -759,6 +759,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AudioDevice dco_decode_audio_device(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return AudioDevice(
+      name: dco_decode_String(arr[0]),
+      id: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
@@ -807,9 +819,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<String> dco_decode_list_String(dynamic raw) {
+  List<AudioDevice> dco_decode_list_audio_device(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_String).toList();
+    return (raw as List<dynamic>).map(dco_decode_audio_device).toList();
   }
 
   @protected
@@ -838,8 +850,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MumbleConfig dco_decode_mumble_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return MumbleConfig(
       audioBitrate: dco_decode_u_32(arr[0]),
       audioFrameMs: dco_decode_u_32(arr[1]),
@@ -847,6 +859,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       jitterBufferMs: dco_decode_u_32(arr[3]),
       outputBufferSize: dco_decode_audio_buffer_size(arr[4]),
       inputBufferSize: dco_decode_audio_buffer_size(arr[5]),
+      inputDeviceId: dco_decode_opt_String(arr[6]),
+      outputDeviceId: dco_decode_opt_String(arr[7]),
     );
   }
 
@@ -1031,6 +1045,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  AudioDevice sse_decode_audio_device(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_id = sse_decode_String(deserializer);
+    return AudioDevice(name: var_name, id: var_id);
+  }
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
@@ -1085,13 +1107,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+  List<AudioDevice> sse_decode_list_audio_device(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <String>[];
+    var ans_ = <AudioDevice>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_String(deserializer));
+      ans_.add(sse_decode_audio_device(deserializer));
     }
     return ans_;
   }
@@ -1131,6 +1153,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_jitterBufferMs = sse_decode_u_32(deserializer);
     var var_outputBufferSize = sse_decode_audio_buffer_size(deserializer);
     var var_inputBufferSize = sse_decode_audio_buffer_size(deserializer);
+    var var_inputDeviceId = sse_decode_opt_String(deserializer);
+    var var_outputDeviceId = sse_decode_opt_String(deserializer);
     return MumbleConfig(
       audioBitrate: var_audioBitrate,
       audioFrameMs: var_audioFrameMs,
@@ -1138,6 +1162,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       jitterBufferMs: var_jitterBufferMs,
       outputBufferSize: var_outputBufferSize,
       inputBufferSize: var_inputBufferSize,
+      inputDeviceId: var_inputDeviceId,
+      outputDeviceId: var_outputDeviceId,
     );
   }
 
@@ -1350,6 +1376,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_audio_device(AudioDevice self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.id, serializer);
+  }
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
@@ -1410,11 +1443,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+  void sse_encode_list_audio_device(
+    List<AudioDevice> self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
-      sse_encode_String(item, serializer);
+      sse_encode_audio_device(item, serializer);
     }
   }
 
@@ -1448,6 +1484,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.jitterBufferMs, serializer);
     sse_encode_audio_buffer_size(self.outputBufferSize, serializer);
     sse_encode_audio_buffer_size(self.inputBufferSize, serializer);
+    sse_encode_opt_String(self.inputDeviceId, serializer);
+    sse_encode_opt_String(self.outputDeviceId, serializer);
   }
 
   @protected

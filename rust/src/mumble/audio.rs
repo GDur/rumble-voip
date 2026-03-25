@@ -1,4 +1,4 @@
-use crate::mumble::types::{RbConsumer, RbProducer};
+use crate::mumble::types::{AudioDevice, RbConsumer, RbProducer};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crossbeam_channel::Sender;
 use ringbuf::traits::{Consumer, Observer, Producer};
@@ -54,12 +54,23 @@ pub fn setup_audio(
 ) -> anyhow::Result<AudioStreams> {
     let host = cpal::default_host();
 
-    let input_device = host
-        .default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("No input device found"))?;
-    let output_device = host
-        .default_output_device()
-        .ok_or_else(|| anyhow::anyhow!("No output device found"))?;
+    let input_device = if let Some(id) = &config.input_device_id {
+        host.input_devices()?
+            .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
+            .ok_or_else(|| anyhow::anyhow!("Input device with ID '{}' not found", id))?
+    } else {
+        host.default_input_device()
+            .ok_or_else(|| anyhow::anyhow!("No input device found"))?
+    };
+
+    let output_device = if let Some(id) = &config.output_device_id {
+        host.output_devices()?
+            .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
+            .ok_or_else(|| anyhow::anyhow!("Output device with ID '{}' not found", id))?
+    } else {
+        host.default_output_device()
+            .ok_or_else(|| anyhow::anyhow!("No output device found"))?
+    };
 
     let input_config_full = input_device.default_input_config()?;
     let output_config_full = output_device.default_output_config()?;
@@ -177,23 +188,31 @@ pub fn setup_audio(
     ))
 }
 
-pub fn list_input_devices() -> Vec<String> {
+pub fn list_input_devices() -> Vec<AudioDevice> {
     let host = cpal::default_host();
     host.input_devices()
         .map(|devices| {
             devices
-                .filter_map(|d| d.description().map(|desc| desc.name().to_string()).ok())
+                .filter_map(|d| {
+                    let id = d.id().ok()?.to_string();
+                    let name = d.description().map(|desc| desc.name().to_string()).ok()?;
+                    Some(AudioDevice { id, name })
+                })
                 .collect()
         })
         .unwrap_or_default()
 }
 
-pub fn list_output_devices() -> Vec<String> {
+pub fn list_output_devices() -> Vec<AudioDevice> {
     let host = cpal::default_host();
     host.output_devices()
         .map(|devices| {
             devices
-                .filter_map(|d| d.description().map(|desc| desc.name().to_string()).ok())
+                .filter_map(|d| {
+                    let id = d.id().ok()?.to_string();
+                    let name = d.description().map(|desc| desc.name().to_string()).ok()?;
+                    Some(AudioDevice { id, name })
+                })
                 .collect()
         })
         .unwrap_or_default()

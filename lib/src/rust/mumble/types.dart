@@ -19,6 +19,24 @@ sealed class AudioBufferSize with _$AudioBufferSize {
   const factory AudioBufferSize.fixed(int field0) = AudioBufferSize_Fixed;
 }
 
+class AudioDevice {
+  final String name;
+  final String id;
+
+  const AudioDevice({required this.name, required this.id});
+
+  @override
+  int get hashCode => name.hashCode ^ id.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AudioDevice &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          id == other.id;
+}
+
 class MumbleConfig {
   /// Target bitrate for the Opus encoder in bits per second (e.g. 72000).
   final int audioBitrate;
@@ -39,6 +57,12 @@ class MumbleConfig {
   /// The requested size of the operating system's hardware audio input buffer.
   final AudioBufferSize inputBufferSize;
 
+  /// The ID of the audio input device to use. If None, the default device is used.
+  final String? inputDeviceId;
+
+  /// The ID of the audio output device to use. If None, the default device is used.
+  final String? outputDeviceId;
+
   const MumbleConfig({
     required this.audioBitrate,
     required this.audioFrameMs,
@@ -46,6 +70,8 @@ class MumbleConfig {
     required this.jitterBufferMs,
     required this.outputBufferSize,
     required this.inputBufferSize,
+    this.inputDeviceId,
+    this.outputDeviceId,
   });
 
   @override
@@ -55,7 +81,9 @@ class MumbleConfig {
       opusComplexity.hashCode ^
       jitterBufferMs.hashCode ^
       outputBufferSize.hashCode ^
-      inputBufferSize.hashCode;
+      inputBufferSize.hashCode ^
+      inputDeviceId.hashCode ^
+      outputDeviceId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -67,5 +95,7 @@ class MumbleConfig {
           opusComplexity == other.opusComplexity &&
           jitterBufferMs == other.jitterBufferMs &&
           outputBufferSize == other.outputBufferSize &&
-          inputBufferSize == other.inputBufferSize;
+          inputBufferSize == other.inputBufferSize &&
+          inputDeviceId == other.inputDeviceId &&
+          outputDeviceId == other.outputDeviceId;
 }
