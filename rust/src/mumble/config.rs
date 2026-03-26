@@ -11,8 +11,6 @@ pub struct MumbleConfig {
     pub outgoing_audio_bitrate: u32,
     /// The size of audio chunks sent over the network in milliseconds (e.g. 10ms or 20ms).
     pub outgoing_audio_ms_per_packet: u32,
-    /// Algorithm complexity of the Opus encoder (0-10, default 10).
-    pub outgoing_opus_complexity: u32,
 
     /// The size of the software jitter buffer in milliseconds.
     /// This intentionally delays playback to handle uneven network packet arrival.
@@ -34,7 +32,6 @@ impl Default for MumbleConfig {
         Self {
             outgoing_audio_bitrate: 72000,
             outgoing_audio_ms_per_packet: 10,
-            outgoing_opus_complexity: 10,
             incoming_jitter_buffer_ms: 40,
             playback_hw_buffer_size: super::hardware::audio::AudioBufferSize::Default,
             capture_hw_buffer_size: super::hardware::audio::AudioBufferSize::Default,

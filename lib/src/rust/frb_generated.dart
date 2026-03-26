@@ -891,17 +891,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MumbleConfig dco_decode_mumble_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return MumbleConfig(
       outgoingAudioBitrate: dco_decode_u_32(arr[0]),
       outgoingAudioMsPerPacket: dco_decode_u_32(arr[1]),
-      outgoingOpusComplexity: dco_decode_u_32(arr[2]),
-      incomingJitterBufferMs: dco_decode_u_32(arr[3]),
-      playbackDeviceId: dco_decode_opt_String(arr[4]),
-      playbackHwBufferSize: dco_decode_audio_buffer_size(arr[5]),
-      captureHwBufferSize: dco_decode_audio_buffer_size(arr[6]),
-      captureDeviceId: dco_decode_opt_String(arr[7]),
+      incomingJitterBufferMs: dco_decode_u_32(arr[2]),
+      playbackDeviceId: dco_decode_opt_String(arr[3]),
+      playbackHwBufferSize: dco_decode_audio_buffer_size(arr[4]),
+      captureHwBufferSize: dco_decode_audio_buffer_size(arr[5]),
+      captureDeviceId: dco_decode_opt_String(arr[6]),
     );
   }
 
@@ -1190,7 +1189,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_outgoingAudioBitrate = sse_decode_u_32(deserializer);
     var var_outgoingAudioMsPerPacket = sse_decode_u_32(deserializer);
-    var var_outgoingOpusComplexity = sse_decode_u_32(deserializer);
     var var_incomingJitterBufferMs = sse_decode_u_32(deserializer);
     var var_playbackDeviceId = sse_decode_opt_String(deserializer);
     var var_playbackHwBufferSize = sse_decode_audio_buffer_size(deserializer);
@@ -1199,7 +1197,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return MumbleConfig(
       outgoingAudioBitrate: var_outgoingAudioBitrate,
       outgoingAudioMsPerPacket: var_outgoingAudioMsPerPacket,
-      outgoingOpusComplexity: var_outgoingOpusComplexity,
       incomingJitterBufferMs: var_incomingJitterBufferMs,
       playbackDeviceId: var_playbackDeviceId,
       playbackHwBufferSize: var_playbackHwBufferSize,
@@ -1521,7 +1518,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.outgoingAudioBitrate, serializer);
     sse_encode_u_32(self.outgoingAudioMsPerPacket, serializer);
-    sse_encode_u_32(self.outgoingOpusComplexity, serializer);
     sse_encode_u_32(self.incomingJitterBufferMs, serializer);
     sse_encode_opt_String(self.playbackDeviceId, serializer);
     sse_encode_audio_buffer_size(self.playbackHwBufferSize, serializer);

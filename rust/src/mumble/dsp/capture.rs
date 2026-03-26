@@ -37,11 +37,6 @@ impl CapturePipeline {
             OPUS_SET_BITRATE_REQUEST,
             config.outgoing_audio_bitrate as i32,
         );
-        // TODO: Probably leave at 10 always (remove this)
-        encoder.ctl(
-            OPUS_SET_COMPLEXITY_REQUEST,
-            config.outgoing_opus_complexity as i32,
-        );
 
         let input_samples_per_frame =
             (input_sample_rate as f32 * (INTERNAL_FRAME_MS as f32 / 1000.0)).ceil() as usize;

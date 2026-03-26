@@ -14,9 +14,6 @@ class MumbleConfig {
   /// The size of audio chunks sent over the network in milliseconds (e.g. 10ms or 20ms).
   final int outgoingAudioMsPerPacket;
 
-  /// Algorithm complexity of the Opus encoder (0-10, default 10).
-  final int outgoingOpusComplexity;
-
   /// The size of the software jitter buffer in milliseconds.
   /// This intentionally delays playback to handle uneven network packet arrival.
   final int incomingJitterBufferMs;
@@ -36,7 +33,6 @@ class MumbleConfig {
   const MumbleConfig({
     required this.outgoingAudioBitrate,
     required this.outgoingAudioMsPerPacket,
-    required this.outgoingOpusComplexity,
     required this.incomingJitterBufferMs,
     this.playbackDeviceId,
     required this.playbackHwBufferSize,
@@ -48,7 +44,6 @@ class MumbleConfig {
   int get hashCode =>
       outgoingAudioBitrate.hashCode ^
       outgoingAudioMsPerPacket.hashCode ^
-      outgoingOpusComplexity.hashCode ^
       incomingJitterBufferMs.hashCode ^
       playbackDeviceId.hashCode ^
       playbackHwBufferSize.hashCode ^
@@ -62,7 +57,6 @@ class MumbleConfig {
           runtimeType == other.runtimeType &&
           outgoingAudioBitrate == other.outgoingAudioBitrate &&
           outgoingAudioMsPerPacket == other.outgoingAudioMsPerPacket &&
-          outgoingOpusComplexity == other.outgoingOpusComplexity &&
           incomingJitterBufferMs == other.incomingJitterBufferMs &&
           playbackDeviceId == other.playbackDeviceId &&
           playbackHwBufferSize == other.playbackHwBufferSize &&

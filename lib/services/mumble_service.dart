@@ -28,7 +28,6 @@ class MumbleService extends ChangeNotifier {
   MumbleConfig _config = const MumbleConfig(
     outgoingAudioBitrate: 72000,
     outgoingAudioMsPerPacket: 10,
-    outgoingOpusComplexity: 10,
     incomingJitterBufferMs: 40,
     playbackHwBufferSize: AudioBufferSize.default_(),
     captureHwBufferSize: AudioBufferSize.default_(),
@@ -98,7 +97,6 @@ class MumbleService extends ChangeNotifier {
     _config = MumbleConfig(
       outgoingAudioBitrate: settings.audioBitrate,
       outgoingAudioMsPerPacket: settings.audioFrameMs,
-      outgoingOpusComplexity: 10,
       incomingJitterBufferMs: 40,
       playbackHwBufferSize: const AudioBufferSize.default_(),
       captureHwBufferSize: const AudioBufferSize.default_(),
@@ -113,7 +111,6 @@ class MumbleService extends ChangeNotifier {
     _config = MumbleConfig(
       outgoingAudioBitrate: _config.outgoingAudioBitrate,
       outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
-      outgoingOpusComplexity: _config.outgoingOpusComplexity,
       incomingJitterBufferMs: _config.incomingJitterBufferMs,
       playbackHwBufferSize: _config.playbackHwBufferSize,
       captureHwBufferSize: _config.captureHwBufferSize,
@@ -131,7 +128,6 @@ class MumbleService extends ChangeNotifier {
     _config = MumbleConfig(
       outgoingAudioBitrate: _config.outgoingAudioBitrate,
       outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
-      outgoingOpusComplexity: _config.outgoingOpusComplexity,
       incomingJitterBufferMs: _config.incomingJitterBufferMs,
       playbackHwBufferSize: _config.playbackHwBufferSize,
       captureHwBufferSize: _config.captureHwBufferSize,
@@ -169,7 +165,6 @@ class MumbleService extends ChangeNotifier {
       _config = MumbleConfig(
         outgoingAudioBitrate: outgoingAudioBitrate ?? _config.outgoingAudioBitrate,
         outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? _config.outgoingAudioMsPerPacket,
-        outgoingOpusComplexity: _config.outgoingOpusComplexity,
         incomingJitterBufferMs: _config.incomingJitterBufferMs,
         playbackHwBufferSize: _config.playbackHwBufferSize,
         captureHwBufferSize: _config.captureHwBufferSize,

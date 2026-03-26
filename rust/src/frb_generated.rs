@@ -996,7 +996,6 @@ impl SseDecode for crate::mumble::config::MumbleConfig {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_outgoingAudioBitrate = <u32>::sse_decode(deserializer);
         let mut var_outgoingAudioMsPerPacket = <u32>::sse_decode(deserializer);
-        let mut var_outgoingOpusComplexity = <u32>::sse_decode(deserializer);
         let mut var_incomingJitterBufferMs = <u32>::sse_decode(deserializer);
         let mut var_playbackDeviceId = <Option<String>>::sse_decode(deserializer);
         let mut var_playbackHwBufferSize =
@@ -1007,7 +1006,6 @@ impl SseDecode for crate::mumble::config::MumbleConfig {
         return crate::mumble::config::MumbleConfig {
             outgoing_audio_bitrate: var_outgoingAudioBitrate,
             outgoing_audio_ms_per_packet: var_outgoingAudioMsPerPacket,
-            outgoing_opus_complexity: var_outgoingOpusComplexity,
             incoming_jitter_buffer_ms: var_incomingJitterBufferMs,
             playback_device_id: var_playbackDeviceId,
             playback_hw_buffer_size: var_playbackHwBufferSize,
@@ -1358,7 +1356,6 @@ impl flutter_rust_bridge::IntoDart for crate::mumble::config::MumbleConfig {
             self.outgoing_audio_ms_per_packet
                 .into_into_dart()
                 .into_dart(),
-            self.outgoing_opus_complexity.into_into_dart().into_dart(),
             self.incoming_jitter_buffer_ms.into_into_dart().into_dart(),
             self.playback_device_id.into_into_dart().into_dart(),
             self.playback_hw_buffer_size.into_into_dart().into_dart(),
@@ -1601,7 +1598,6 @@ impl SseEncode for crate::mumble::config::MumbleConfig {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.outgoing_audio_bitrate, serializer);
         <u32>::sse_encode(self.outgoing_audio_ms_per_packet, serializer);
-        <u32>::sse_encode(self.outgoing_opus_complexity, serializer);
         <u32>::sse_encode(self.incoming_jitter_buffer_ms, serializer);
         <Option<String>>::sse_encode(self.playback_device_id, serializer);
         <crate::mumble::hardware::audio::AudioBufferSize>::sse_encode(
