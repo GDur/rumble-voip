@@ -86,8 +86,9 @@ class AudioTab extends StatelessWidget {
               Expanded(
                 child: ShadSlider(
                   initialValue: settings.audioBitrate / 1000,
-                  min: 8.0,
+                  min: 32.0,
                   max: 192.0,
+                  divisions: ((192.0 - 32.0) / 16.0).toInt(),
                   onChanged: (v) {
                     final bitrate = (v * 1000).round();
                     settings.setAudioBitrate(bitrate);
@@ -118,8 +119,9 @@ class AudioTab extends StatelessWidget {
                 child: ShadSlider(
                   initialValue: settings.audioFrameMs.toDouble(),
                   min: 10.0,
-                  max: 60.0,
-                  divisions: 5,
+                  max: 40.0,
+                  // TODO: only allow 10, 20, 40
+                  divisions: 3,
                   onChanged: (v) {
                     final frameMs = v.round();
                     settings.setAudioFrameMs(frameMs);

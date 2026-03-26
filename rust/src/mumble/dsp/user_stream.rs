@@ -13,7 +13,7 @@ pub struct UserVoiceStream {
 }
 
 impl UserVoiceStream {
-    pub fn new(sample_rate: i32, channels: i32) -> Self {
+    pub fn new(sample_rate: u32, channels: u32) -> Self {
         Self {
             decoder: OpusDecoder::new(sample_rate, channels).unwrap(),
             jitter_buffer: Box::new(heapless::Deque::new()),

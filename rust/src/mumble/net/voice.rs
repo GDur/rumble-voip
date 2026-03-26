@@ -1,4 +1,4 @@
-use crate::mumble::dsp::{AudioPacket, IncomingAudio, MAX_OPUS_SIZE};
+use crate::mumble::dsp::{AudioPacket, IncomingAudio, MAX_OPUS_PACKET_SIZE};
 use bytes::BytesMut;
 use crossbeam_channel::Sender as CrossSender;
 use mumble_protocol_2x::crypt::CryptState;
@@ -92,8 +92,8 @@ impl VoiceChannel {
                     if let Ok(len) = res {
                         let mut data_to_decrypt = BytesMut::from(&udp_recv_buf[..len]);
                         if let Ok(Ok(VoicePacket::Audio { session_id, payload: VoicePacketPayload::Opus(data, last), .. })) = crypt_state.decrypt(&mut data_to_decrypt) {
-                            let mut p = heapless::Vec::<u8, MAX_OPUS_SIZE>::new();
-                            p.extend_from_slice(&data[..data.len().min(MAX_OPUS_SIZE)]).expect("UDP receive Opus payload overflow");
+                            let mut p = heapless::Vec::<u8, MAX_OPUS_PACKET_SIZE>::new();
+                            p.extend_from_slice(&data[..data.len().min(MAX_OPUS_PACKET_SIZE)]).expect("UDP receive Opus payload overflow");
                             let _ = udp_tx.try_send(IncomingAudio::new(
                                 session_id,
                                 AudioPacket::new(p, last),

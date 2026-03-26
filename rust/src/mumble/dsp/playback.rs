@@ -76,7 +76,7 @@ impl PlaybackMixer {
     pub fn get_or_insert_user(&mut self, session_id: u32) -> &mut UserVoiceStream {
         self.users
             .entry(session_id)
-            .or_insert_with(|| UserVoiceStream::new(INTERNAL_SAMPLE_RATE as i32, 1))
+            .or_insert_with(|| UserVoiceStream::new(INTERNAL_SAMPLE_RATE, 1))
     }
 
     pub fn output_frame_sample_count(&self) -> usize {

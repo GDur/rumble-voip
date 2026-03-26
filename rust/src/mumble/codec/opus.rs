@@ -4,17 +4,24 @@ use std::ptr;
 pub struct OpusEncoder(pub *mut opus_head_sys::OpusEncoder);
 
 impl OpusEncoder {
-    pub fn new(sample_rate: i32, channels: i32, application: i32) -> anyhow::Result<Self> {
+    pub fn new(sample_rate: u32, channels: u32, application: u32) -> anyhow::Result<Self> {
         let mut err = 0;
-        let ptr = unsafe { opus_encoder_create(sample_rate, channels, application, &mut err) };
+        let ptr = unsafe {
+            opus_encoder_create(
+                sample_rate as i32,
+                channels as i32,
+                application as i32,
+                &mut err,
+            )
+        };
         if err != OPUS_OK as i32 {
             return Err(anyhow::anyhow!("Opus encoder creation error: {}", err));
         }
         Ok(Self(ptr))
     }
 
-    pub fn ctl(&self, request: i32, value: i32) -> i32 {
-        unsafe { opus_encoder_ctl(self.0, request, value) }
+    pub fn ctl(&self, request: u32, value: i32) -> i32 {
+        unsafe { opus_encoder_ctl(self.0, request as i32, value) }
     }
 
     pub fn encode(&self, pcm: &[f32], frame_size: usize, data: &mut [u8]) -> anyhow::Result<usize> {
@@ -32,6 +39,10 @@ impl OpusEncoder {
         }
         Ok(ret as usize)
     }
+
+    pub fn reset_state(&mut self) {
+        let _ = self.ctl(OPUS_RESET_STATE, 1);
+    }
 }
 
 impl Drop for OpusEncoder {
@@ -43,9 +54,9 @@ impl Drop for OpusEncoder {
 pub struct OpusDecoder(pub *mut opus_head_sys::OpusDecoder);
 
 impl OpusDecoder {
-    pub fn new(sample_rate: i32, channels: i32) -> anyhow::Result<Self> {
+    pub fn new(sample_rate: u32, channels: u32) -> anyhow::Result<Self> {
         let mut err = 0;
-        let ptr = unsafe { opus_decoder_create(sample_rate, channels, &mut err) };
+        let ptr = unsafe { opus_decoder_create(sample_rate as i32, channels as i32, &mut err) };
         if err != OPUS_OK as i32 {
             return Err(anyhow::anyhow!("Opus decoder creation error: {}", err));
         }

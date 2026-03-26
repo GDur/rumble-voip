@@ -1,8 +1,8 @@
 use crate::mumble::codec::opus::OpusEncoder;
 use crate::mumble::config::MumbleConfig;
 use crate::mumble::dsp::{
-    AudioPacket, INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE, MAX_OPUS_SIZE,
-    MAX_PACKET_SAMPLES,
+    AudioPacket, INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE,
+    MAX_OPUS_PACKET_SIZE, MAX_PACKET_SAMPLES,
 };
 use opus_head_sys::*;
 use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
@@ -17,7 +17,7 @@ pub struct CapturePipeline {
     // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
     incoming_pcm_buffer: Box<heapless::Vec<f32, 8192>>,
     // Reusable buffer to compute a single outgoing packet.
-    opus_buf: Box<heapless::Vec<u8, MAX_OPUS_SIZE>>,
+    opus_buf: Box<heapless::Vec<u8, MAX_OPUS_PACKET_SIZE>>,
     // Number of samples per outgoing opus packet.
     outgoing_packet_sample_count: usize,
     // Number of input samples corresponding to 10ms.
@@ -26,17 +26,20 @@ pub struct CapturePipeline {
 
 impl CapturePipeline {
     pub fn new(input_rate: u32, config: &MumbleConfig) -> Self {
-        let encoder =
-            OpusEncoder::new(INTERNAL_SAMPLE_RATE as i32, 1, OPUS_APPLICATION_VOIP as i32).unwrap();
-        encoder.ctl(OPUS_SET_VBR_REQUEST as i32, 1);
-        encoder.ctl(OPUS_SET_INBAND_FEC_REQUEST as i32, 1);
-        encoder.ctl(OPUS_SET_PACKET_LOSS_PERC_REQUEST as i32, 10);
+        // Mumble chooses between VOIP, AUDIO, and RESTRICTED_LOW_DELAY based on bit rate and another flag for low delay mode
+        // VoIP mode is only relevant for ultra low sample rates, and RESTRICTED_LOW_DELAY only gains us a few ms of algorithmic delay,
+        // but requires higher bit rates. Just always pick AUDIO. Mumble also uses CBR, but who cares, VBR is better.
+        // No forward error correction (FEC), and no DTX (discontinuous transmission, for silence) just as in Mumble.
+
+        let encoder = OpusEncoder::new(INTERNAL_SAMPLE_RATE, 1, OPUS_APPLICATION_AUDIO).unwrap();
+
         encoder.ctl(
-            OPUS_SET_BITRATE_REQUEST as i32,
+            OPUS_SET_BITRATE_REQUEST,
             config.outgoing_audio_bitrate as i32,
         );
+        // TODO: Probably leave at 10 always (remove this)
         encoder.ctl(
-            OPUS_SET_COMPLEXITY_REQUEST as i32,
+            OPUS_SET_COMPLEXITY_REQUEST,
             config.outgoing_opus_complexity as i32,
         );
 
@@ -67,7 +70,7 @@ impl CapturePipeline {
 
         let mut opus_buf = Box::new(heapless::Vec::new());
         opus_buf
-            .resize(MAX_OPUS_SIZE, 0)
+            .resize(MAX_OPUS_PACKET_SIZE, 0)
             .expect("Opus buf resize failed");
 
         let outgoing_packet_sample_count =
@@ -139,7 +142,7 @@ impl CapturePipeline {
             ) {
                 let mut payload = heapless::Vec::new();
                 payload
-                    .extend_from_slice(&self.opus_buf[..len.min(MAX_OPUS_SIZE)])
+                    .extend_from_slice(&self.opus_buf[..len.min(MAX_OPUS_PACKET_SIZE)])
                     .expect("Opus payload buffer overflow");
                 packets
                     .push(AudioPacket::new(payload, false))
@@ -154,9 +157,10 @@ impl CapturePipeline {
         self.incoming_pcm_buffer.clear();
         // Clear resampler state by pushing zeros
         if let Some(res) = &mut self.resampler {
-            let zero_in = [0.0f32; 1024];
+            let zero_in = [0.0f32; INTERNAL_FRAME_SIZE];
             let mut zero_out = [0.0f32; INTERNAL_FRAME_SIZE];
             res.resample(&zero_in[..self.input_samples_per_10ms], &mut zero_out);
         }
+        self.encoder.reset_state();
     }
 }
