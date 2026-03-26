@@ -593,7 +593,10 @@ class _ChannelTreeState extends State<ChannelTree> {
             const SizedBox(width: 8),
             Text(
               '(You)',
-              style: theme.textTheme.muted.copyWith(fontSize: 12),
+              style: theme.textTheme.muted.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
           if (isMuted || isSuppressed) ...[

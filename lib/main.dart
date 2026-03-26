@@ -579,6 +579,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
+          _buildVolumeControl(mumbleService),
           if (showChatToggle)
             ShadIconButton.ghost(
               icon: const Icon(LucideIcons.messageSquare, size: 20),
@@ -762,8 +763,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          _buildVolumeControl(service),
-          const SizedBox(width: 8),
           _buildMicStatus(service),
           const SizedBox(width: 16),
           _buildPTTButton(service),
