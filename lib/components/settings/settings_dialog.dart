@@ -7,6 +7,7 @@ import 'package:rumble/components/settings/tabs/general_tab.dart';
 import 'package:rumble/components/settings/tabs/hotkey_tab.dart';
 import 'package:rumble/components/settings/tabs/certificate_tab.dart';
 import 'package:rumble/components/settings/tabs/about_tab.dart';
+import 'package:rumble/components/ptt_button.dart';
 
 // Component: settings-dialog
 class SettingsDialog extends StatefulWidget {
@@ -93,82 +94,99 @@ class _SettingsDialogState extends State<SettingsDialog> {
       child: SafeArea(
         top: isMobile,
         bottom: isMobile,
-        child: SizedBox(
-          width: isMobile
-              ? MediaQuery.of(context).size.width * 0.95
-              : MediaQuery.of(context).size.width * 0.85,
-          height: isMobile
-              ? MediaQuery.of(context).size.height * 0.8
-              : MediaQuery.of(context).size.height * 0.85,
-          child: isMobile
-              ? _buildMobileContent(effectiveTab, sideBarItems)
-              : Row(
-                  children: [
-                    // Sidebar
-                    Container(
-                      width: 180,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: ShadTheme.of(context).colorScheme.border,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: isMobile
+                  ? MediaQuery.of(context).size.width * 0.95
+                  : MediaQuery.of(context).size.width * 0.85,
+              height: isMobile
+                  ? MediaQuery.of(context).size.height * 0.8
+                  : MediaQuery.of(context).size.height * 0.85,
+              child: isMobile
+                  ? _buildMobileContent(effectiveTab, sideBarItems)
+                  : Row(
+                      children: [
+                        // Sidebar
+                        Container(
+                          width: 180,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              right: BorderSide(
+                                color: ShadTheme.of(context).colorScheme.border,
+                              ),
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: sideBarItems.map((item) {
+                              final isSelected = effectiveTab == item.id;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: ShadButton.ghost(
+                                  onPressed: () =>
+                                      setState(() => _currentTab = item.id),
+                                  width: double.infinity,
+                                  gap: 12,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  backgroundColor: isSelected
+                                      ? ShadTheme.of(context).colorScheme.accent
+                                      : Colors.transparent,
+                                  pressedBackgroundColor: ShadTheme.of(
+                                    context,
+                                  ).colorScheme.accent,
+                                  leading: Icon(item.icon, size: 16),
+                                  child: Text(
+                                    item.label,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        children: sideBarItems.map((item) {
-                          final isSelected = effectiveTab == item.id;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: ShadButton.ghost(
-                              onPressed: () =>
-                                  setState(() => _currentTab = item.id),
-                              width: double.infinity,
-                              gap: 12,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              backgroundColor: isSelected
-                                  ? ShadTheme.of(context).colorScheme.accent
-                                  : Colors.transparent,
-                              pressedBackgroundColor: ShadTheme.of(
-                                context,
-                              ).colorScheme.accent,
-                              leading: Icon(item.icon, size: 16),
-                              child: Text(
-                                item.label,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
+                        // Content
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(child: _buildTabContent(effectiveTab!)),
+                                const SizedBox(height: 16),
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: ShadButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('Done'),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    // Content
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(child: _buildTabContent(effectiveTab!)),
-                            const SizedBox(height: 16),
-                            Align(
-                              alignment: Alignment.bottomRight,
-                              child: ShadButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Done'),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+            ),
+            if (isMobile && widget.mumbleService.isConnected)
+              Positioned(
+                bottom: 100, // Move it higher to clear bottom navigation buttons
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: PushToTalkButton(
+                    service: widget.mumbleService,
+                    width: 180,
+                    height: 48,
+                  ),
                 ),
+              ),
+          ],
         ),
       ),
     );
