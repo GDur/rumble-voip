@@ -396,7 +396,7 @@ class _ChannelTreeState extends State<ChannelTree> {
             onEnter: (_) => setState(() => _hoveredChannelId = channel.id),
             onExit: (_) => setState(() => _hoveredChannelId = null),
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
+              margin: const EdgeInsets.only(left: 4, right: 12, top: 1, bottom: 1),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
@@ -428,14 +428,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                           : null,
                     ),
                   ),
-                  Icon(
-                    channel.id == 0 ? LucideIcons.house : LucideIcons.hash,
-                    size: 16,
-                    color: isMyChannel
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.mutedForeground,
-                  ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       channel.name,
@@ -571,28 +564,61 @@ class _ChannelTreeState extends State<ChannelTree> {
               ),
             ),
           ),
+          if (isMuted || isSuppressed) ...[
+            const SizedBox(width: 8),
+            ShadButton.ghost(
+              padding: EdgeInsets.zero,
+              width: 20,
+              height: 20,
+              onPressed: () {},
+              child: ShadPopover(
+                controller: ShadPopoverController(),
+                popover: (context) {
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      isSuppressed ? 'Suppressed by Server' : 'Muted',
+                      style: theme.textTheme.small,
+                    ),
+                  );
+                },
+                child: Icon(
+                  LucideIcons.micOff,
+                  size: 14,
+                  color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
+          if (isDeaf) ...[
+            const SizedBox(width: 4),
+            ShadButton.ghost(
+              padding: EdgeInsets.zero,
+              width: 20,
+              height: 20,
+              onPressed: () {},
+              child: ShadPopover(
+                controller: ShadPopoverController(),
+                popover: (context) {
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    child: Text('Deafened', style: theme.textTheme.small),
+                  );
+                },
+                child: Icon(
+                  LucideIcons.headphoneOff,
+                  size: 14,
+                  color: theme.colorScheme.destructive.withValues(alpha: 0.7),
+                ),
+              ),
+            ),
+          ],
           if (u.comment != null && u.comment!.isNotEmpty) ...[
             const SizedBox(width: 6),
             NoticeButton(
               title: 'User Notice',
               notice: HtmlUtils.sanitizeMumbleHtml(u.comment!),
               icon: LucideIcons.fileText,
-            ),
-          ],
-          if (isMuted || isSuppressed) ...[
-            const SizedBox(width: 8),
-            Icon(
-              LucideIcons.micOff,
-              size: 14,
-              color: theme.colorScheme.destructive.withValues(alpha: 0.7),
-            ),
-          ],
-          if (isDeaf) ...[
-            const SizedBox(width: 4),
-            Icon(
-              LucideIcons.headphoneOff,
-              size: 14,
-              color: theme.colorScheme.destructive.withValues(alpha: 0.7),
             ),
           ],
         ],
@@ -775,12 +801,16 @@ class _NoticeButtonState extends State<NoticeButton> {
             ),
           ),
         ),
-        child: ShadIconButton.ghost(
+        child: ShadButton.ghost(
           padding: EdgeInsets.zero,
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           onPressed: () => controller.toggle(),
-          icon: Icon(widget.icon, size: 14, color: theme.colorScheme.foreground.withValues(alpha: 0.4)),
+          child: Icon(
+            widget.icon,
+            size: 14,
+            color: theme.colorScheme.primary.withValues(alpha: 0.6),
+          ),
         ),
       ),
     );
