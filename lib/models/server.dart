@@ -100,7 +100,6 @@ String _generateDefaultUsername() {
   const gameNames = [
     'Glados',
     'MasterChief',
-    'Chell',
     'Cortana',
     'DoomSlayer',
     'Geralt',
