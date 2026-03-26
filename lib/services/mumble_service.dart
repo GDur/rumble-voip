@@ -95,8 +95,8 @@ class MumbleService extends ChangeNotifier {
   ) async {
     _settings = settings;
     _config = MumbleConfig(
-      outgoingAudioBitrate: settings.audioBitrate,
-      outgoingAudioMsPerPacket: settings.audioFrameMs,
+      outgoingAudioBitrate: settings.outgoingAudioBitrate,
+      outgoingAudioMsPerPacket: settings.outgoingAudioMsPerPacket,
       incomingJitterBufferMs: 40,
       playbackHwBufferSize: const AudioBufferSize.default_(),
       captureHwBufferSize: const AudioBufferSize.default_(),
@@ -119,7 +119,7 @@ class MumbleService extends ChangeNotifier {
     );
     await _client.setConfig(config: _config);
     if (_settings != null) {
-      await _settings!.setInputDeviceId(captureDeviceId);
+      await _settings!.setCaptureDeviceId(captureDeviceId);
     }
     notifyListeners();
   }
@@ -136,7 +136,7 @@ class MumbleService extends ChangeNotifier {
     );
     await _client.setConfig(config: _config);
     if (_settings != null) {
-      await _settings!.setOutputDeviceId(playbackDeviceId);
+      await _settings!.setPlaybackDeviceId(playbackDeviceId);
     }
     notifyListeners();
   }

@@ -40,7 +40,7 @@ class AudioTab extends StatelessWidget {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.inputDevices;
-              final captureDeviceId = settings.inputDeviceId;
+              final captureDeviceId = settings.captureDeviceId;
               final hasCurrent =
                   captureDeviceId == null ||
                   devices.any((d) => d.id == captureDeviceId);
@@ -49,7 +49,7 @@ class AudioTab extends StatelessWidget {
                 placeholder: const Text('Default Device'),
                 initialValue: captureDeviceId,
                 onChanged: (value) async {
-                  settings.setInputDeviceId(value);
+                  settings.setCaptureDeviceId(value);
                   await mumbleService.updateAudioSettings(captureDeviceId: value);
                 },
                 options: [
@@ -85,13 +85,13 @@ class AudioTab extends StatelessWidget {
             children: [
               Expanded(
                 child: ShadSlider(
-                  initialValue: settings.audioBitrate / 1000,
+                  initialValue: settings.outgoingAudioBitrate / 1000,
                   min: 32.0,
                   max: 192.0,
                   divisions: ((192.0 - 32.0) / 16.0).toInt(),
                   onChanged: (v) {
                     final bitrate = (v * 1000).round();
-                    settings.setAudioBitrate(bitrate);
+                    settings.setOutgoingAudioBitrate(bitrate);
                     mumbleService.updateAudioSettings(outgoingAudioBitrate: bitrate);
                     onUpdate(() {});
                   },
@@ -101,7 +101,7 @@ class AudioTab extends StatelessWidget {
               SizedBox(
                 width: 60,
                 child: Text(
-                  '${(settings.audioBitrate / 1000).round()} kb/s',
+                  '${(settings.outgoingAudioBitrate / 1000).round()} kb/s',
                   style: theme.textTheme.muted,
                 ),
               ),
@@ -117,14 +117,14 @@ class AudioTab extends StatelessWidget {
             children: [
               Expanded(
                 child: ShadSlider(
-                  initialValue: settings.audioFrameMs.toDouble(),
+                  initialValue: settings.outgoingAudioMsPerPacket.toDouble(),
                   min: 10.0,
                   max: 40.0,
                   // TODO: only allow 10, 20, 40
                   divisions: 3,
                   onChanged: (v) {
                     final frameMs = v.round();
-                    settings.setAudioFrameMs(frameMs);
+                    settings.setOutgoingAudioMsPerPacket(frameMs);
                     mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: frameMs);
                     onUpdate(() {});
                   },
@@ -134,7 +134,7 @@ class AudioTab extends StatelessWidget {
               SizedBox(
                 width: 60,
                 child: Text(
-                  '${settings.audioFrameMs} ms',
+                  '${settings.outgoingAudioMsPerPacket} ms',
                   style: theme.textTheme.muted,
                 ),
               ),
@@ -226,7 +226,7 @@ class AudioTab extends StatelessWidget {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.outputDevices;
-              final playbackDeviceId = settings.outputDeviceId;
+              final playbackDeviceId = settings.playbackDeviceId;
               final hasCurrent =
                   playbackDeviceId == null ||
                   devices.any((d) => d.id == playbackDeviceId);
@@ -235,7 +235,7 @@ class AudioTab extends StatelessWidget {
                 placeholder: const Text('Default Output'),
                 initialValue: playbackDeviceId,
                 onChanged: (value) async {
-                  settings.setOutputDeviceId(value);
+                  settings.setPlaybackDeviceId(value);
                   await mumbleService.updateAudioSettings(
                     playbackDeviceId: value,
                   );
