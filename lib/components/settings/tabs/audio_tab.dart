@@ -112,31 +112,26 @@ class AudioTab extends StatelessWidget {
             'Audio per packet',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ShadSlider(
-                  initialValue: settings.outgoingAudioMsPerPacket.toDouble(),
-                  min: 10.0,
-                  max: 40.0,
-                  // TODO: only allow 10, 20, 40
-                  divisions: 3,
-                  onChanged: (v) {
-                    final frameMs = v.round();
-                    settings.setOutgoingAudioMsPerPacket(frameMs);
-                    mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: frameMs);
-                    onUpdate(() {});
-                  },
-                ),
+          const SizedBox(height: 12),
+          ShadTabs<int>(
+            value: settings.outgoingAudioMsPerPacket,
+            onChanged: (v) {
+              settings.setOutgoingAudioMsPerPacket(v);
+              mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: v);
+              onUpdate(() {});
+            },
+            tabs: [
+              ShadTab(
+                value: 10,
+                child: const Text('10ms'),
               ),
-              const SizedBox(width: 12),
-              SizedBox(
-                width: 60,
-                child: Text(
-                  '${settings.outgoingAudioMsPerPacket} ms',
-                  style: theme.textTheme.muted,
-                ),
+              ShadTab(
+                value: 20,
+                child: const Text('20ms'),
+              ),
+              ShadTab(
+                value: 40,
+                child: const Text('40ms'),
               ),
             ],
           ),
