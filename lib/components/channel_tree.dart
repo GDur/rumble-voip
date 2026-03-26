@@ -54,9 +54,9 @@ class _ChannelTreeState extends State<ChannelTree> {
       while (currentId != null) {
         result.add(currentId);
         final current = widget.channels.cast<MumbleChannel?>().firstWhere(
-              (c) => c?.id == currentId,
-              orElse: () => null,
-            );
+          (c) => c?.id == currentId,
+          orElse: () => null,
+        );
         currentId = current?.parentId;
       }
     }
@@ -203,10 +203,10 @@ class _ChannelTreeState extends State<ChannelTree> {
     final rootChannels = widget.channels
         .where((c) => c.parentId == null || c.id == 0)
         .toList();
-    
+
     // Sort root channels
     rootChannels.sort((a, b) => a.position.compareTo(b.position));
-    
+
     _buildVisibleItems(rootChannels);
 
     return Shortcuts(
@@ -214,7 +214,8 @@ class _ChannelTreeState extends State<ChannelTree> {
         LogicalKeySet(LogicalKeyboardKey.arrowUp): const _ArrowIntent.up(),
         LogicalKeySet(LogicalKeyboardKey.arrowDown): const _ArrowIntent.down(),
         LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _ArrowIntent.left(),
-        LogicalKeySet(LogicalKeyboardKey.arrowRight): const _ArrowIntent.right(),
+        LogicalKeySet(LogicalKeyboardKey.arrowRight):
+            const _ArrowIntent.right(),
         LogicalKeySet(LogicalKeyboardKey.enter): const _EnterIntent(),
       },
       child: Actions(
@@ -225,7 +226,9 @@ class _ChannelTreeState extends State<ChannelTree> {
           _EnterIntent: CallbackAction<_EnterIntent>(
             onInvoke: (intent) {
               if (_selectedChannelId != null) {
-                final channel = widget.channels.firstWhere((c) => c.id == _selectedChannelId);
+                final channel = widget.channels.firstWhere(
+                  (c) => c.id == _selectedChannelId,
+                );
                 _onEnterChannel(channel);
               }
               return null;
@@ -262,9 +265,7 @@ class _ChannelTreeState extends State<ChannelTree> {
 
         // Sort users by name
         usersInChannel.sort(
-          (a, b) => (a.name).toLowerCase().compareTo(
-            (b.name).toLowerCase(),
-          ),
+          (a, b) => (a.name).toLowerCase().compareTo((b.name).toLowerCase()),
         );
 
         for (var user in usersInChannel) {
@@ -313,7 +314,7 @@ class _ChannelTreeState extends State<ChannelTree> {
           _toggleChannel(_selectedChannelId!);
         }
       }
-      return; 
+      return;
     } else if (direction == TraversalDirection.left) {
       if (_selectedChannelId != null) {
         if (_isExpanded(_selectedChannelId!)) {
@@ -323,7 +324,9 @@ class _ChannelTreeState extends State<ChannelTree> {
             (c) => c.id == _selectedChannelId,
           );
           if (channel.parentId != null) {
-            final parent = widget.channels.firstWhere((c) => c.id == channel.parentId);
+            final parent = widget.channels.firstWhere(
+              (c) => c.id == channel.parentId,
+            );
             _selectChannel(parent);
           }
         }
@@ -332,7 +335,9 @@ class _ChannelTreeState extends State<ChannelTree> {
           (u) => u.session == _selectedUserSession,
           orElse: () => widget.self!,
         );
-        final channel = widget.channels.firstWhere((c) => c.id == user.channelId);
+        final channel = widget.channels.firstWhere(
+          (c) => c.id == user.channelId,
+        );
         _selectChannel(channel);
       }
       return;
@@ -365,19 +370,15 @@ class _ChannelTreeState extends State<ChannelTree> {
       if (a.position != b.position) {
         return (a.position).compareTo(b.position);
       }
-      return (a.name).toLowerCase().compareTo(
-        (b.name).toLowerCase(),
-      );
+      return (a.name).toLowerCase().compareTo((b.name).toLowerCase());
     });
 
     usersInChannel.sort(
-      (a, b) =>
-          (a.name).toLowerCase().compareTo((b.name).toLowerCase()),
+      (a, b) => (a.name).toLowerCase().compareTo((b.name).toLowerCase()),
     );
 
     int userCount = usersInChannel.length;
-    final bool isMyChannel =
-        widget.self?.channelId == channel.id;
+    final bool isMyChannel = widget.self?.channelId == channel.id;
     final bool expanded = _isExpanded(channel.id);
     final bool hasChildren =
         subChannels.isNotEmpty || usersInChannel.isNotEmpty;
@@ -396,14 +397,19 @@ class _ChannelTreeState extends State<ChannelTree> {
             onEnter: (_) => setState(() => _hoveredChannelId = channel.id),
             onExit: (_) => setState(() => _hoveredChannelId = null),
             child: Container(
-              margin: const EdgeInsets.only(left: 4, right: 12, top: 1, bottom: 1),
+              margin: const EdgeInsets.only(
+                left: 4,
+                right: 12,
+                top: 1,
+                bottom: 1,
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected
                     ? theme.colorScheme.primary.withValues(alpha: 0.1)
                     : isHovered
-                        ? theme.colorScheme.accent.withValues(alpha: 0.05)
-                        : Colors.transparent,
+                    ? theme.colorScheme.accent.withValues(alpha: 0.05)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -433,8 +439,9 @@ class _ChannelTreeState extends State<ChannelTree> {
                     child: Text(
                       channel.name,
                       style: theme.textTheme.small.copyWith(
-                        fontWeight:
-                            isMyChannel ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isMyChannel
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isMyChannel
                             ? theme.colorScheme.primary
                             : theme.textTheme.small.color,
@@ -444,7 +451,9 @@ class _ChannelTreeState extends State<ChannelTree> {
                   if (userCount > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.muted.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(10),
@@ -456,15 +465,20 @@ class _ChannelTreeState extends State<ChannelTree> {
                     ),
                   if (channel.isEnterRestricted == true) ...[
                     const SizedBox(width: 4),
-                    Icon(LucideIcons.lock,
-                        size: 12, color: theme.colorScheme.mutedForeground),
+                    Icon(
+                      LucideIcons.lock,
+                      size: 12,
+                      color: theme.colorScheme.mutedForeground,
+                    ),
                   ],
                   if (channel.description != null &&
                       channel.description!.isNotEmpty) ...[
                     const SizedBox(width: 6),
                     NoticeButton(
                       title: 'Channel Description',
-                      notice: HtmlUtils.sanitizeMumbleHtml(channel.description!),
+                      notice: HtmlUtils.sanitizeMumbleHtml(
+                        channel.description!,
+                      ),
                       icon: LucideIcons.info,
                     ),
                   ],
@@ -507,8 +521,14 @@ class _ChannelTreeState extends State<ChannelTree> {
     }
 
     Widget content = Container(
+      /**
+       * Very important. Visually the user is no perfeclty aligned
+       * with other channels (with their indicator point.)
+       * 38 px is the standard distance and the root has a depths of 0.
+       * And the next ones then + 1 * 16 , + 2 * 16 etc 
+       */
       margin: EdgeInsets.only(
-        left: 48.0 + 8.0 + (depth * 16.0),
+        left: 38.0 + ((depth) * 16.0),
         right: 16,
         top: 1,
         bottom: 1,
@@ -518,15 +538,15 @@ class _ChannelTreeState extends State<ChannelTree> {
         color: isSelected
             ? theme.colorScheme.primary.withValues(alpha: 0.15)
             : isHovered
-                ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                : Colors.transparent,
+            ? theme.colorScheme.primary.withValues(alpha: 0.05)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isSelected
               ? theme.colorScheme.primary.withValues(alpha: 0.2)
               : isHovered
-                  ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                  : Colors.transparent,
+              ? theme.colorScheme.primary.withValues(alpha: 0.05)
+              : Colors.transparent,
           width: 1,
         ),
       ),
@@ -774,9 +794,18 @@ class _NoticeButtonState extends State<NoticeButton> {
                 children: [
                   Row(
                     children: [
-                      Icon(widget.icon, size: 14, color: theme.colorScheme.primary),
+                      Icon(
+                        widget.icon,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 8),
-                      Text(widget.title, style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        widget.title,
+                        style: theme.textTheme.small.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(height: 16),
@@ -793,7 +822,9 @@ class _NoticeButtonState extends State<NoticeButton> {
                       return true;
                     },
                     textStyle: theme.textTheme.small.copyWith(
-                      color: theme.colorScheme.foreground.withValues(alpha: 0.9),
+                      color: theme.colorScheme.foreground.withValues(
+                        alpha: 0.9,
+                      ),
                     ),
                   ),
                 ],
