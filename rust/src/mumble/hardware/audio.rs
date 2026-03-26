@@ -1,4 +1,5 @@
 use crate::mumble::config::{RbConsumer, RbProducer};
+use anyhow::{anyhow, Context};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crossbeam_channel::Sender;
 use ringbuf::traits::{Consumer, Observer, Producer};
@@ -68,26 +69,15 @@ pub fn setup_audio(
 ) -> anyhow::Result<AudioBackend> {
     let host = cpal::default_host();
 
-    let input_device = if let Some(id) = &config.capture_device_id {
-        host.input_devices()?
-            .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
-            .ok_or_else(|| anyhow::anyhow!("Input device with ID '{}' not found", id))?
-    } else {
-        host.default_input_device()
-            .ok_or_else(|| anyhow::anyhow!("No input device found"))?
-    };
+    let input_device = select_device(&host, &config.capture_device_id, true)?;
+    let output_device = select_device(&host, &config.playback_device_id, false)?;
 
-    let output_device = if let Some(id) = &config.playback_device_id {
-        host.output_devices()?
-            .find(|d| d.id().map(|d_id| d_id.to_string() == *id).unwrap_or(false))
-            .ok_or_else(|| anyhow::anyhow!("Output device with ID '{}' not found", id))?
-    } else {
-        host.default_output_device()
-            .ok_or_else(|| anyhow::anyhow!("No output device found"))?
-    };
-
-    let input_config_full = input_device.default_input_config()?;
-    let output_config_full = output_device.default_output_config()?;
+    let input_config_full = input_device
+        .default_input_config()
+        .context("Failed to get input config after selection")?;
+    let output_config_full = output_device
+        .default_output_config()
+        .context("Failed to get output config after selection")?;
 
     let mut input_config = input_config_full.config();
     let mut output_config = output_config_full.config();
@@ -208,6 +198,9 @@ pub fn list_input_devices() -> Vec<AudioDevice> {
         .map(|devices| {
             devices
                 .filter_map(|d| {
+                    // Only include if it actually supports an input config
+                    d.default_input_config().ok()?;
+
                     let id = d.id().ok()?.to_string();
                     let name = d.description().map(|desc| desc.name().to_string()).ok()?;
                     Some(AudioDevice { id, name })
@@ -223,6 +216,9 @@ pub fn list_output_devices() -> Vec<AudioDevice> {
         .map(|devices| {
             devices
                 .filter_map(|d| {
+                    // Only include if it actually supports an output config
+                    d.default_output_config().ok()?;
+
                     let id = d.id().ok()?.to_string();
                     let name = d.description().map(|desc| desc.name().to_string()).ok()?;
                     Some(AudioDevice { id, name })
@@ -230,4 +226,64 @@ pub fn list_output_devices() -> Vec<AudioDevice> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// Robustly selects an audio device by ID or falls back to the first functional one.
+fn select_device(
+    host: &cpal::Host,
+    device_id: &Option<String>,
+    is_input: bool,
+) -> Result<cpal::Device, anyhow::Error> {
+    let devices = if is_input {
+        host.input_devices()?
+    } else {
+        host.output_devices()?
+    };
+
+    // 1. If an ID is provided, try to find that specific device.
+    if let Some(id) = device_id {
+        return devices
+            .filter(|d| d.id().map(|v| v.to_string() == *id).unwrap_or(false))
+            .next()
+            .ok_or_else(|| anyhow!("Device with ID '{}' not found", id));
+    }
+
+    // 2. No ID provided: Don't just trust 'default_device()'.
+    // First, try the official default as a priority.
+    let official_default = if is_input {
+        host.default_input_device()
+    } else {
+        host.default_output_device()
+    };
+
+    if let Some(ref d) = official_default {
+        // Probe if the default actually supports a config
+        let has_config = if is_input {
+            d.default_input_config().is_ok()
+        } else {
+            d.default_output_config().is_ok()
+        };
+
+        if has_config {
+            return Ok(official_default.unwrap());
+        }
+    }
+
+    // 3. Fallback: Brute-force discovery
+    // Iterate through all devices and return the first one that doesn't error on config.
+    devices
+        .filter(|d| {
+            if is_input {
+                d.default_input_config().is_ok()
+            } else {
+                d.default_output_config().is_ok()
+            }
+        })
+        .next()
+        .ok_or_else(|| {
+            anyhow!(
+                "No functional {} audio devices found on the system",
+                if is_input { "input" } else { "output" }
+            )
+        })
 }
