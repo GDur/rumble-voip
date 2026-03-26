@@ -780,26 +780,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Row(
       children: [
-        // Mic signal indicator (performance-optimized CustomPainter)
-        if (settings.showVolumeIndicator)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: VolumeIndicator(
-              volumeNotifier: service.volumeNotifier,
-              isMuted: isMuted,
-              isDeafened: isDeafened,
-              foregroundColor: kBrandGreen,
-              mutedColor: theme.colorScheme.mutedForeground,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            if (settings.showVolumeIndicator)
+              VolumeIndicator(
+                volumeNotifier: service.volumeNotifier,
+                isMuted: isMuted,
+                isDeafened: isDeafened,
+                foregroundColor: kBrandGreen,
+                mutedColor: theme.colorScheme.mutedForeground,
+              ),
+            ShadIconButton.ghost(
+              icon: Icon(
+                isMuted ? LucideIcons.micOff : LucideIcons.mic,
+                color: isMuted
+                    ? theme.colorScheme.destructive
+                    : theme.colorScheme.primary,
+                size: 20,
+              ),
+              onPressed: () => service.toggleMute(),
             ),
-          ),
-        ShadIconButton.ghost(
-          icon: Icon(
-            isMuted ? LucideIcons.micOff : LucideIcons.mic,
-            color: isMuted
-                ? theme.colorScheme.destructive
-                : theme.colorScheme.primary,
-          ),
-          onPressed: () => service.toggleMute(),
+          ],
         ),
         ShadIconButton.ghost(
           icon: Icon(
@@ -969,7 +971,7 @@ class VolumeIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
-        size: const Size(12, 12),
+        size: const Size(48, 48),
         painter: _VolumeIndicatorPainter(
           volumeNotifier: volumeNotifier,
           isMuted: isMuted,
@@ -1000,37 +1002,30 @@ class _VolumeIndicatorPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // 1. Draw background circle
+    // 1. Draw background circle (outside ring)
     final bgPaint = Paint()
-      ..color = foregroundColor.withValues(alpha: 0.1)
+      ..color = foregroundColor.withValues(alpha: 0.05)
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, radius, bgPaint);
+    canvas.drawCircle(center, 18.0, bgPaint);
 
     final volume = volumeNotifier.value;
-    const double volumeMultiplier = 20.0;
+    const double volumeMultiplier = 35.0; // Responsive scale
     final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
 
     // 2. Calculate inner circle size (radius)
-    final innerRadius = (2.0 + (10.0 * displayVolume)) / 2;
+    // Larger baseline: 15px (30px diameter)
+    // Dynamic expansion up to 24px (48px diameter)
+    final innerRadius = 15.0 + (9.0 * displayVolume);
 
-    // 3. Draw shadow (only if talking and not muted)
-    if (!isMuted && !isDeafened && displayVolume > 0.1) {
-      final shadowPaint = Paint()
-        ..color = foregroundColor.withValues(alpha: 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
-      // spreadRadius: 1 is achieved by adding 1 to the radius
-      canvas.drawCircle(center, innerRadius + 1, shadowPaint);
-    }
-
-    // 4. Draw inner circle
+    // 3. Draw indicator circle
     final innerPaint = Paint()..style = PaintingStyle.fill;
+    
     if (isMuted || isDeafened) {
-      innerPaint.color = mutedColor.withValues(alpha: 0.3);
+      innerPaint.color = mutedColor.withValues(alpha: 0.1);
     } else {
+      // Lowered alpha for the larger surface area
       innerPaint.color = foregroundColor.withValues(
-        alpha: (0.4 + (displayVolume * 0.6)).clamp(0.0, 1.0),
+        alpha: (0.15 + (displayVolume * 0.35)).clamp(0.0, 1.0),
       );
     }
 
