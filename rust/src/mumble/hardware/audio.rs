@@ -69,8 +69,14 @@ pub fn setup_audio(
 ) -> anyhow::Result<AudioBackend> {
     let host = cpal::default_host();
 
-    let input_device = select_device(&host, &config.capture_device_id, true)?;
-    let output_device = select_device(&host, &config.playback_device_id, false)?;
+    let input_device = match &config.capture_device_id {
+        Some(id) => select_device(&host, id, true)?,
+        None => select_first_working_device(&host, true)?,
+    };
+    let output_device = match &config.playback_device_id {
+        Some(id) => select_device(&host, id, false)?,
+        None => select_first_working_device(&host, false)?,
+    };
 
     let input_config_full = input_device
         .default_input_config()
@@ -228,28 +234,29 @@ pub fn list_output_devices() -> Vec<AudioDevice> {
         .unwrap_or_default()
 }
 
-/// Robustly selects an audio device by ID or falls back to the first functional one.
+/// Selects a specific audio device by its ID.
 fn select_device(
     host: &cpal::Host,
-    device_id: &Option<String>,
+    id: &str,
     is_input: bool,
 ) -> Result<cpal::Device, anyhow::Error> {
-    let devices = if is_input {
+    let mut devices = if is_input {
         host.input_devices()?
     } else {
         host.output_devices()?
     };
 
-    // 1. If an ID is provided, try to find that specific device.
-    if let Some(id) = device_id {
-        return devices
-            .filter(|d| d.id().map(|v| v.to_string() == *id).unwrap_or(false))
-            .next()
-            .ok_or_else(|| anyhow!("Device with ID '{}' not found", id));
-    }
+    devices
+        .find(|d| d.id().map(|v| v.to_string() == *id).unwrap_or(false))
+        .ok_or_else(|| anyhow!("Device with ID '{}' not found", id))
+}
 
-    // 2. No ID provided: Don't just trust 'default_device()'.
-    // First, try the official default as a priority.
+/// Selects the first functional audio device, preferring the official default.
+fn select_first_working_device(
+    host: &cpal::Host,
+    is_input: bool,
+) -> Result<cpal::Device, anyhow::Error> {
+    // 1. Try the official default as a priority.
     let official_default = if is_input {
         host.default_input_device()
     } else {
@@ -269,17 +276,22 @@ fn select_device(
         }
     }
 
-    // 3. Fallback: Brute-force discovery
+    // 2. Fallback: Brute-force discovery
     // Iterate through all devices and return the first one that doesn't error on config.
+    let mut devices = if is_input {
+        host.input_devices()?
+    } else {
+        host.output_devices()?
+    };
+
     devices
-        .filter(|d| {
+        .find(|d| {
             if is_input {
                 d.default_input_config().is_ok()
             } else {
                 d.default_output_config().is_ok()
             }
         })
-        .next()
         .ok_or_else(|| {
             anyhow!(
                 "No functional {} audio devices found on the system",
