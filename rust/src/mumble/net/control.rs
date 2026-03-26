@@ -149,46 +149,61 @@ impl MumbleSession {
             }
             ControlPacket::ChannelState(cs) => {
                 let id = cs.channel_id();
-                let channel = MumbleChannel {
+                let channel = self.channels.entry(id).or_insert_with(|| MumbleChannel {
                     id,
-                    name: cs.name().to_string(),
-                    parent_id: if cs.has_parent() {
-                        Some(cs.parent())
-                    } else {
-                        None
-                    },
-                    position: cs.position(),
-                    description: if cs.has_description() {
-                        Some(cs.description().to_string())
-                    } else {
-                        None
-                    },
-                    is_enter_restricted: false,
-                };
-                self.channels.insert(id, channel.clone());
-                let _ = self.event_sink.add(MumbleEvent::ChannelUpdate(channel));
+                    ..Default::default()
+                });
+
+                if cs.has_name() {
+                    channel.name = cs.name().to_string();
+                }
+                if cs.has_parent() {
+                    channel.parent_id = Some(cs.parent());
+                }
+                if cs.has_position() {
+                    channel.position = cs.position();
+                }
+                if cs.has_description() {
+                    channel.description = Some(cs.description().to_string());
+                }
+
+                let channel_clone = channel.clone();
+                let _ = self
+                    .event_sink
+                    .add(MumbleEvent::ChannelUpdate(channel_clone));
             }
             ControlPacket::UserState(us) => {
                 let session = us.session();
-                if session == self.session_id {
-                    self.my_channel_id = us.channel_id();
-                }
-                let user = MumbleUser {
+                let user = self.users.entry(session).or_insert_with(|| MumbleUser {
                     session,
-                    name: us.name().to_string(),
-                    channel_id: us.channel_id(),
-                    is_talking: false,
-                    is_muted: us.self_mute() || us.mute(),
-                    is_deafened: us.self_deaf() || us.deaf(),
-                    is_suppressed: us.suppress(),
-                    comment: if us.has_comment() {
-                        Some(us.comment().to_string())
-                    } else {
-                        None
-                    },
-                };
-                self.users.insert(session, user.clone());
-                let _ = self.event_sink.add(MumbleEvent::UserUpdate(user));
+                    ..Default::default()
+                });
+
+                if us.has_name() {
+                    user.name = us.name().to_string();
+                }
+                if us.has_channel_id() {
+                    user.channel_id = us.channel_id();
+                }
+                if us.has_self_mute() || us.has_mute() {
+                    user.is_muted = us.self_mute() || us.mute();
+                }
+                if us.has_self_deaf() || us.has_deaf() {
+                    user.is_deafened = us.self_deaf() || us.deaf();
+                }
+                if us.has_suppress() {
+                    user.is_suppressed = us.suppress();
+                }
+                if us.has_comment() {
+                    user.comment = Some(us.comment().to_string());
+                }
+
+                if session == self.session_id {
+                    self.my_channel_id = user.channel_id;
+                }
+
+                let user_clone = user.clone();
+                let _ = self.event_sink.add(MumbleEvent::UserUpdate(user_clone));
             }
             ControlPacket::UserRemove(ur) => {
                 self.users.remove(&ur.session());

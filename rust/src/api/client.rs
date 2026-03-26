@@ -22,7 +22,7 @@ pub enum MumbleEvent {
     AudioVolume(f32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MumbleChannel {
     pub id: u32,
     pub name: String,
@@ -32,7 +32,7 @@ pub struct MumbleChannel {
     pub is_enter_restricted: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MumbleUser {
     pub session: u32,
     pub name: String,

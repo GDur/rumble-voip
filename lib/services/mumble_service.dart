@@ -250,15 +250,17 @@ class MumbleService extends ChangeNotifier {
           }
         }
 
+        // Rust now sends the full updated user state, but we preserve isTalking
+        // as it is updated more frequently by separate UserTalking events.
         final updatedUser = MumbleUser(
           session: user.session,
-          name: user.name.isEmpty ? existing.name : user.name,
+          name: user.name,
           channelId: user.channelId,
-          isTalking: user.isTalking,
+          isTalking: existing.isTalking,
           isMuted: user.isMuted,
           isDeafened: user.isDeafened,
           isSuppressed: user.isSuppressed,
-          comment: user.comment ?? existing.comment,
+          comment: user.comment,
         );
         _users[user.session] = updatedUser;
       } else {
