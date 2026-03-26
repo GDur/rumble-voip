@@ -843,14 +843,18 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: ShadSlider(
-                      initialValue: settings.outputVolume,
-                      min: 0.0,
-                      max: 2.0,
-                      onChanged: (v) {
-                        settings.setOutputVolume(v);
-                        service.updateAudioSettings(outputVolume: v);
-                      },
+                    child: SizedBox(
+                      height: 48,
+                      child: ShadSlider(
+                        initialValue: settings.outputVolume,
+                        min: 0.0,
+                        max: 2.0,
+                        thumbRadius: 10,
+                        onChanged: (v) {
+                          settings.setOutputVolume(v);
+                          service.updateAudioSettings(outputVolume: v);
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),

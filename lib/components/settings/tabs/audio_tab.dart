@@ -84,17 +84,23 @@ class AudioTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ShadSlider(
-                  initialValue: settings.outgoingAudioBitrate / 1000,
-                  min: 32.0,
-                  max: 192.0,
-                  divisions: ((192.0 - 32.0) / 16.0).toInt(),
-                  onChanged: (v) {
-                    final bitrate = (v * 1000).round();
-                    settings.setOutgoingAudioBitrate(bitrate);
-                    mumbleService.updateAudioSettings(outgoingAudioBitrate: bitrate);
-                    onUpdate(() {});
-                  },
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.outgoingAudioBitrate / 1000,
+                    min: 32.0,
+                    max: 192.0,
+                    divisions: ((192.0 - 32.0) / 16.0).toInt(),
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final bitrate = (v * 1000).round();
+                      settings.setOutgoingAudioBitrate(bitrate);
+                      mumbleService.updateAudioSettings(
+                        outgoingAudioBitrate: bitrate,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -144,15 +150,19 @@ class AudioTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ShadSlider(
-                  initialValue: settings.inputGain,
-                  min: 0.0,
-                  max: 2.0,
-                  onChanged: (v) {
-                    settings.setInputGain(v);
-                    mumbleService.updateAudioSettings(inputGain: v);
-                    onUpdate(() {});
-                  },
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.inputGain,
+                    min: 0.0,
+                    max: 2.0,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      settings.setInputGain(v);
+                      mumbleService.updateAudioSettings(inputGain: v);
+                      onUpdate(() {});
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -271,15 +281,19 @@ class AudioTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ShadSlider(
-                  initialValue: settings.outputVolume,
-                  min: 0.0,
-                  max: 1.5,
-                  onChanged: (v) {
-                    settings.setOutputVolume(v);
-                    mumbleService.updateAudioSettings(outputVolume: v);
-                    onUpdate(() {});
-                  },
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.outputVolume,
+                    min: 0.0,
+                    max: 1.5,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      settings.setOutputVolume(v);
+                      mumbleService.updateAudioSettings(outputVolume: v);
+                      onUpdate(() {});
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
