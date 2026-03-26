@@ -94,15 +94,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
       child: SafeArea(
         top: isMobile,
         bottom: isMobile,
-        child: Stack(
-          children: [
-            SizedBox(
-              width: isMobile
-                  ? MediaQuery.of(context).size.width * 0.95
-                  : MediaQuery.of(context).size.width * 0.85,
-              height: isMobile
-                  ? MediaQuery.of(context).size.height * 0.8
-                  : MediaQuery.of(context).size.height * 0.85,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 0),
+          child: Stack(
+            children: [
+              SizedBox(
+                width: isMobile
+                    ? MediaQuery.of(context).size.width * 0.95
+                    : MediaQuery.of(context).size.width * 0.85,
+                height: isMobile
+                    ? (MediaQuery.of(context).size.height -
+                            MediaQuery.of(context).padding.top -
+                            MediaQuery.of(context).padding.bottom) *
+                        0.8
+                    : MediaQuery.of(context).size.height * 0.85,
               child: isMobile
                   ? _buildMobileContent(effectiveTab, sideBarItems)
                   : Row(
@@ -189,8 +194,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMobileContent(
     String? effectiveTab,

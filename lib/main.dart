@@ -331,34 +331,39 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
       builder: (context) {
         final theme = ShadTheme.of(context);
-        return ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-          ),
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: ShadSheet(
-              backgroundColor: theme.colorScheme.background.withValues(alpha: 0.6),
-              padding: EdgeInsets.zero,
-              scrollable: false,
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.9,
-              ),
-              radius: const BorderRadius.only(
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 bottomLeft: Radius.circular(16),
               ),
-              closeIconPosition: const ShadPosition(top: 12, right: 12),
-              title: Padding(
-                padding: const EdgeInsets.only(left: 16, top: 16),
-                child: const Text('Chat'),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: ShadSheet(
+                  backgroundColor: theme.colorScheme.background.withValues(alpha: 0.6),
+                  padding: EdgeInsets.zero,
+                  scrollable: false,
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                  ),
+                  radius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                  closeIconPosition: const ShadPosition(top: 12, right: 12),
+                  title: Padding(
+                    padding: const EdgeInsets.only(left: 16, top: 16),
+                    child: const Text('Chat'),
+                  ),
+                  description: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: const Text('Text messages and conversation'),
+                  ),
+                  child: const ChatView(),
+                ),
               ),
-              description: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: const Text('Text messages and conversation'),
-              ),
-              child: const ChatView(),
             ),
           ),
         );
