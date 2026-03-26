@@ -141,11 +141,18 @@ impl MumbleSession {
         &mut self,
         packet: ControlPacket<Clientbound>,
         framed: &mut Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
-    ) {
+    ) -> anyhow::Result<()> {
         match packet {
             ControlPacket::ServerSync(ss) => {
                 self.session_id = ss.session();
                 let _ = self.event_sink.add(MumbleEvent::Connected(self.session_id));
+            }
+            ControlPacket::Reject(rj) => {
+                let reason = rj.reason().to_string();
+                let _ = self
+                    .event_sink
+                    .add(MumbleEvent::Disconnected(reason.clone()));
+                return Err(anyhow::anyhow!("Handshake rejected: {}", reason));
             }
             ControlPacket::ChannelState(cs) => {
                 let id = cs.channel_id();
@@ -292,6 +299,7 @@ impl MumbleSession {
             }
             _ => {}
         }
+        Ok(())
     }
 
     async fn handle_command(
@@ -356,7 +364,10 @@ pub async fn connect(
     port: u16,
     username: String,
     password: Option<String>,
-) -> anyhow::Result<Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>> {
+) -> anyhow::Result<(
+    Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+    Vec<ControlPacket<Clientbound>>,
+)> {
     // Setup TLS with OpenSSL
     let mut builder = SslConnector::builder(SslMethod::tls())?;
     builder.set_verify(SslVerifyMode::NONE);
@@ -394,7 +405,26 @@ pub async fn connect(
         .send(ControlPacket::Authenticate(Box::new(auth)))
         .await?;
 
-    Ok(framed)
+    // Buffered Handshake: collect packets until ServerSync or Reject
+    let mut initial_packets = Vec::new();
+    loop {
+        match framed.next().await {
+            Some(Ok(packet)) => match &packet {
+                ControlPacket::ServerSync(_) => {
+                    initial_packets.push(packet);
+                    return Ok((framed, initial_packets));
+                }
+                ControlPacket::Reject(rj) => {
+                    return Err(anyhow::anyhow!("Handshake rejected: {}", rj.reason()));
+                }
+                _ => {
+                    initial_packets.push(packet);
+                }
+            },
+            Some(Err(e)) => return Err(anyhow::anyhow!("Protocol error during handshake: {}", e)),
+            None => return Err(anyhow::anyhow!("Server closed connection during handshake")),
+        }
+    }
 }
 
 pub async fn run_loop(
@@ -404,10 +434,16 @@ pub async fn run_loop(
     mut cmd_rx: mpsc::Receiver<MumbleCommand>,
     event_sink: StreamSink<MumbleEvent>,
     config: MumbleConfig,
+    initial_packets: Vec<ControlPacket<Clientbound>>,
 ) -> anyhow::Result<()> {
     let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
     let mut session = MumbleSession::new(event_sink, config, vol_cmd_tx, vol_cmd_rx, host, port);
+
+    // Process buffered handshake packets
+    for packet in initial_packets {
+        session.handle_packet(packet, &mut framed).await?;
+    }
 
     let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(15));
     let mut volume_interval = tokio::time::interval(std::time::Duration::from_millis(200));
@@ -430,7 +466,7 @@ pub async fn run_loop(
             packet = framed.next() => {
                 match packet {
                     Some(Ok(packet)) => {
-                        session.handle_packet(packet, &mut framed).await;
+                        session.handle_packet(packet, &mut framed).await?
                     }
                     Some(Err(e)) => {
                         let _ = session.event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));

@@ -36,13 +36,12 @@ impl MumbleClient {
         config: MumbleConfig,
     ) -> Result<Self, String> {
         let (cmd_tx, cmd_rx) = mpsc::channel(32);
-
         let event_sink_clone = event_sink.clone();
 
         // Perform connection and handshake in the current task so we can return errors
-        let framed =
+        let (framed, initial_packets) =
             match crate::mumble::net::control::connect(&host, port, username, password).await {
-                Ok(f) => f,
+                Ok(res) => res,
                 Err(e) => {
                     let err_msg = format!("Failed to connect to mumble server: {}", e);
                     return Err(err_msg);
@@ -52,7 +51,13 @@ impl MumbleClient {
         // Main loop runner
         tokio::spawn(async move {
             if let Err(e) = crate::mumble::net::control::run_loop(
-                framed, host, port, cmd_rx, event_sink, config,
+                framed,
+                host,
+                port,
+                cmd_rx,
+                event_sink,
+                config,
+                initial_packets,
             )
             .await
             {
