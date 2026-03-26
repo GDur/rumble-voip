@@ -1,6 +1,5 @@
 pub mod capture;
 pub mod playback;
-pub mod resample;
 pub mod user_stream;
 
 use crate::frb_generated::StreamSink;
@@ -100,6 +99,7 @@ pub fn spawn_encode_thread(
             if !ptt {
                 if was_ptt {
                     was_ptt = false;
+                    // Send an empty packet to signal end of transmission.
                     let _ = network_tx.try_send(AudioPacket::new(heapless::Vec::new(), true));
                 }
                 pipeline.clear();
@@ -126,7 +126,8 @@ pub fn spawn_decode_thread(
 ) {
     std::thread::spawn(move || {
         let mut mixer = PlaybackMixer::new(output_rate, &config, global_volume);
-        let target_latency_frames =
+        // Ensure the jitter buffer has a baseline number of frames before playback feels stable.
+        let target_latency_samples =
             (output_rate as f32 * (config.incoming_jitter_buffer_ms as f32 / 1000.0)) as usize;
 
         loop {
@@ -146,18 +147,23 @@ pub fn spawn_decode_thread(
                         let is_empty = packet.payload().is_empty();
 
                         let user = mixer.get_or_insert_user(sid);
-
                         user.update_last_packet_time();
+
+                        // Track user talking state.
                         if !user.is_talking() && !is_empty {
                             user.set_talking(true);
                             let _ = event_sink.add(MumbleEvent::UserTalking(sid, true));
                         }
 
+                        // Push audio packet to user stream if not empty.
+                        if !is_empty {
+                            user.push_packet(packet);
+                        }
+
+                        // Stop talking state if signalled by the network packet.
                         if is_last {
                             user.set_talking(false);
                             let _ = event_sink.add(MumbleEvent::UserTalking(sid, false));
-                        } else {
-                            user.push_packet(packet);
                         }
                     } else {
                         break;
@@ -166,11 +172,13 @@ pub fn spawn_decode_thread(
                 recv(output_notify) -> msg => {
                     if msg.is_err() { break; }
 
-                    while prod_out.occupied_len() < target_latency_frames {
+                    // Fill the output ring buffer until target latency is reached.
+                    while prod_out.occupied_len() < target_latency_samples {
                         let frame = mixer.mix_frame(&event_sink);
                         let _ = prod_out.push_slice(frame);
 
-                        if prod_out.vacant_len() < mixer.output_frame_sample_count() {
+                        // Break if there's not enough space for another full frame.
+                        if prod_out.vacant_len() < mixer.output_samples_per_frame() {
                             break;
                         }
                     }

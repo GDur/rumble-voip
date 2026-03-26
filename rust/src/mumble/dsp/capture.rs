@@ -25,7 +25,7 @@ pub struct CapturePipeline {
 }
 
 impl CapturePipeline {
-    pub fn new(input_rate: u32, config: &MumbleConfig) -> Self {
+    pub fn new(input_sample_rate: u32, config: &MumbleConfig) -> Self {
         // Mumble chooses between VOIP, AUDIO, and RESTRICTED_LOW_DELAY based on bit rate and another flag for low delay mode
         // VoIP mode is only relevant for ultra low sample rates, and RESTRICTED_LOW_DELAY only gains us a few ms of algorithmic delay,
         // but requires higher bit rates. Just always pick AUDIO. Mumble also uses CBR, but who cares, VBR is better.
@@ -43,12 +43,12 @@ impl CapturePipeline {
             config.outgoing_opus_complexity as i32,
         );
 
-        let input_samples_per_10ms =
-            (input_rate as f32 * (INTERNAL_FRAME_MS as f32 / 1000.0)).ceil() as usize;
+        let input_samples_per_frame =
+            (input_sample_rate as f32 * (INTERNAL_FRAME_MS as f32 / 1000.0)).ceil() as usize;
 
-        let resampler = if input_rate != INTERNAL_SAMPLE_RATE {
+        let resampler = if input_sample_rate != INTERNAL_SAMPLE_RATE {
             Some(PushSincResampler::new(
-                input_samples_per_10ms,
+                input_samples_per_frame,
                 INTERNAL_FRAME_SIZE,
             ))
         } else {
@@ -83,7 +83,7 @@ impl CapturePipeline {
             incoming_pcm_buffer: Box::new(heapless::Vec::new()),
             opus_buf,
             outgoing_packet_sample_count,
-            input_samples_per_10ms,
+            input_samples_per_10ms: input_samples_per_frame,
         }
     }
 
