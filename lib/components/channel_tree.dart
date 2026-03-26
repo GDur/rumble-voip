@@ -442,9 +442,6 @@ class _ChannelTreeState extends State<ChannelTree> {
                     channel.name,
                     softWrap: false,
                     style: theme.textTheme.small.copyWith(
-                      fontWeight: isMyChannel
-                          ? FontWeight.bold
-                          : FontWeight.normal,
                       color: isMyChannel
                           ? theme.colorScheme.primary
                           : theme.textTheme.small.color,

@@ -573,6 +573,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: theme.textTheme.muted.copyWith(
                   fontSize: 10,
                   height: 1.0,
+                  color: theme.colorScheme.primary,
                 ),
               ),
             ],
