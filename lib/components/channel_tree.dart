@@ -241,11 +241,14 @@ class _ChannelTreeState extends State<ChannelTree> {
             alignment: Alignment.topCenter,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: rootChannels
-                    .map((c) => _buildChannelItem(context, c, 0))
-                    .toList(),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: rootChannels
+                      .map((c) => _buildChannelItem(context, c, 0))
+                      .toList(),
+                ),
               ),
             ),
           ),
@@ -435,17 +438,16 @@ class _ChannelTreeState extends State<ChannelTree> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      channel.name,
-                      style: theme.textTheme.small.copyWith(
-                        fontWeight: isMyChannel
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isMyChannel
-                            ? theme.colorScheme.primary
-                            : theme.textTheme.small.color,
-                      ),
+                  Text(
+                    channel.name,
+                    softWrap: false,
+                    style: theme.textTheme.small.copyWith(
+                      fontWeight: isMyChannel
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: isMyChannel
+                          ? theme.colorScheme.primary
+                          : theme.textTheme.small.color,
                     ),
                   ),
                   if (userCount > 0)
@@ -569,19 +571,18 @@ class _ChannelTreeState extends State<ChannelTree> {
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              isMe ? '${u.name} (You)' : (u.name),
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 14,
-                color: (isTalking || isSelected)
-                    ? theme.colorScheme.foreground
-                    : theme.colorScheme.foreground.withValues(alpha: 0.6),
-                fontWeight: (isTalking || isMe || isSelected)
-                    ? FontWeight.w700
-                    : FontWeight.w400,
-              ),
+          Text(
+            isMe ? '${u.name} (You)' : (u.name),
+            softWrap: false,
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 14,
+              color: (isTalking || isSelected)
+                  ? theme.colorScheme.foreground
+                  : theme.colorScheme.foreground.withValues(alpha: 0.6),
+              fontWeight: (isTalking || isMe || isSelected)
+                  ? FontWeight.w700
+                  : FontWeight.w400,
             ),
           ),
           if (isMuted || isSuppressed) ...[
