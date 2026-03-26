@@ -19,14 +19,25 @@ pub const INTERNAL_SAMPLE_RATE: u32 = 48000;
 pub const INTERNAL_FRAME_MS: u32 = 10;
 pub const INTERNAL_FRAME_SIZE: usize = (INTERNAL_SAMPLE_RATE * INTERNAL_FRAME_MS / 1000) as usize;
 
+// Although according to the documentation an Opus packet can be longer,
+// these are the maximum values which can be chosen in Mumbles settings.
+pub const MAX_PACKET_MS: u32 = 60;
+pub const MAX_BITRATE: u32 = 192000;
+
+/// Maximum size for an Opus packet in bytes.
+/// Calculated as (192000 bps * 60ms) / 1000 / 8 bits = 1440 bytes.
+pub const MAX_OPUS_SIZE: usize = (MAX_BITRATE as usize * MAX_PACKET_MS as usize / 1000) / 8;
+/// Maximum number of samples in an opus packet (48kHz * 60ms / 1000 = 2880 samples).
+pub const MAX_PACKET_SAMPLES: usize = INTERNAL_SAMPLE_RATE as usize * MAX_PACKET_MS as usize / 1000;
+
 #[derive(Debug, Clone)]
 pub struct AudioPacket {
-    payload: heapless::Vec<u8, 8192>,
+    payload: heapless::Vec<u8, MAX_OPUS_SIZE>,
     is_last: bool,
 }
 
 impl AudioPacket {
-    pub fn new(payload: heapless::Vec<u8, 8192>, is_last: bool) -> Self {
+    pub fn new(payload: heapless::Vec<u8, MAX_OPUS_SIZE>, is_last: bool) -> Self {
         Self { payload, is_last }
     }
 

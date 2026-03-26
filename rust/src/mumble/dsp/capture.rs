@@ -1,28 +1,27 @@
 use crate::mumble::codec::opus::OpusEncoder;
 use crate::mumble::config::MumbleConfig;
-use crate::mumble::dsp::resample::Resampler;
 use crate::mumble::dsp::{
-    AudioPacket, INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE,
+    AudioPacket, INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE, MAX_OPUS_SIZE,
+    MAX_PACKET_SAMPLES,
 };
 use opus_head_sys::*;
 use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};
+use sonora_common_audio::push_sinc_resampler::PushSincResampler;
 
 pub struct CapturePipeline {
-    resampler: Option<Resampler>,
+    resampler: Option<PushSincResampler>,
     apm: AudioProcessing,
     encoder: OpusEncoder,
     // Captured PCM with in `input_bitrate`.
     // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
     incoming_pcm_buffer: Box<heapless::Vec<f32, 8192>>,
-    // Resampled incoming pcm to INTERNAL_SAMPLE_RATE pre processing.
-    pcm_48k_buffer: Box<heapless::Vec<f32, 8192>>,
-    // Buffer for processed pcm with INTERNAL_SAMPLE_RATE
-    processed_pcm_48k_buffer: Box<heapless::Vec<f32, 8192>>,
-    // 8192 bytes is the maximum expected Opus payload for a single packet.
-    opus_buf: Box<heapless::Vec<u8, 8192>>,
+    // Reusable buffer to compute a single outgoing packet.
+    opus_buf: Box<heapless::Vec<u8, MAX_OPUS_SIZE>>,
     // Number of samples per outgoing opus packet.
     outgoing_packet_sample_count: usize,
+    // Number of input samples corresponding to 10ms.
+    input_samples_per_10ms: usize,
 }
 
 impl CapturePipeline {
@@ -41,8 +40,14 @@ impl CapturePipeline {
             config.outgoing_opus_complexity as i32,
         );
 
+        let input_samples_per_10ms =
+            (input_rate as f32 * (INTERNAL_FRAME_MS as f32 / 1000.0)).ceil() as usize;
+
         let resampler = if input_rate != INTERNAL_SAMPLE_RATE {
-            Some(Resampler::new(input_rate, INTERNAL_SAMPLE_RATE, INTERNAL_FRAME_MS).unwrap())
+            Some(PushSincResampler::new(
+                input_samples_per_10ms,
+                INTERNAL_FRAME_SIZE,
+            ))
         } else {
             None
         };
@@ -61,7 +66,9 @@ impl CapturePipeline {
             .build();
 
         let mut opus_buf = Box::new(heapless::Vec::new());
-        opus_buf.resize(8192, 0).expect("Opus buf resize failed");
+        opus_buf
+            .resize(MAX_OPUS_SIZE, 0)
+            .expect("Opus buf resize failed");
 
         let outgoing_packet_sample_count =
             (INTERNAL_SAMPLE_RATE * config.outgoing_audio_ms_per_packet / 1000) as usize;
@@ -71,10 +78,9 @@ impl CapturePipeline {
             apm,
             encoder,
             incoming_pcm_buffer: Box::new(heapless::Vec::new()),
-            pcm_48k_buffer: Box::new(heapless::Vec::new()),
-            processed_pcm_48k_buffer: Box::new(heapless::Vec::new()),
             opus_buf,
             outgoing_packet_sample_count,
+            input_samples_per_10ms,
         }
     }
 
@@ -85,71 +91,60 @@ impl CapturePipeline {
     }
 
     pub fn process(&mut self) -> heapless::Vec<AudioPacket, 16> {
-        // Resample
-        if let Some(res) = &mut self.resampler {
-            res.process(&self.incoming_pcm_buffer, &mut self.pcm_48k_buffer);
-            self.incoming_pcm_buffer.clear();
-        } else {
-            // Buffer safety: ensure pcm_48k_buffer has enough room
-            let to_copy = self
-                .incoming_pcm_buffer
-                .len()
-                .min(self.pcm_48k_buffer.capacity() - self.pcm_48k_buffer.len());
-            self.pcm_48k_buffer
-                .extend_from_slice(&self.incoming_pcm_buffer[..to_copy])
-                .expect("Resampler buffer overflow in CapturePipeline");
-            self.incoming_pcm_buffer.clear();
-        }
-
-        // Process available frames
-        while self.pcm_48k_buffer.len() >= INTERNAL_FRAME_SIZE {
-            // Read frame from buffer
-            let frame = &self.pcm_48k_buffer[..INTERNAL_FRAME_SIZE];
-
-            // Extend processed buffer and process directly into it
-            let start_idx = self.processed_pcm_48k_buffer.len();
-            self.processed_pcm_48k_buffer
-                .resize(start_idx + INTERNAL_FRAME_SIZE, 0.0)
-                .expect("Processed buffer overflow");
-            let chunk_out =
-                &mut self.processed_pcm_48k_buffer[start_idx..start_idx + INTERNAL_FRAME_SIZE];
-
-            self.apm
-                .process_capture_f32(&[frame], &mut [chunk_out])
-                .expect("APM capture processing failed");
-
-            // Remove frame from buffer
-            self.pcm_48k_buffer.rotate_left(INTERNAL_FRAME_SIZE);
-            self.pcm_48k_buffer
-                .truncate(self.pcm_48k_buffer.len() - INTERNAL_FRAME_SIZE);
-        }
-
-        // Encode available data into network packets
         let mut packets = heapless::Vec::new();
-        while self.processed_pcm_48k_buffer.len() >= self.outgoing_packet_sample_count {
-            // Read packet data from processed buffer
-            let packet_data = &self.processed_pcm_48k_buffer[..self.outgoing_packet_sample_count];
+
+        // outgoing_packet_sample_count is always a multiple of INTERNAL_FRAME_SIZE
+        let frames_per_packet = self.outgoing_packet_sample_count / INTERNAL_FRAME_SIZE;
+        let input_samples_per_packet = frames_per_packet * self.input_samples_per_10ms;
+
+        // Process available data into network packets
+        while self.incoming_pcm_buffer.len() >= input_samples_per_packet {
+            // Buffer for a single outgoing packet
+            let mut packet_data = heapless::Vec::<f32, MAX_PACKET_SAMPLES>::new();
+
+            for _ in 0..frames_per_packet {
+                let input_frame = &self.incoming_pcm_buffer[..self.input_samples_per_10ms];
+                let mut frame_48k = [0.0f32; INTERNAL_FRAME_SIZE];
+
+                // Resample to 48kHz
+                if let Some(res) = &mut self.resampler {
+                    res.resample(input_frame, &mut frame_48k);
+                } else {
+                    frame_48k.copy_from_slice(input_frame);
+                }
+
+                // Process 10ms frame
+                let mut processed_frame = [0.0f32; INTERNAL_FRAME_SIZE];
+                self.apm
+                    .process_capture_f32(&[&frame_48k], &mut [&mut processed_frame])
+                    .expect("APM capture processing failed");
+
+                // Add to packet data
+                packet_data
+                    .extend_from_slice(&processed_frame)
+                    .expect("Packet data overflow");
+
+                // Remove frame from buffer
+                self.incoming_pcm_buffer
+                    .rotate_left(self.input_samples_per_10ms);
+                self.incoming_pcm_buffer
+                    .truncate(self.incoming_pcm_buffer.len() - self.input_samples_per_10ms);
+            }
 
             // Encode packet
             if let Ok(len) = self.encoder.encode(
-                packet_data,
+                &packet_data,
                 self.outgoing_packet_sample_count,
                 &mut self.opus_buf,
             ) {
                 let mut payload = heapless::Vec::new();
                 payload
-                    .extend_from_slice(&self.opus_buf[..len.min(8192)])
+                    .extend_from_slice(&self.opus_buf[..len.min(MAX_OPUS_SIZE)])
                     .expect("Opus payload buffer overflow");
                 packets
                     .push(AudioPacket::new(payload, false))
                     .expect("Too many packets generated");
             }
-
-            // Remove packet data from processed buffer
-            self.processed_pcm_48k_buffer
-                .rotate_left(self.outgoing_packet_sample_count);
-            self.processed_pcm_48k_buffer
-                .truncate(self.processed_pcm_48k_buffer.len() - self.outgoing_packet_sample_count);
         }
 
         packets
@@ -157,7 +152,11 @@ impl CapturePipeline {
 
     pub fn clear(&mut self) {
         self.incoming_pcm_buffer.clear();
-        self.pcm_48k_buffer.clear();
-        self.processed_pcm_48k_buffer.clear();
+        // Clear resampler state by pushing zeros
+        if let Some(res) = &mut self.resampler {
+            let zero_in = [0.0f32; 1024];
+            let mut zero_out = [0.0f32; INTERNAL_FRAME_SIZE];
+            res.resample(&zero_in[..self.input_samples_per_10ms], &mut zero_out);
+        }
     }
 }
