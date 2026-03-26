@@ -4,6 +4,10 @@
 default:
     @just --list
 
+go:
+    just clean
+    flutter pub get
+
 # Regenerate the Flutter-Rust bridge code
 gen:
     rm -rf lib/src/rust && flutter_rust_bridge_codegen generate
