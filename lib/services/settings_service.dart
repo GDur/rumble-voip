@@ -23,6 +23,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kShowVolumeIndicator = 'show_volume_indicator';
   static const String _kOutgoingAudioBitrate = 'outgoing_audio_bitrate';
   static const String _kOutgoingAudioMsPerPacket = 'outgoing_audio_ms_per_packet';
+  static const String _kIncomingJitterBufferMs = 'incoming_jitter_buffer_ms';
 
   final SharedPreferences _prefs;
 
@@ -41,6 +42,7 @@ class SettingsService extends ChangeNotifier {
   final Map<String, double> _userVolumes;
   int _outgoingAudioBitrate;
   int _outgoingAudioMsPerPacket;
+  int _incomingJitterBufferMs;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -56,6 +58,7 @@ class SettingsService extends ChangeNotifier {
       _showVolumeIndicator = _prefs.getBool(_kShowVolumeIndicator) ?? true,
       _outgoingAudioBitrate = _prefs.getInt(_kOutgoingAudioBitrate) ?? 72000,
       _outgoingAudioMsPerPacket = _prefs.getInt(_kOutgoingAudioMsPerPacket) ?? 10,
+      _incomingJitterBufferMs = _prefs.getInt(_kIncomingJitterBufferMs) ?? 40,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -96,6 +99,7 @@ class SettingsService extends ChangeNotifier {
   bool get showVolumeIndicator => _showVolumeIndicator;
   int get outgoingAudioBitrate => _outgoingAudioBitrate;
   int get outgoingAudioMsPerPacket => _outgoingAudioMsPerPacket;
+  int get incomingJitterBufferMs => _incomingJitterBufferMs;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -233,6 +237,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setOutgoingAudioMsPerPacket(int frameMs) async {
     _outgoingAudioMsPerPacket = frameMs;
     await _prefs.setInt(_kOutgoingAudioMsPerPacket, frameMs);
+    notifyListeners();
+  }
+
+  Future<void> setIncomingJitterBufferMs(int ms) async {
+    _incomingJitterBufferMs = ms;
+    await _prefs.setInt(_kIncomingJitterBufferMs, ms);
     notifyListeners();
   }
 }

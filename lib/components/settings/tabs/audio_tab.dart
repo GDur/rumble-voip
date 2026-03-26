@@ -324,6 +324,44 @@ class AudioTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
+          const Text(
+            'Jitter Buffer',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.incomingJitterBufferMs.toDouble(),
+                    min: 0.0,
+                    max: 500.0,
+                    divisions: 50,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final ms = v.round();
+                      settings.setIncomingJitterBufferMs(ms);
+                      mumbleService.updateAudioSettings(
+                        incomingJitterBufferMs: ms,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '${settings.incomingJitterBufferMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

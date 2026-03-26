@@ -97,7 +97,7 @@ class MumbleService extends ChangeNotifier {
     _config = MumbleConfig(
       outgoingAudioBitrate: settings.outgoingAudioBitrate,
       outgoingAudioMsPerPacket: settings.outgoingAudioMsPerPacket,
-      incomingJitterBufferMs: 40,
+      incomingJitterBufferMs: settings.incomingJitterBufferMs,
       playbackHwBufferSize: const AudioBufferSize.default_(),
       captureHwBufferSize: const AudioBufferSize.default_(),
       captureDeviceId: captureDeviceId,
@@ -148,6 +148,7 @@ class MumbleService extends ChangeNotifier {
     double? outputVolume,
     int? outgoingAudioBitrate,
     int? outgoingAudioMsPerPacket,
+    int? incomingJitterBufferMs,
   }) async {
     if (captureDeviceId != null) {
       await setCaptureDevice(captureDeviceId);
@@ -161,11 +162,16 @@ class MumbleService extends ChangeNotifier {
     if (outputVolume != null) {
       await _client.setOutputVolume(volume: outputVolume);
     }
-    if (outgoingAudioBitrate != null || outgoingAudioMsPerPacket != null) {
+    if (outgoingAudioBitrate != null ||
+        outgoingAudioMsPerPacket != null ||
+        incomingJitterBufferMs != null) {
       _config = MumbleConfig(
-        outgoingAudioBitrate: outgoingAudioBitrate ?? _config.outgoingAudioBitrate,
-        outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? _config.outgoingAudioMsPerPacket,
-        incomingJitterBufferMs: _config.incomingJitterBufferMs,
+        outgoingAudioBitrate:
+            outgoingAudioBitrate ?? _config.outgoingAudioBitrate,
+        outgoingAudioMsPerPacket:
+            outgoingAudioMsPerPacket ?? _config.outgoingAudioMsPerPacket,
+        incomingJitterBufferMs:
+            incomingJitterBufferMs ?? _config.incomingJitterBufferMs,
         playbackHwBufferSize: _config.playbackHwBufferSize,
         captureHwBufferSize: _config.captureHwBufferSize,
         captureDeviceId: _config.captureDeviceId,
