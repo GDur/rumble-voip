@@ -2,11 +2,10 @@ pub mod capture;
 pub mod playback;
 pub mod user_stream;
 
-use crate::frb_generated::StreamSink;
 use crate::mumble::config::{MumbleConfig, RbConsumer, RbProducer};
 use crate::mumble::dsp::capture::CapturePipeline;
 use crate::mumble::dsp::playback::PlaybackMixer;
-use crate::mumble::MumbleEvent;
+use crate::api::client::AudioEvent;
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -118,7 +117,7 @@ pub fn spawn_decode_thread(
     mut prod_out: RbProducer,
     output_notify: Receiver<()>,
     udp_rx: Receiver<IncomingAudio>,
-    event_sink: StreamSink<MumbleEvent>,
+    event_sink: crate::frb_generated::StreamSink<AudioEvent>,
     output_rate: u32,
     config: MumbleConfig,
     global_volume: Arc<AtomicU32>,
@@ -152,7 +151,7 @@ pub fn spawn_decode_thread(
                         // Track user talking state.
                         if !user.is_talking() && !is_empty {
                             user.set_talking(true);
-                            let _ = event_sink.add(MumbleEvent::UserTalking(sid, true));
+                            let _ = event_sink.add(AudioEvent::UserTalking(sid, true));
                         }
 
                         // Push audio packet to user stream if not empty.
@@ -163,7 +162,7 @@ pub fn spawn_decode_thread(
                         // Stop talking state if signalled by the network packet.
                         if is_last {
                             user.set_talking(false);
-                            let _ = event_sink.add(MumbleEvent::UserTalking(sid, false));
+                            let _ = event_sink.add(AudioEvent::UserTalking(sid, false));
                         }
                     } else {
                         break;

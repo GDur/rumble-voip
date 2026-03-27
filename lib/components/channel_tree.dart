@@ -179,7 +179,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                       max: 2.0,
                       onChanged: (v) {
                         setState(() => volume = v);
-                        mumbleService.setUserVolume(user, v);
+                        mumbleService.setUserVolume(user.session, v);
                       },
                     ),
                   ),

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:rumble/models/certificate.dart';
@@ -9,181 +11,101 @@ import 'package:rumble/src/rust/api/client.dart';
 import 'package:rumble/src/rust/mumble/config.dart';
 import 'package:rumble/src/rust/mumble/hardware/audio.dart';
 import 'package:rumble/utils/html_utils.dart';
+import 'package:dumble/dumble.dart' as dumble;
 
-class MumbleService extends ChangeNotifier {
-  final RustMumbleClient _client = RustMumbleClient();
+class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
+  final RustAudioEngine _rustEngine = RustAudioEngine();
+  dumble.MumbleClient? _dumbleClient;
   bool _isConnected = false;
   String? _error;
   List<MumbleChannel> _channels = [];
-  Map<int, MumbleUser> _users = {};
-  bool _isTalking = false;
+  final Map<int, MumbleUser> _users = {};
+  final Set<int> _talkingUsers = {};
+  final List<ChatMessage> _messages = [];
+  int? _selfSession;
+  late SettingsService _settings;
 
-  final Map<int, bool> _talkingUsers = {};
   final ValueNotifier<double> volumeNotifier = ValueNotifier(0.0);
-  List<ChatMessage> _messages = [];
   String? _pttErrorMessage;
-  List<AudioDevice> _inputDevices = [];
-  List<AudioDevice> _outputDevices = [];
-  SettingsService? _settings;
-  MumbleConfig _config = const MumbleConfig(
-    outgoingAudioBitrate: 72000,
-    outgoingAudioMsPerPacket: 10,
-    incomingJitterBufferMs: 40,
-    playbackHwBufferSize: AudioBufferSize.default_(),
-    captureHwBufferSize: AudioBufferSize.default_(),
-  );
+
+  StreamSubscription? _audioEventSubscription;
 
   bool get isConnected => _isConnected;
   String? get error => _error;
   List<MumbleChannel> get channels => _channels;
-  bool get isTalking => _selfSession != null && (_talkingUsers[_selfSession!] ?? false);
-  double get currentVolume => volumeNotifier.value;
-  Map<int, bool> get talkingUsers => _talkingUsers;
   List<MumbleUser> get users => _users.values.toList();
-  List<AudioDevice> get inputDevices => _inputDevices;
-  List<AudioDevice> get outputDevices => _outputDevices;
-  String? get pttErrorMessage => _pttErrorMessage;
-  List<ChatMessage> get messages => List.unmodifiable(_messages);
-
-  bool get isSuppressed => _users[_selfSession]?.isSuppressed ?? false;
-  bool get isMuted => _users[_selfSession]?.isMuted ?? false;
-  bool get isDeafened => _users[_selfSession]?.isDeafened ?? false;
-  bool get hasMicPermission => true; 
+  List<ChatMessage> get messages => _messages;
+  int? get selfSession => _selfSession;
+  Map<int, bool> get talkingUsers => {for (var uid in _talkingUsers) uid: true};
   MumbleUser? get self => _selfSession != null ? _users[_selfSession] : null;
 
-  String get currentChannelName {
-    final s = self;
-    if (s == null) return 'Not Connected';
-    final channel = _channels.cast<MumbleChannel?>().firstWhere(
-          (c) => c?.id == s.channelId,
-          orElse: () => null,
-        );
-    return channel?.name ?? 'Unknown Channel';
-  }
+  // UI-specific getters
+  String get currentChannelName => self?.channelId != null 
+      ? _channels.firstWhere((c) => c.id == self!.channelId).name 
+      : 'Not Connected';
+  bool get isTalking => _talkingUsers.contains(_selfSession);
+  double get currentVolume => volumeNotifier.value;
+  bool get isSuppressed => self?.isSuppressed ?? false;
 
-  StreamSubscription<MumbleEvent>? _eventSubscription;
-  int? _selfSession;
-  int? get currentSelfSession => _selfSession;
+  bool get hasMicPermission => true; // For now
+  String? get pttErrorMessage => _pttErrorMessage;
 
-  MumbleService() {
-    _refreshDevices();
-  }
-
-  Future<void> _refreshDevices() async {
-    try {
-      _inputDevices = await listAudioInputDevices();
-      _outputDevices = await listAudioOutputDevices();
-      notifyListeners();
-    } catch (e) {
-      debugPrint('[MumbleService] Error listing devices: $e');
-    }
-  }
-
-  void clearPttErrorMessage() {
-    if (_pttErrorMessage != null) {
-      _pttErrorMessage = null;
-      notifyListeners();
-    }
-  }
+  Stream<double> get volumeStream => const Stream.empty(); // Not supported by dumble directly, we'll use rust for this later
 
   Future<void> initialize(
     SettingsService settings,
-    double inputGain,
-    double outputVolume,
-    String? captureDeviceId,
-    String? playbackDeviceId,
+    double input_gain,
+    double output_volume,
+    String? capture_device_id,
+    String? playback_device_id,
   ) async {
     _settings = settings;
-    _config = MumbleConfig(
-      outgoingAudioBitrate: settings.outgoingAudioBitrate,
-      outgoingAudioMsPerPacket: settings.outgoingAudioMsPerPacket,
-      incomingJitterBufferMs: settings.incomingJitterBufferMs,
-      playbackHwBufferSize: const AudioBufferSize.default_(),
-      captureHwBufferSize: const AudioBufferSize.default_(),
-      captureDeviceId: captureDeviceId,
-      playbackDeviceId: playbackDeviceId,
+    
+    // Wire up Rust audio engine events
+    _audioEventSubscription = _rustEngine.getEventStream().listen((event) {
+      event.when(
+        audioVolume: (vol) {
+          volumeNotifier.value = vol;
+        },
+        userTalking: (sessionId, isTalking) {
+          if (isTalking) {
+            _talkingUsers.add(sessionId);
+          } else {
+            _talkingUsers.remove(sessionId);
+          }
+          _syncUsers();
+        },
+        disconnected: (reason) {
+          _error = reason;
+          disconnect();
+        },
+      );
+    });
+
+    await updateAudioSettings(
+      bitrate: settings.outgoingAudioBitrate,
+      msPerPacket: settings.outgoingAudioMsPerPacket,
+      jitterBuffer: settings.incomingJitterBufferMs,
+      captureDevice: capture_device_id,
+      playbackDevice: playback_device_id,
+      inputGain: input_gain,
+      outputVolume: output_volume,
     );
-    _client.setConfig(config: _config);
+    
     await _refreshDevices();
   }
 
-  Future<void> setCaptureDevice(String? captureDeviceId) async {
-    _config = MumbleConfig(
-      outgoingAudioBitrate: _config.outgoingAudioBitrate,
-      outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
-      incomingJitterBufferMs: _config.incomingJitterBufferMs,
-      playbackHwBufferSize: _config.playbackHwBufferSize,
-      captureHwBufferSize: _config.captureHwBufferSize,
-      captureDeviceId: captureDeviceId,
-      playbackDeviceId: _config.playbackDeviceId,
-    );
-    await _client.setConfig(config: _config);
-    if (_settings != null) {
-      await _settings!.setCaptureDeviceId(captureDeviceId);
-    }
+  List<AudioDevice> _inputDevices = [];
+  List<AudioDevice> _outputDevices = [];
+
+  List<AudioDevice> get inputDevices => _inputDevices;
+  List<AudioDevice> get outputDevices => _outputDevices;
+
+  Future<void> _refreshDevices() async {
+    _inputDevices = await listAudioInputDevices();
+    _outputDevices = await listAudioOutputDevices();
     notifyListeners();
   }
-
-  Future<void> setPlaybackDevice(String? playbackDeviceId) async {
-    _config = MumbleConfig(
-      outgoingAudioBitrate: _config.outgoingAudioBitrate,
-      outgoingAudioMsPerPacket: _config.outgoingAudioMsPerPacket,
-      incomingJitterBufferMs: _config.incomingJitterBufferMs,
-      playbackHwBufferSize: _config.playbackHwBufferSize,
-      captureHwBufferSize: _config.captureHwBufferSize,
-      captureDeviceId: _config.captureDeviceId,
-      playbackDeviceId: playbackDeviceId,
-    );
-    await _client.setConfig(config: _config);
-    if (_settings != null) {
-      await _settings!.setPlaybackDeviceId(playbackDeviceId);
-    }
-    notifyListeners();
-  }
-
-  Future<void> updateAudioSettings({
-    String? captureDeviceId,
-    String? playbackDeviceId,
-    double? inputGain,
-    double? outputVolume,
-    int? outgoingAudioBitrate,
-    int? outgoingAudioMsPerPacket,
-    int? incomingJitterBufferMs,
-  }) async {
-    if (captureDeviceId != null) {
-      await setCaptureDevice(captureDeviceId);
-    }
-    if (playbackDeviceId != null) {
-      await setPlaybackDevice(playbackDeviceId);
-    }
-    if (inputGain != null) {
-      await _client.setInputGain(gain: inputGain);
-    }
-    if (outputVolume != null) {
-      await _client.setOutputVolume(volume: outputVolume);
-    }
-    if (outgoingAudioBitrate != null ||
-        outgoingAudioMsPerPacket != null ||
-        incomingJitterBufferMs != null) {
-      _config = MumbleConfig(
-        outgoingAudioBitrate:
-            outgoingAudioBitrate ?? _config.outgoingAudioBitrate,
-        outgoingAudioMsPerPacket:
-            outgoingAudioMsPerPacket ?? _config.outgoingAudioMsPerPacket,
-        incomingJitterBufferMs:
-            incomingJitterBufferMs ?? _config.incomingJitterBufferMs,
-        playbackHwBufferSize: _config.playbackHwBufferSize,
-        captureHwBufferSize: _config.captureHwBufferSize,
-        captureDeviceId: _config.captureDeviceId,
-        playbackDeviceId: _config.playbackDeviceId,
-      );
-      await _client.setConfig(config: _config);
-    }
-    notifyListeners();
-  }
-
-  Future<void> refreshInputDevices() => _refreshDevices();
-  Future<void> refreshOutputDevices() => _refreshDevices();
 
   Future<void> connect(MumbleServer server, {MumbleCertificate? certificate}) async {
     _error = null;
@@ -195,19 +117,48 @@ class MumbleService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _eventSubscription?.cancel();
-      _eventSubscription = _client.getEventStream().listen(_handleEvent, onError: (e) {
-        _error = e.toString();
-        _isConnected = false;
-        notifyListeners();
-      });
+      SecurityContext? context;
+      if (certificate != null) {
+        context = SecurityContext();
+        context.useCertificateChainBytes(utf8.encode(certificate.certificatePem));
+        context.usePrivateKeyBytes(utf8.encode(certificate.privateKeyPem));
+      }
 
-      await _client.connect(
+      final options = dumble.ConnectionOptions(
         host: server.host,
         port: server.port,
-        username: server.username,
+        name: server.username,
         password: server.password.isEmpty ? null : server.password,
+        context: context,
       );
+
+      _dumbleClient = await dumble.MumbleClient.connect(
+        options: options,
+        onBadCertificate: (cert) => true, // Accept all for now, maybe we'll add dialog later
+        useUdp: true, 
+      );
+      
+      _isConnected = true; 
+      _dumbleClient!.add(this);
+      
+      _selfSession = _dumbleClient!.self.session;
+      
+      // Hand over crypt keys to rust
+      final crypt = _dumbleClient!.cryptState;
+      await _rustEngine.initializeAudio(
+        host: server.host,
+        port: server.port,
+        key: crypt.key,
+        encryptNonce: crypt.clientNonce,
+        decryptNonce: crypt.serverNonce,
+      );
+
+      _syncChannels();
+      _syncUsers();
+      
+      _addSystemMessage('Connected.');
+      notifyListeners();
+
     } catch (e) {
       _error = e.toString();
       _isConnected = false;
@@ -216,192 +167,301 @@ class MumbleService extends ChangeNotifier {
     }
   }
 
-  void _handleEvent(MumbleEvent event) {
-    if (event is MumbleEvent_Connected) {
-      _isConnected = true;
-      _selfSession = event.field0;
-      _addSystemMessage('Connected.');
-
-      // Apply audio settings upon connection
-      if (_settings != null) {
-        _client.setInputGain(gain: _settings!.inputGain);
-        _client.setOutputVolume(volume: _settings!.outputVolume);
-      }
-    } else if (event is MumbleEvent_Disconnected) {
-      _isConnected = false;
-      _error = event.field0;
-      _addSystemMessage('Disconnected: ${event.field0}');
-    } else if (event is MumbleEvent_ChannelUpdate) {
-      final channel = event.field0;
-      _channels.removeWhere((c) => c.id == channel.id);
-      _channels.add(channel);
-    } else if (event is MumbleEvent_UserUpdate) {
-      final user = event.field0;
-      final existing = _users[user.session];
-
-      // If it's a new user with a name, apply their saved volume
-      if (existing == null && user.name.isNotEmpty) {
-        final savedVolume = getUserVolume(user);
-        if (savedVolume != 1.0) {
-          _client.setUserVolume(sessionId: user.session, volume: savedVolume);
-        }
-      }
-
-      if (existing != null) {
-        // If the name was previously empty and now we have it, apply saved volume
-        if (existing.name.isEmpty && user.name.isNotEmpty) {
-          final savedVolume = _settings?.getUserVolume(user.name) ?? 1.0;
-          if (savedVolume != 1.0) {
-            _client.setUserVolume(sessionId: user.session, volume: savedVolume);
-          }
-        }
-
-        // Rust now sends the full updated user state, but we preserve isTalking
-        // as it is updated more frequently by separate UserTalking events.
-        final updatedUser = MumbleUser(
-          session: user.session,
-          name: user.name,
-          channelId: user.channelId,
-          isTalking: existing.isTalking,
-          isMuted: user.isMuted,
-          isDeafened: user.isDeafened,
-          isSuppressed: user.isSuppressed,
-          comment: user.comment,
-        );
-        _users[user.session] = updatedUser;
-      } else {
-        _users[user.session] = user;
-      }
-      _talkingUsers[user.session] = _users[user.session]!.isTalking;
-    } else if (event is MumbleEvent_UserTalking) {
-      final session = event.field0;
-      final isTalking = event.field1;
-      _talkingUsers[session] = isTalking;
-      final user = _users[session];
-      if (user != null) {
-        _users[session] = MumbleUser(
-          session: user.session,
-          name: user.name,
-          channelId: user.channelId,
-          isTalking: isTalking,
-          isMuted: user.isMuted,
-          isDeafened: user.isDeafened,
-          isSuppressed: user.isSuppressed,
-          comment: user.comment,
-        );
-      }
-    } else if (event is MumbleEvent_UserRemoved) {
-      final session = event.field0;
-      _users.remove(session);
-      _talkingUsers.remove(session);
-    } else if (event is MumbleEvent_TextMessage) {
-      final tm = event.field0;
-      _messages.add(
-        ChatMessage(
-          senderName: tm.senderName,
-          content: HtmlUtils.sanitizeMumbleHtml(tm.message),
-          timestamp: DateTime.now(),
-          isSelf: false, 
-        ),
-      );
-    } else if (event is MumbleEvent_AudioVolume) {
-      volumeNotifier.value = event.field0;
-      return; // Early return to NOT trigger notifyListeners() for the entire service
-    }
+  void disconnect() {
+    _dumbleClient?.close();
+    _dumbleClient = null;
+    _rustEngine.disconnect();
+    _isConnected = false;
+    _selfSession = null;
+    _channels = [];
+    _users.clear();
+    _talkingUsers.clear();
     notifyListeners();
   }
 
-  void _addSystemMessage(String text, {String senderName = 'System'}) {
+  // --- dumble.MumbleClientListener implementation ---
+
+  @override
+  void onUserAdded(dumble.User user) {
+     user.add(_GenericUserListener(this));
+     _syncUsers();
+  }
+
+  @override
+  void onChannelAdded(dumble.Channel channel) {
+     channel.add(_GenericChannelListener(this));
+     _syncChannels();
+  }
+
+  @override
+  void onTextMessage(dumble.IncomingTextMessage message) {
     _messages.add(
       ChatMessage(
-        senderName: senderName,
-        content: text,
+        senderName: message.actor?.name ?? 'System',
+        content: HtmlUtils.sanitizeMumbleHtml(message.message),
         timestamp: DateTime.now(),
-        isSystem: true,
-        isSelf: false,
+        isSelf: message.actor?.session == _selfSession,
       ),
     );
     notifyListeners();
   }
 
-  void startPushToTalk() {
-    _client.setPtt(active: true);
-    _isTalking = true;
-    if (_selfSession != null) {
-      _talkingUsers[_selfSession!] = true;
-    }
-    notifyListeners();
-  }
-
-  void stopPushToTalk() {
-    _client.setPtt(active: false);
-    _isTalking = false;
-    if (_selfSession != null) {
-      _talkingUsers[_selfSession!] = false;
-    }
-    notifyListeners();
-  }
-
-  Future<void> disconnect() async {
-    _client.disconnect();
-    _eventSubscription?.cancel();
-    _isConnected = false;
-    _channels = [];
-    _users.clear();
-    _messages.clear();
-    _talkingUsers.clear();
-    _selfSession = null;
-    notifyListeners();
-  }
-
-  void sendMessage(String text) {
-    if (text.isNotEmpty) {
-      _client.sendTextMessage(message: text);
-      _messages.add(
-        ChatMessage(
-          senderName: self?.name ?? 'Me',
-          content: HtmlUtils.sanitizeMumbleHtml(text),
-          timestamp: DateTime.now(),
-          isSelf: true,
-          sender: self,
-        ),
-      );
-      notifyListeners();
-    }
-  }
-
-  void toggleMute() {
-    final current = isMuted;
-    _client.setMute(mute: !current);
-  }
-
-  void toggleDeafen() {
-    final current = isDeafened;
-    _client.setDeafen(deafen: !current);
-  }
-
-  Future<void> joinChannel(MumbleChannel channel) async {
-    _client.joinChannel(channelId: channel.id);
-  }
-
-  Future<void> setUserVolume(MumbleUser user, double volume) async {
-    if (_settings != null) {
-      await _settings!.setUserVolume(user.name, volume);
-      await _client.setUserVolume(sessionId: user.session, volume: volume);
-      notifyListeners();
-    }
-  }
-
-  double getUserVolume(MumbleUser user) {
-    if (_settings != null) {
-      return _settings!.getUserVolume(user.name);
-    }
-    return 1.0;
+  @override
+  void onDone() {
+    disconnect();
   }
 
   @override
+  void onError(Object error, [StackTrace? stackTrace]) {
+    _error = error.toString();
+    disconnect();
+  }
+
+  @override
+  void onCryptStateChanged() {
+    final crypt = _dumbleClient?.cryptState;
+    if (crypt != null && _isConnected) {
+       _rustEngine.initializeAudio(
+          host: _dumbleClient!.options.host,
+          port: _dumbleClient!.options.port,
+          key: crypt.key,
+          encryptNonce: crypt.clientNonce,
+          decryptNonce: crypt.serverNonce,
+        );
+    }
+  }
+  
+  @override
+  void onBanListReceived(List<dumble.BanEntry> bans) {}
+  @override
+  void onDropAllChannelPermissions() {}
+  @override
+  void onPermissionDenied(dumble.PermissionDeniedException e) {
+    _addSystemMessage('Permission Denied: ${e.reason}');
+  }
+  @override
+  void onQueryUsersResult(Map<int, String> idToName) {}
+  @override
+  void onUserListReceived(List<dumble.RegisteredUser> users) {}
+
+  // --- End Listener implementation ---
+
+  void _syncChannels() {
+    if (_dumbleClient == null) return;
+    _channels = _dumbleClient!.getChannels().values.map((c) => MumbleChannel(
+      id: c.channelId,
+      name: c.name ?? 'Unknown',
+      parentId: c.parent?.channelId,
+      position: c.position ?? 0,
+      description: c.description,
+      isEnterRestricted: c.isEnterRestricted ?? false,
+    )).toList();
+    notifyListeners();
+  }
+
+  void _syncUsers() {
+    if (_dumbleClient == null) return;
+    _users.clear();
+    
+    // Add all users
+    for (var u in _dumbleClient!.getUsers().values) {
+      _users[u.session] = _mapUser(u);
+    }
+    
+    // Add self
+    final self = _dumbleClient!.self;
+    _users[self.session] = _mapUser(self);
+    
+    notifyListeners();
+  }
+
+  MumbleUser _mapUser(dumble.User u) {
+    return MumbleUser(
+          session: u.session,
+          name: u.name ?? 'Unknown',
+          channelId: u.channel.channelId,
+          isTalking: _talkingUsers.contains(u.session),
+          isMuted: (u.mute ?? false) || (u.selfMute ?? false),
+          isDeafened: (u.deaf ?? false) || (u.selfDeaf ?? false),
+          isSuppressed: u.suppress ?? false,
+          comment: u.comment,
+        );
+  }
+
+  void _addSystemMessage(String content) {
+    _messages.add(ChatMessage(
+      senderName: 'System',
+      content: content,
+      timestamp: DateTime.now(),
+      isSelf: false,
+    ));
+    notifyListeners();
+  }
+
+  // --- Direct Commands ---
+
+  void joinChannel(int channelId) {
+    final chan = _dumbleClient?.getChannels()[channelId];
+    if (chan != null) {
+      _dumbleClient?.self.moveToChannel(channel: chan);
+    }
+  }
+
+  void sendTextMessage(String message) {
+    if (_dumbleClient == null) return;
+    final currentChannel = _dumbleClient!.self.channel;
+    
+    _dumbleClient!.sendMessage(
+      message: dumble.OutgoingTextMessage(
+        message: message,
+        channels: [currentChannel],
+      ),
+    );
+    
+    _messages.add(ChatMessage(
+      senderName: _dumbleClient!.self.name ?? 'Me',
+      content: message,
+      timestamp: DateTime.now(),
+      isSelf: true,
+    ));
+    notifyListeners();
+  }
+
+  void setPtt(bool active) {
+    _rustEngine.setPtt(active: active);
+  }
+
+  void setMute(bool mute) {
+    _dumbleClient?.self.setSelfMute(mute: mute);
+  }
+
+  void setDeafen(bool deaf) {
+    _dumbleClient?.self.setSelfDeaf(deaf: deaf);
+  }
+
+  void setInputGain(double gain) {
+    _rustEngine.setInputGain(gain: gain);
+  }
+
+  void setOutputVolume(double volume) {
+    _rustEngine.setOutputVolume(volume: volume);
+  }
+
+  void setUserVolume(int sessionId, double volume) {
+    _rustEngine.setUserVolume(sessionId: sessionId, volume: volume);
+  }
+
+  void toggleMute() {
+    if (_dumbleClient == null) return;
+    final isCurrentlyMuted = _dumbleClient!.self.selfMute ?? false;
+    _dumbleClient!.self.setSelfMute(mute: !isCurrentlyMuted);
+  }
+
+  void toggleDeafen() {
+    if (_dumbleClient == null) return;
+    final isCurrentlyDeaf = _dumbleClient!.self.selfDeaf ?? false;
+    _dumbleClient!.self.setSelfDeaf(deaf: !isCurrentlyDeaf);
+  }
+
+  bool get isMuted => _dumbleClient?.self.selfMute ?? false;
+  bool get isDeafened => _dumbleClient?.self.selfDeaf ?? false;
+
+  void setComment(String comment) {
+    if (_dumbleClient == null) return;
+    _dumbleClient!.self.setComment(comment: comment);
+  }
+
+  double getUserVolume(MumbleUser user) {
+    return _settings.getUserVolume(user.name);
+  }
+
+  Future<void> updateAudioSettings({
+    int? bitrate,
+    int? msPerPacket,
+    int? jitterBuffer,
+    String? captureDevice,
+    String? playbackDevice,
+    double? inputGain,
+    double? outputVolume,
+    // Aliases for UI compatibility
+    int? outgoingAudioBitrate,
+    int? outgoingAudioMsPerPacket,
+    int? incomingJitterBufferMs,
+    String? captureDeviceId,
+    String? playbackDeviceId,
+  }) async {
+    final bridgeConfig = MumbleConfig(
+      outgoingAudioBitrate: outgoingAudioBitrate ?? bitrate ?? _settings.outgoingAudioBitrate,
+      outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? msPerPacket ?? _settings.outgoingAudioMsPerPacket,
+      incomingJitterBufferMs: incomingJitterBufferMs ?? jitterBuffer ?? _settings.incomingJitterBufferMs,
+      playbackHwBufferSize: const AudioBufferSize.default_(),
+      captureHwBufferSize: const AudioBufferSize.default_(),
+      captureDeviceId: captureDeviceId ?? captureDevice,
+      playbackDeviceId: playbackDeviceId ?? playbackDevice,
+    );
+    await _rustEngine.setConfig(config: bridgeConfig);
+
+    if (inputGain != null) {
+      await _rustEngine.setInputGain(gain: inputGain);
+    }
+    if (outputVolume != null) {
+      await _rustEngine.setOutputVolume(volume: outputVolume);
+    }
+  }
+
+  Future<void> startPushToTalk() async {
+    await _rustEngine.setPtt(active: true);
+  }
+
+  Future<void> stopPushToTalk() async {
+    await _rustEngine.setPtt(active: false);
+  }
+
+  void refreshInputDevices() => _refreshDevices();
+  void refreshOutputDevices() => _refreshDevices();
+  void clearPttErrorMessage() => _pttErrorMessage = null;
+  void sendMessage(String message) => sendTextMessage(message);
+
+  @override
   void dispose() {
-    _eventSubscription?.cancel();
+    _audioEventSubscription?.cancel();
+    _dumbleClient?.close();
     super.dispose();
   }
+}
+
+class _GenericUserListener with dumble.UserListener {
+  final MumbleService service;
+  _GenericUserListener(this.service);
+
+  @override
+  void onUserChanged(dumble.User user, dumble.User? actor, dumble.UserChanges changes) {
+    service._syncUsers();
+  }
+
+  @override
+  void onUserRemoved(dumble.User user, dumble.User? actor, String? reason, bool? ban) {
+    service._syncUsers();
+  }
+  
+  @override
+  void onUserStats(dumble.User user, dumble.UserStats stats) {}
+}
+
+class _GenericChannelListener with dumble.ChannelListener {
+  final MumbleService service;
+  _GenericChannelListener(this.service);
+
+  @override
+  void onChannelChanged(dumble.Channel channel, dumble.ChannelChanges changes) {
+    service._syncChannels();
+  }
+
+  @override
+  void onChannelRemoved(dumble.Channel channel) {
+    service._syncChannels();
+  }
+
+  @override
+  void onChannelPermissionsReceived(dumble.Channel channel, dumble.Permission permission) {}
 }

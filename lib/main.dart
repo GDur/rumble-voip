@@ -506,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         talkingUsers: mumbleService.talkingUsers,
                         self: mumbleService.self,
                         hasMicPermission: mumbleService.hasMicPermission,
-                        onChannelTap: (c) => mumbleService.joinChannel(c),
+                        onChannelTap: (c) => mumbleService.joinChannel(c.id),
                       );
                     }
                     return ShadResizablePanelGroup(
@@ -522,7 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             talkingUsers: mumbleService.talkingUsers,
                             self: mumbleService.self,
                             hasMicPermission: mumbleService.hasMicPermission,
-                            onChannelTap: (c) => mumbleService.joinChannel(c),
+                            onChannelTap: (c) => mumbleService.joinChannel(c.id),
                           ),
                         ),
                         ShadResizablePanel(

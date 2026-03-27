@@ -23,34 +23,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_RustMumbleClientPtr => wire
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient;
+  get rust_arc_decrement_strong_count_RustAudioEnginePtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
-  RustMumbleClient
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     dynamic raw,
   );
 
   @protected
-  RustMumbleClient
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     dynamic raw,
   );
 
   @protected
-  RustMumbleClient
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     dynamic raw,
   );
 
   @protected
-  RustStreamSink<MumbleEvent> dco_decode_StreamSink_mumble_event_Sse(
-    dynamic raw,
-  );
+  RustStreamSink<AudioEvent> dco_decode_StreamSink_audio_event_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -62,19 +60,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioDevice dco_decode_audio_device(dynamic raw);
 
   @protected
+  AudioEvent dco_decode_audio_event(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  MumbleChannel dco_decode_box_autoadd_mumble_channel(dynamic raw);
-
-  @protected
   MumbleConfig dco_decode_box_autoadd_mumble_config(dynamic raw);
-
-  @protected
-  MumbleTextMessage dco_decode_box_autoadd_mumble_text_message(dynamic raw);
-
-  @protected
-  MumbleUser dco_decode_box_autoadd_mumble_user(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
@@ -89,6 +81,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AudioDevice> dco_decode_list_audio_device(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -96,12 +91,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MumbleConfig dco_decode_mumble_config(dynamic raw);
-
-  @protected
-  MumbleEvent dco_decode_mumble_event(dynamic raw);
-
-  @protected
-  MumbleTextMessage dco_decode_mumble_text_message(dynamic raw);
 
   @protected
   MumbleUser dco_decode_mumble_user(dynamic raw);
@@ -131,25 +120,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
-  RustMumbleClient
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     SseDeserializer deserializer,
   );
 
   @protected
-  RustMumbleClient
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     SseDeserializer deserializer,
   );
 
   @protected
-  RustMumbleClient
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  RustAudioEngine
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     SseDeserializer deserializer,
   );
 
   @protected
-  RustStreamSink<MumbleEvent> sse_decode_StreamSink_mumble_event_Sse(
+  RustStreamSink<AudioEvent> sse_decode_StreamSink_audio_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -163,25 +152,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AudioDevice sse_decode_audio_device(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
+  AudioEvent sse_decode_audio_event(SseDeserializer deserializer);
 
   @protected
-  MumbleChannel sse_decode_box_autoadd_mumble_channel(
-    SseDeserializer deserializer,
-  );
+  bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
   MumbleConfig sse_decode_box_autoadd_mumble_config(
     SseDeserializer deserializer,
   );
-
-  @protected
-  MumbleTextMessage sse_decode_box_autoadd_mumble_text_message(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  MumbleUser sse_decode_box_autoadd_mumble_user(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
@@ -196,6 +175,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<AudioDevice> sse_decode_list_audio_device(SseDeserializer deserializer);
 
   @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
@@ -203,14 +185,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   MumbleConfig sse_decode_mumble_config(SseDeserializer deserializer);
-
-  @protected
-  MumbleEvent sse_decode_mumble_event(SseDeserializer deserializer);
-
-  @protected
-  MumbleTextMessage sse_decode_mumble_text_message(
-    SseDeserializer deserializer,
-  );
 
   @protected
   MumbleUser sse_decode_mumble_user(SseDeserializer deserializer);
@@ -244,28 +218,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
-    RustMumbleClient self,
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
+    RustAudioEngine self,
     SseSerializer serializer,
   );
 
   @protected
   void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
-    RustMumbleClient self,
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
+    RustAudioEngine self,
     SseSerializer serializer,
   );
 
   @protected
   void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
-    RustMumbleClient self,
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
+    RustAudioEngine self,
     SseSerializer serializer,
   );
 
   @protected
-  void sse_encode_StreamSink_mumble_event_Sse(
-    RustStreamSink<MumbleEvent> self,
+  void sse_encode_StreamSink_audio_event_Sse(
+    RustStreamSink<AudioEvent> self,
     SseSerializer serializer,
   );
 
@@ -282,29 +256,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_audio_device(AudioDevice self, SseSerializer serializer);
 
   @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
+  void sse_encode_audio_event(AudioEvent self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_mumble_channel(
-    MumbleChannel self,
-    SseSerializer serializer,
-  );
+  void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_mumble_config(
     MumbleConfig self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_mumble_text_message(
-    MumbleTextMessage self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_mumble_user(
-    MumbleUser self,
     SseSerializer serializer,
   );
 
@@ -324,6 +283,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -334,15 +296,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_mumble_config(MumbleConfig self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_mumble_event(MumbleEvent self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_mumble_text_message(
-    MumbleTextMessage self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_mumble_user(MumbleUser self, SseSerializer serializer);
@@ -375,18 +328,18 @@ class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
   void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     int ptr,
   ) => wasmModule
-      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
         ptr,
       );
 
   void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     int ptr,
   ) => wasmModule
-      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
         ptr,
       );
 }
@@ -398,12 +351,12 @@ external RustLibWasmModule get wasmModule;
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     int ptr,
   );
 
   external void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustMumbleClient(
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustAudioEngine(
     int ptr,
   );
 }

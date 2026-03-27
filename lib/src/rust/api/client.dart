@@ -10,7 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'client.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `send_command`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `MumbleTextMessage`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<List<AudioDevice>> listAudioInputDevices() =>
@@ -19,39 +19,43 @@ Future<List<AudioDevice>> listAudioInputDevices() =>
 Future<List<AudioDevice>> listAudioOutputDevices() =>
     RustLib.instance.api.crateApiClientListAudioOutputDevices();
 
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustMumbleClient>>
-abstract class RustMumbleClient implements RustOpaqueInterface {
-  Future<void> connect({
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustAudioEngine>>
+abstract class RustAudioEngine implements RustOpaqueInterface {
+  Future<void> disconnect();
+
+  Stream<AudioEvent> getEventStream();
+
+  Future<void> initializeAudio({
     required String host,
     required int port,
-    required String username,
-    String? password,
+    required List<int> key,
+    required List<int> encryptNonce,
+    required List<int> decryptNonce,
   });
 
-  void disconnect();
-
-  Stream<MumbleEvent> getEventStream();
-
-  Future<void> joinChannel({required int channelId});
-
-  factory RustMumbleClient() =>
-      RustLib.instance.api.crateApiClientRustMumbleClientNew();
-
-  Future<void> sendTextMessage({required String message});
+  factory RustAudioEngine() =>
+      RustLib.instance.api.crateApiClientRustAudioEngineNew();
 
   Future<void> setConfig({required MumbleConfig config});
 
-  Future<void> setDeafen({required bool deafen});
-
   Future<void> setInputGain({required double gain});
-
-  Future<void> setMute({required bool mute});
 
   Future<void> setOutputVolume({required double volume});
 
   Future<void> setPtt({required bool active});
 
   Future<void> setUserVolume({required int sessionId, required double volume});
+}
+
+@freezed
+sealed class AudioEvent with _$AudioEvent {
+  const AudioEvent._();
+
+  const factory AudioEvent.audioVolume(double field0) = AudioEvent_AudioVolume;
+  const factory AudioEvent.userTalking(int field0, bool field1) =
+      AudioEvent_UserTalking;
+  const factory AudioEvent.disconnected(String field0) =
+      AudioEvent_Disconnected;
 }
 
 class MumbleChannel {
@@ -70,6 +74,9 @@ class MumbleChannel {
     this.description,
     required this.isEnterRestricted,
   });
+
+  static Future<MumbleChannel> default_() =>
+      RustLib.instance.api.crateApiClientMumbleChannelDefault();
 
   @override
   int get hashCode =>
@@ -93,44 +100,6 @@ class MumbleChannel {
           isEnterRestricted == other.isEnterRestricted;
 }
 
-@freezed
-sealed class MumbleEvent with _$MumbleEvent {
-  const MumbleEvent._();
-
-  const factory MumbleEvent.connected(int field0) = MumbleEvent_Connected;
-  const factory MumbleEvent.disconnected(String field0) =
-      MumbleEvent_Disconnected;
-  const factory MumbleEvent.channelUpdate(MumbleChannel field0) =
-      MumbleEvent_ChannelUpdate;
-  const factory MumbleEvent.userUpdate(MumbleUser field0) =
-      MumbleEvent_UserUpdate;
-  const factory MumbleEvent.userRemoved(int field0) = MumbleEvent_UserRemoved;
-  const factory MumbleEvent.userTalking(int field0, bool field1) =
-      MumbleEvent_UserTalking;
-  const factory MumbleEvent.textMessage(MumbleTextMessage field0) =
-      MumbleEvent_TextMessage;
-  const factory MumbleEvent.audioVolume(double field0) =
-      MumbleEvent_AudioVolume;
-}
-
-class MumbleTextMessage {
-  final String senderName;
-  final String message;
-
-  const MumbleTextMessage({required this.senderName, required this.message});
-
-  @override
-  int get hashCode => senderName.hashCode ^ message.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is MumbleTextMessage &&
-          runtimeType == other.runtimeType &&
-          senderName == other.senderName &&
-          message == other.message;
-}
-
 class MumbleUser {
   final int session;
   final String name;
@@ -151,6 +120,9 @@ class MumbleUser {
     required this.isSuppressed,
     this.comment,
   });
+
+  static Future<MumbleUser> default_() =>
+      RustLib.instance.api.crateApiClientMumbleUserDefault();
 
   @override
   int get hashCode =>

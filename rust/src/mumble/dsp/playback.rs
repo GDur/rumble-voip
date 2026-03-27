@@ -1,8 +1,7 @@
-use crate::frb_generated::StreamSink;
 use crate::mumble::config::MumbleConfig;
 use crate::mumble::dsp::user_stream::UserVoiceStream;
 use crate::mumble::dsp::{INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE};
-use crate::mumble::MumbleEvent;
+use crate::api::client::AudioEvent;
 use sonora::config::GainController2;
 use sonora::{AudioProcessing, Config, StreamConfig};
 use sonora_common_audio::push_sinc_resampler::PushSincResampler;
@@ -88,12 +87,12 @@ impl PlaybackMixer {
 
     /// Mixes one frame of audio from all active users.
     /// Returns a slice of PCM samples at the output sample rate.
-    pub fn mix_frame(&mut self, event_sink: &StreamSink<MumbleEvent>) -> &[f32] {
+    pub fn mix_frame(&mut self, event_sink: &crate::frb_generated::StreamSink<AudioEvent>) -> &[f32] {
         // Remove users that have been inactive for too long.
         self.users.retain(|sid, user| {
             if user.is_talking() && user.time_since_last_packet().as_millis() > 500 {
                 user.set_talking(false);
-                let _ = event_sink.add(MumbleEvent::UserTalking(*sid, false));
+                let _ = event_sink.add(AudioEvent::UserTalking(*sid, false));
             }
             // Keep user state for 10 seconds of silence before dropping.
             user.time_since_last_packet().as_secs() < 10
