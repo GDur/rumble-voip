@@ -41,7 +41,13 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   List<MumbleUser> get users => _users.values.toList();
   List<ChatMessage> get messages => _messages;
   int? get selfSession => _selfSession;
-  Map<int, bool> get talkingUsers => {for (var uid in _talkingUsers) uid: true};
+  Map<int, bool> get talkingUsers {
+    final res = {for (var uid in _talkingUsers) uid: true};
+    if (_isLocalPttActive && _selfSession != null) {
+      res[_selfSession!] = true;
+    }
+    return res;
+  }
   MumbleUser? get self => _selfSession != null ? _users[_selfSession] : null;
   int? get maxUsers => _dumbleClient?.serverInfo.config?.maxUsers;
 

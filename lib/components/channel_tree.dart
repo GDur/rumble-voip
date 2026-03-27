@@ -510,16 +510,12 @@ class _ChannelTreeState extends State<ChannelTree> {
 
     Color statusColor;
     if (isTalking) {
-      statusColor = Colors.blueAccent;
+      statusColor = Colors.blue;
+    } else if (isSuppressed || isMuted || isDeaf) {
+      statusColor = theme.colorScheme.destructive;
     } else {
-      if (isDeaf) {
-        statusColor = Colors.redAccent.withValues(alpha: 0.6);
-      } else if (isMuted || isSuppressed) {
-        statusColor = Colors.grey;
-      } else {
-        final bool hasMic = isMe ? widget.hasMicPermission : true;
-        statusColor = hasMic ? Colors.greenAccent : Colors.grey;
-      }
+      final bool hasMic = isMe ? widget.hasMicPermission : true;
+      statusColor = hasMic ? const Color(0xFF64FFDA) : Colors.grey;
     }
 
     Widget content = Container(
