@@ -66,6 +66,23 @@ class GeneralTab extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(
+                child: Text('Remember last folder'),
+              ),
+              const SizedBox(width: 8),
+              ShadSwitch(
+                value: settings.rememberLastChannel,
+                onChanged: (val) {
+                  settings.setRememberLastChannel(val);
+                  onUpdate(() {});
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );

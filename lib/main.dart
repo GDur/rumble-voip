@@ -409,6 +409,13 @@ class _HomeScreenState extends State<HomeScreen> {
           : null;
       debugPrint('[DEBUG] Certificate resolved: $certificate');
 
+      // Set update callback for persisting last joined channel
+      service.onServerUpdated = (updatedServer) {
+        if (mounted) {
+           Provider.of<ServerProvider>(context, listen: false).updateServer(updatedServer);
+        }
+      };
+
       await service.connect(server, certificate: certificate);
       debugPrint('[DEBUG] Connecting service done');
 

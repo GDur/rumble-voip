@@ -25,6 +25,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   int? _selfSession;
   bool _isLocalPttActive = false;
   late SettingsService _settings;
+  MumbleServer? _currentServer;
+  int? _targetChannelId;
+  void Function(MumbleServer)? onServerUpdated;
 
   // Trackers to avoid adding duplicate listeners
   final Set<int> _trackedUserListeners = {};
@@ -127,11 +130,13 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     _talkingUsers.clear();
     _messages.clear();
     _selfSession = null;
+    _targetChannelId = null;
     _trackedUserListeners.clear();
     _trackedChannelListeners.clear();
     notifyListeners();
 
     try {
+      _currentServer = server;
       SecurityContext? context;
       if (certificate != null) {
         context = SecurityContext();
@@ -159,6 +164,12 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       _selfSession = _dumbleClient!.self.session;
       debugPrint('Mumble: Handshake finished. Self session: $_selfSession');
       
+      // Target channel to join once sync is stable
+      if (_settings.rememberLastChannel && server.lastChannelId != null) {
+        _targetChannelId = server.lastChannelId;
+        debugPrint('Mumble: Target channel set: $_targetChannelId');
+      }
+
       // Hand over crypt keys to rust
       final crypt = _dumbleClient!.cryptState;
       await _rustEngine.initializeAudio(
@@ -171,13 +182,17 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
       _syncChannels();
       _syncUsers();
-      
+
+      // Initial attempt (in case channels are already fully synced)
+      _tryJoinTargetChannel();
+
       _addSystemMessage('Connected.');
       notifyListeners();
 
     } catch (e) {
       _error = e.toString();
       _isConnected = false;
+      _currentServer = null;
       notifyListeners();
       rethrow;
     }
@@ -186,9 +201,11 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   void disconnect() {
     _dumbleClient?.close();
     _dumbleClient = null;
+    _currentServer = null;
     _rustEngine.disconnect();
     _isConnected = false;
     _selfSession = null;
+    _targetChannelId = null;
     _channels = [];
     _users.clear();
     _talkingUsers.clear();
@@ -295,6 +312,18 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     }).toList();
     
     notifyListeners();
+    _tryJoinTargetChannel();
+  }
+
+  void _tryJoinTargetChannel() {
+    if (_targetChannelId == null || _dumbleClient == null) return;
+    
+    final chan = _dumbleClient!.getChannels()[_targetChannelId!];
+    if (chan != null) {
+      debugPrint('Mumble: Rejoining target channel: ${_targetChannelId}');
+      _dumbleClient!.self.moveToChannel(channel: chan);
+      // We don't clear it here, we clear it in _syncUsers once we are actually there
+    }
   }
 
   void _syncUsers() {
@@ -330,6 +359,23 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     _users[selfFromMap.session] = _mapUser(selfFromMap);
     
     notifyListeners();
+
+    final currentChannelId = selfFromMap.channel.channelId;
+
+    // If we've reached our target folder, clear the sticky target
+    if (_targetChannelId != null && currentChannelId == _targetChannelId) {
+      debugPrint('Mumble: Target folder reached. Clearing target sticky.');
+      _targetChannelId = null;
+    }
+
+    // Update last channel if it changed (and only if we are not still trying to move to a target)
+    if (_currentServer != null && _settings.rememberLastChannel && _targetChannelId == null) {
+      if (currentChannelId != _currentServer!.lastChannelId) {
+        debugPrint('Mumble: Updating last joined channel to $currentChannelId');
+        _currentServer = _currentServer!.copyWith(lastChannelId: currentChannelId);
+        onServerUpdated?.call(_currentServer!);
+      }
+    }
   }
 
   MumbleUser _mapUser(dumble.User u) {
@@ -358,6 +404,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   // --- Direct Commands ---
 
   void joinChannel(int channelId) {
+    _targetChannelId = null; // Manual move cancels autojoin
     final chan = _dumbleClient?.getChannels()[channelId];
     if (chan != null) {
       _dumbleClient?.self.moveToChannel(channel: chan);

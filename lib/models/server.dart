@@ -10,6 +10,7 @@ class MumbleServer {
   final String username;
   final String password;
   final bool isArchived;
+  final int? lastChannelId;
   // Transient data for server list
   final int? ping;
   final int? userCount;
@@ -23,6 +24,7 @@ class MumbleServer {
     required this.username,
     this.password = '',
     this.isArchived = false,
+    this.lastChannelId,
     this.ping,
     this.userCount,
     this.maxUsers,
@@ -36,6 +38,7 @@ class MumbleServer {
     'username': username,
     'password': password,
     'isArchived': isArchived,
+    'lastChannelId': lastChannelId,
     if (ping != null) 'ping': ping,
     if (userCount != null) 'userCount': userCount,
     if (maxUsers != null) 'maxUsers': maxUsers,
@@ -49,6 +52,7 @@ class MumbleServer {
     username: json['username'],
     password: json['password'] ?? '',
     isArchived: json['isArchived'] ?? false,
+    lastChannelId: json['lastChannelId'],
     ping: json['ping'],
     userCount: json['userCount'],
     maxUsers: json['maxUsers'],
@@ -61,6 +65,7 @@ class MumbleServer {
     String? username,
     String? password,
     bool? isArchived,
+    int? lastChannelId,
     int? ping,
     int? userCount,
     int? maxUsers,
@@ -72,6 +77,7 @@ class MumbleServer {
     username: username ?? this.username,
     password: password ?? this.password,
     isArchived: isArchived ?? this.isArchived,
+    lastChannelId: lastChannelId ?? this.lastChannelId,
     ping: ping ?? this.ping,
     userCount: userCount ?? this.userCount,
     maxUsers: maxUsers ?? this.maxUsers,

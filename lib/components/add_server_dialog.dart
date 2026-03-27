@@ -86,6 +86,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                 port: int.tryParse(_portController.text) ?? 64738,
                 username: username,
                 password: _passwordController.text,
+                lastChannelId: widget.server?.lastChannelId,
               );
 
               final provider = Provider.of<ServerProvider>(

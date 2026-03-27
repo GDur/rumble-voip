@@ -25,6 +25,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kOutgoingAudioMsPerPacket = 'outgoing_audio_ms_per_packet';
   static const String _kIncomingJitterBufferMs = 'incoming_jitter_buffer_ms';
   static const String _kPlaybackHwBufferMs = 'playback_hw_buffer_ms';
+  static const String _kRememberLastChannel = 'remember_last_channel';
 
   final SharedPreferences _prefs;
 
@@ -45,6 +46,7 @@ class SettingsService extends ChangeNotifier {
   int _outgoingAudioMsPerPacket;
   int _incomingJitterBufferMs;
   int _playbackHwBufferMs;
+  bool _rememberLastChannel;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -62,6 +64,7 @@ class SettingsService extends ChangeNotifier {
       _outgoingAudioMsPerPacket = _prefs.getInt(_kOutgoingAudioMsPerPacket) ?? 10,
       _incomingJitterBufferMs = _prefs.getInt(_kIncomingJitterBufferMs) ?? 40,
       _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
+      _rememberLastChannel = _prefs.getBool(_kRememberLastChannel) ?? true,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -104,6 +107,7 @@ class SettingsService extends ChangeNotifier {
   int get outgoingAudioMsPerPacket => _outgoingAudioMsPerPacket;
   int get incomingJitterBufferMs => _incomingJitterBufferMs;
   int get playbackHwBufferMs => _playbackHwBufferMs;
+  bool get rememberLastChannel => _rememberLastChannel;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -253,6 +257,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setPlaybackHwBufferMs(int ms) async {
     _playbackHwBufferMs = ms;
     await _prefs.setInt(_kPlaybackHwBufferMs, ms);
+    notifyListeners();
+  }
+  
+  Future<void> setRememberLastChannel(bool value) async {
+    _rememberLastChannel = value;
+    await _prefs.setBool(_kRememberLastChannel, value);
     notifyListeners();
   }
 }
