@@ -74,12 +74,13 @@ class MumbleServer {
     isArchived: isArchived ?? this.isArchived,
     ping: ping ?? this.ping,
     userCount: userCount ?? this.userCount,
+    maxUsers: maxUsers ?? this.maxUsers,
   );
 }
 
 String _generateDefaultUsername() {
   // Current branch: rust-plugin
-  const branch = 'RustPlugin';
+  const branch = 'RustPluginDumble';
   String platform;
   if (kIsWeb) {
     platform = 'Web';
@@ -100,16 +101,14 @@ String _generateDefaultUsername() {
   const gameNames = [
     'Glados',
     'MasterChief',
-    'Cortana',
     'DoomSlayer',
     'Geralt',
     'Triss',
     'Yennefer',
-    'Arthur',
-    'Ellie',
-    'Joel',
+    'Arthas',
     'DrStrange',
     'SonGoku',
+    'Bulma',
     'Vegeta',
     'Frieza',
     'TonyStark',

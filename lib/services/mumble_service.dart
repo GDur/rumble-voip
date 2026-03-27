@@ -43,6 +43,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   int? get selfSession => _selfSession;
   Map<int, bool> get talkingUsers => {for (var uid in _talkingUsers) uid: true};
   MumbleUser? get self => _selfSession != null ? _users[_selfSession] : null;
+  int? get maxUsers => _dumbleClient?.serverInfo.config?.maxUsers;
 
   // UI-specific getters
   String get currentChannelName => self?.channelId != null 

@@ -585,6 +585,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: theme.colorScheme.primary,
                 ),
               ),
+              if (mumbleService.isConnected)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    '${mumbleService.users.length}/${mumbleService.maxUsers ?? "?"} Users',
+                    style: theme.textTheme.muted.copyWith(
+                      fontSize: 10,
+                      height: 1.0,
+                    ),
+                  ),
+                ),
             ],
           ),
           const Spacer(),
