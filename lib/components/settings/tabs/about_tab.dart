@@ -67,7 +67,7 @@ class AboutTab extends StatelessWidget {
                   color: theme.colorScheme.primary.withValues(alpha: 0.8),
                 ),
                 Text(
-                   ' assistance',
+                  ' assistance',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.withValues(alpha: 0.8),

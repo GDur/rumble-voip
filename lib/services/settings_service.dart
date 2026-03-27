@@ -14,12 +14,17 @@ class SettingsService extends ChangeNotifier {
   static const String _kWindowY = 'window_y';
   static const String _kReconnectToLastServer = 'reconnect_last_server';
   static const String _kLastServerJson = 'last_server_json';
-  static const String _kInputDeviceId = 'input_device_id';
-  static const String _kOutputDeviceId = 'output_device_id';
+  static const String _kCaptureDeviceId = 'capture_device_id';
+  static const String _kPlaybackDeviceId = 'playback_device_id';
   static const String _kInputGain = 'input_gain';
   static const String _kOutputVolume = 'output_volume';
   static const String _kIgnoreAccessibility = 'ignore_accessibility';
   static const String _kUserVolumes = 'user_volumes';
+  static const String _kShowVolumeIndicator = 'show_volume_indicator';
+  static const String _kOutgoingAudioBitrate = 'outgoing_audio_bitrate';
+  static const String _kOutgoingAudioMsPerPacket = 'outgoing_audio_ms_per_packet';
+  static const String _kIncomingJitterBufferMs = 'incoming_jitter_buffer_ms';
+  static const String _kPlaybackHwBufferMs = 'playback_hw_buffer_ms';
 
   final SharedPreferences _prefs;
 
@@ -29,12 +34,17 @@ class SettingsService extends ChangeNotifier {
   Map<String, dynamic>? _customHotkey;
   bool _reconnectToLastServer;
   String? _lastServerJson;
-  String? _inputDeviceId;
-  String? _outputDeviceId;
+  String? _captureDeviceId;
+  String? _playbackDeviceId;
   double _inputGain;
   double _outputVolume;
   bool _ignoreAccessibility;
+  bool _showVolumeIndicator;
   final Map<String, double> _userVolumes;
+  int _outgoingAudioBitrate;
+  int _outgoingAudioMsPerPacket;
+  int _incomingJitterBufferMs;
+  int _playbackHwBufferMs;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -42,11 +52,16 @@ class SettingsService extends ChangeNotifier {
       _themeMode = ThemeMode.values[_prefs.getInt(_kThemeMode) ?? 2],
       _reconnectToLastServer = _prefs.getBool(_kReconnectToLastServer) ?? false,
       _lastServerJson = _prefs.getString(_kLastServerJson),
-      _inputDeviceId = _prefs.getString(_kInputDeviceId),
-      _outputDeviceId = _prefs.getString(_kOutputDeviceId),
+      _captureDeviceId = _prefs.getString(_kCaptureDeviceId),
+      _playbackDeviceId = _prefs.getString(_kPlaybackDeviceId),
       _inputGain = _prefs.getDouble(_kInputGain) ?? 1.0,
       _outputVolume = _prefs.getDouble(_kOutputVolume) ?? 1.0,
       _ignoreAccessibility = _prefs.getBool(_kIgnoreAccessibility) ?? false,
+      _showVolumeIndicator = _prefs.getBool(_kShowVolumeIndicator) ?? true,
+      _outgoingAudioBitrate = _prefs.getInt(_kOutgoingAudioBitrate) ?? 72000,
+      _outgoingAudioMsPerPacket = _prefs.getInt(_kOutgoingAudioMsPerPacket) ?? 10,
+      _incomingJitterBufferMs = _prefs.getInt(_kIncomingJitterBufferMs) ?? 40,
+      _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -79,11 +94,16 @@ class SettingsService extends ChangeNotifier {
   Map<String, dynamic>? get customHotkey => _customHotkey;
   bool get reconnectToLastServer => _reconnectToLastServer;
   String? get lastServerJson => _lastServerJson;
-  String? get inputDeviceId => _inputDeviceId;
-  String? get outputDeviceId => _outputDeviceId;
+  String? get captureDeviceId => _captureDeviceId;
+  String? get playbackDeviceId => _playbackDeviceId;
   double get inputGain => _inputGain;
   double get outputVolume => _outputVolume;
   bool get ignoreAccessibility => _ignoreAccessibility;
+  bool get showVolumeIndicator => _showVolumeIndicator;
+  int get outgoingAudioBitrate => _outgoingAudioBitrate;
+  int get outgoingAudioMsPerPacket => _outgoingAudioMsPerPacket;
+  int get incomingJitterBufferMs => _incomingJitterBufferMs;
+  int get playbackHwBufferMs => _playbackHwBufferMs;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -156,22 +176,22 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setInputDeviceId(String? id) async {
-    _inputDeviceId = id;
+  Future<void> setCaptureDeviceId(String? id) async {
+    _captureDeviceId = id;
     if (id != null) {
-      await _prefs.setString(_kInputDeviceId, id);
+      await _prefs.setString(_kCaptureDeviceId, id);
     } else {
-      await _prefs.remove(_kInputDeviceId);
+      await _prefs.remove(_kCaptureDeviceId);
     }
     notifyListeners();
   }
 
-  Future<void> setOutputDeviceId(String? id) async {
-    _outputDeviceId = id;
+  Future<void> setPlaybackDeviceId(String? id) async {
+    _playbackDeviceId = id;
     if (id != null) {
-      await _prefs.setString(_kOutputDeviceId, id);
+      await _prefs.setString(_kPlaybackDeviceId, id);
     } else {
-      await _prefs.remove(_kOutputDeviceId);
+      await _prefs.remove(_kPlaybackDeviceId);
     }
     notifyListeners();
   }
@@ -194,6 +214,12 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setShowVolumeIndicator(bool value) async {
+    _showVolumeIndicator = value;
+    await _prefs.setBool(_kShowVolumeIndicator, value);
+    notifyListeners();
+  }
+
   Future<void> setUserVolume(String name, double volume) async {
     _userVolumes[name] = volume;
     final List<String> userVols =
@@ -204,5 +230,29 @@ class SettingsService extends ChangeNotifier {
 
   double getUserVolume(String name) {
     return _userVolumes[name] ?? 1.0;
+  }
+
+  Future<void> setOutgoingAudioBitrate(int bitrate) async {
+    _outgoingAudioBitrate = bitrate;
+    await _prefs.setInt(_kOutgoingAudioBitrate, bitrate);
+    notifyListeners();
+  }
+
+  Future<void> setOutgoingAudioMsPerPacket(int frameMs) async {
+    _outgoingAudioMsPerPacket = frameMs;
+    await _prefs.setInt(_kOutgoingAudioMsPerPacket, frameMs);
+    notifyListeners();
+  }
+
+  Future<void> setIncomingJitterBufferMs(int ms) async {
+    _incomingJitterBufferMs = ms;
+    await _prefs.setInt(_kIncomingJitterBufferMs, ms);
+    notifyListeners();
+  }
+
+  Future<void> setPlaybackHwBufferMs(int ms) async {
+    _playbackHwBufferMs = ms;
+    await _prefs.setInt(_kPlaybackHwBufferMs, ms);
+    notifyListeners();
   }
 }

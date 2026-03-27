@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/src/rust/mumble/hardware/audio.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 // Component: audio-tab
 class AudioTab extends StatelessWidget {
@@ -19,11 +20,17 @@ class AudioTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
+    const double volumeMultiplier = 10.0;
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Audio Input',
+            style: theme.textTheme.large.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
           const Text(
             'Input Device',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -33,17 +40,17 @@ class AudioTab extends StatelessWidget {
             listenable: mumbleService,
             builder: (context, _) {
               final devices = mumbleService.inputDevices;
-              final inputDeviceId = settings.inputDeviceId;
+              final captureDeviceId = settings.captureDeviceId;
               final hasCurrent =
-                  inputDeviceId == null ||
-                  devices.any((d) => d.id.toString() == inputDeviceId);
+                  captureDeviceId == null ||
+                  devices.any((d) => d.id == captureDeviceId);
 
               return ShadSelect<String?>(
                 placeholder: const Text('Default Device'),
-                initialValue: inputDeviceId,
+                initialValue: captureDeviceId,
                 onChanged: (value) async {
-                  settings.setInputDeviceId(value);
-                  await mumbleService.updateAudioSettings(inputDeviceId: value);
+                  settings.setCaptureDeviceId(value);
+                  await mumbleService.updateAudioSettings(captureDeviceId: value);
                 },
                 options: [
                   const ShadOption<String?>(
@@ -52,81 +59,89 @@ class AudioTab extends StatelessWidget {
                   ),
                   if (!hasCurrent)
                     ShadOption<String?>(
-                      value: inputDeviceId,
+                      value: captureDeviceId,
                       child: const Text('Unknown Device'),
                     ),
                   ...devices.map(
-                    (d) => ShadOption<String?>(
-                      value: d.id.toString(),
-                      child: Text(d.label.toString()),
-                    ),
+                    (d) =>
+                        ShadOption<String?>(value: d.id, child: Text(d.name)),
                   ),
                 ],
                 selectedOptionBuilder: (context, value) {
                   if (value == null) return const Text('Default Input');
-                  final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.id.toString() == value,
+                  final device = devices.cast<AudioDevice?>().firstWhere(
+                    (d) => d?.id == value,
                     orElse: () => null,
                   );
-                  return Text(dev?.label?.toString() ?? 'Current Device');
+                  return Text(device?.name ?? value);
                 },
               );
             },
           ),
           const SizedBox(height: 24),
+          const Text('Quality', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.outgoingAudioBitrate / 1000,
+                    min: 32.0,
+                    max: 192.0,
+                    divisions: ((192.0 - 32.0) / 16.0).toInt(),
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final bitrate = (v * 1000).round();
+                      settings.setOutgoingAudioBitrate(bitrate);
+                      mumbleService.updateAudioSettings(
+                        outgoingAudioBitrate: bitrate,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '${(settings.outgoingAudioBitrate / 1000).round()} kb/s',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
           const Text(
-            'Output Device',
+            'Audio per packet',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 8),
-          ListenableBuilder(
-            listenable: mumbleService,
-            builder: (context, _) {
-              final devices = mumbleService.outputDevices;
-              final outputDeviceId = settings.outputDeviceId;
-              final hasCurrent =
-                  outputDeviceId == null ||
-                  devices.any((d) => d.id.toString() == outputDeviceId);
-
-              return ShadSelect<String?>(
-                placeholder: const Text('Default Output'),
-                initialValue: outputDeviceId,
-                onChanged: (value) async {
-                  settings.setOutputDeviceId(value);
-                  await mumbleService.updateAudioSettings(
-                    outputDeviceId: value,
-                  );
-                  onUpdate(() {});
-                },
-                options: [
-                  const ShadOption<String?>(
-                    value: null,
-                    child: Text('Default Output'),
-                  ),
-                  if (!hasCurrent)
-                    ShadOption<String?>(
-                      value: outputDeviceId,
-                      child: const Text('Current Device'),
-                    ),
-                  ...devices.map(
-                    (d) => ShadOption<String?>(
-                      value: d.id.toString(),
-                      child: Text(d.name.toString()),
-                    ),
-                  ),
-                ],
-                selectedOptionBuilder: (context, value) {
-                  if (value == null) return const Text('Default Output');
-                  final dev = devices.cast<dynamic>().firstWhere(
-                    (d) => d.id.toString() == value,
-                    orElse: () => null,
-                  );
-                  return Text(dev?.name?.toString() ?? 'Current Device');
-                },
-              );
+          const SizedBox(height: 12),
+          ShadTabs<int>(
+            value: settings.outgoingAudioMsPerPacket,
+            onChanged: (v) {
+              settings.setOutgoingAudioMsPerPacket(v);
+              mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: v);
+              onUpdate(() {});
             },
+            tabs: [
+              ShadTab(
+                value: 10,
+                child: const Text('10ms'),
+              ),
+              ShadTab(
+                value: 20,
+                child: const Text('20ms'),
+              ),
+              ShadTab(
+                value: 40,
+                child: const Text('40ms'),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
           const Text(
             'Input Gain',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -135,61 +150,41 @@ class AudioTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ShadSlider(
-                  initialValue: settings.inputGain,
-                  min: 0.0,
-                  max: 2.0,
-                  onChanged: (v) {
-                    settings.setInputGain(v);
-                    mumbleService.updateAudioSettings(inputGain: v);
-                    onUpdate(() {});
-                  },
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.inputGain,
+                    min: 0.0,
+                    max: 2.0,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      settings.setInputGain(v);
+                      mumbleService.updateAudioSettings(inputGain: v);
+                      onUpdate(() {});
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                '${(settings.inputGain * 100).round()}%',
-                style: theme.textTheme.muted,
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '${(settings.inputGain * 100).round()}%',
+                  style: theme.textTheme.muted,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 24),
           const Text(
-            'Output Volume',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: ShadSlider(
-                  initialValue: settings.outputVolume,
-                  min: 0.0,
-                  max: 1.5,
-                  onChanged: (v) {
-                    settings.setOutputVolume(v);
-                    mumbleService.updateAudioSettings(outputVolume: v);
-                    onUpdate(() {});
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '${(settings.outputVolume * 100).round()}%',
-                style: theme.textTheme.muted,
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          const Text(
             'Microphone Test',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ListenableBuilder(
-            listenable: mumbleService,
-            builder: (context, _) {
-              final volume = mumbleService.currentVolume;
+          ValueListenableBuilder<double>(
+            valueListenable: mumbleService.volumeNotifier,
+            builder: (context, volume, child) {
+              final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
               return Container(
                 height: 24,
                 width: double.infinity,
@@ -201,7 +196,7 @@ class AudioTab extends StatelessWidget {
                   children: [
                     FractionallySizedBox(
                       alignment: Alignment.centerLeft,
-                      widthFactor: volume.clamp(0.0, 1.0),
+                      widthFactor: displayVolume,
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -221,6 +216,197 @@ class AudioTab extends StatelessWidget {
             'Speak into your mic to see the level.',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
+          const SizedBox(height: 40),
+          Text(
+            'Audio Output',
+            style: theme.textTheme.large.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Output Device',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: mumbleService,
+            builder: (context, _) {
+              final devices = mumbleService.outputDevices;
+              final playbackDeviceId = settings.playbackDeviceId;
+              final hasCurrent =
+                  playbackDeviceId == null ||
+                  devices.any((d) => d.id == playbackDeviceId);
+
+              return ShadSelect<String?>(
+                placeholder: const Text('Default Output'),
+                initialValue: playbackDeviceId,
+                onChanged: (value) async {
+                  settings.setPlaybackDeviceId(value);
+                  await mumbleService.updateAudioSettings(
+                    playbackDeviceId: value,
+                  );
+                  onUpdate(() {});
+                },
+                options: [
+                  const ShadOption<String?>(
+                    value: null,
+                    child: Text('Default Output'),
+                  ),
+                  if (!hasCurrent)
+                    ShadOption<String?>(
+                      value: playbackDeviceId,
+                      child: const Text('Current Device'),
+                    ),
+                  ...devices.map(
+                    (d) =>
+                        ShadOption<String?>(value: d.id, child: Text(d.name)),
+                  ),
+                ],
+                selectedOptionBuilder: (context, value) {
+                  if (value == null) return const Text('Default Output');
+                  final device = devices.cast<AudioDevice?>().firstWhere(
+                    (d) => d?.id == value,
+                    orElse: () => null,
+                  );
+                  return Text(device?.name ?? value);
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Output Volume',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.outputVolume,
+                    min: 0.0,
+                    max: 1.5,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      settings.setOutputVolume(v);
+                      mumbleService.updateAudioSettings(outputVolume: v);
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '${(settings.outputVolume * 100).round()}%',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Show volume indicator',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              ShadSwitch(
+                value: settings.showVolumeIndicator,
+                onChanged: (v) {
+                  settings.setShowVolumeIndicator(v);
+                  onUpdate(() {});
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Jitter Buffer',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.incomingJitterBufferMs.toDouble(),
+                    min: 0.0,
+                    max: 500.0,
+                    divisions: 50,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final ms = v.round();
+                      settings.setIncomingJitterBufferMs(ms);
+                      mumbleService.updateAudioSettings(
+                        incomingJitterBufferMs: ms,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  '${settings.incomingJitterBufferMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Output Delay (Hardware Buffer)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.playbackHwBufferMs.toDouble(),
+                    min: 0.0,
+                    max: 100.0,
+                    divisions: 20,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final ms = v.round();
+                      settings.setPlaybackHwBufferMs(ms);
+                      mumbleService.updateAudioSettings(
+                        playbackHwBufferMs: ms,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  settings.playbackHwBufferMs == 0
+                      ? 'Default'
+                      : '${settings.playbackHwBufferMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Increase if audio is choppy/crackly. 0 = OS Default.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

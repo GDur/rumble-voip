@@ -20,8 +20,3 @@ is then turned on as default but can be turned off in the settings.
     [] on mobile, the floating component should be able to be moved around the screen by dragging it.
     [] on mobile, the floating component should be able to be hidden by tapping on it.
     [] on mobile, the floating component should be able to be expanded to see the hole app again by tapping a max button inside.
-
-    
-
-## Important Developer Notes
-- **Audio Playback Latency Issue (`flutter_soloud`)**: When using `flutter_soloud` with `BufferingType.released`, it is crucial to properly dispose of the audio source using `SoLoud.instance.setDataIsEnded(source)` exactly when a remote user stops talking (i.e., at the end of their talk burst). Failing to end the stream causes `flutter_soloud` to keep the handle alive; during network dropouts or silence, the engine starves and pauses playback while it waits to rebuild buffer data to satisfy the `bufferingTimeNeeds` requirement. This leads to a severe, accumulating latency (e.g., up to 20 seconds!) over the duration of the app session. Always recreate a fresh stream handle for each new talk burst and configure a small `bufferingTimeNeeds` (e.g., `0.05`) to maintain real-time snappiness.

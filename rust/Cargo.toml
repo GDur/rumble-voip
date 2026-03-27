@@ -1,0 +1,38 @@
+[package]
+name = "rust_lib_rumble"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+flutter_rust_bridge = "=2.11.1"
+tokio = { version = "1.50", features = ["full"] }
+tokio-util = { version = "0.7.18", features = ["codec", "net"] }
+futures-util = "0.3.32"
+tokio-openssl = "0.6.5"
+openssl = { version = "0.10.76", features = ["vendored"] }
+anyhow = "1.0.102"
+cpal = "0.17.3"
+bytes = "1.11.1"
+ringbuf = "0.4.8"
+sonora = "0.1"
+sonora-common-audio = "0.1.0"
+opus-head-sys = "0.1.0"
+mumble-protocol-2x = "0.6"
+crossbeam-channel = "0.5.15"
+heapless = "0.8.0"
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22.4"
+ndk-context = "0.1.1"
+
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = "symbols"

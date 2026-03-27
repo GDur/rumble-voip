@@ -57,4 +57,7 @@ plugins/**/.flutter-plugins-dependencies
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-rust
+# Rust related
+rust/target/
+rust_builder/.dart_tool/
+rust_builder/build/

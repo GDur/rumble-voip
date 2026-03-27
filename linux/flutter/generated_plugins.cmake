@@ -5,14 +5,13 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   hotkey_manager_linux
   pasteboard
-  record_linux
   screen_retriever_linux
   url_launcher_linux
   window_manager
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
-  flutter_soloud
+  rust_lib_rumble
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

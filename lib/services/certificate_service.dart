@@ -219,9 +219,7 @@ class CertificateService extends ChangeNotifier {
     Uint8List data,
     String? password,
   ) async {
-    if (kIsWeb) {
-      return null;
-    }
+    if (kIsWeb) return null;
     if (!(Platform.isMacOS || Platform.isLinux || Platform.isWindows)) {
       return null;
     }

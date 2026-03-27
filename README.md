@@ -13,9 +13,39 @@ Looking ahead, we plan to implement automatic updates to keep the experience sea
 - **Interoperable**: Rumble works in tandem with original Mumble clients. You can switch to Rumble without forcing your friends or community to change anything.
 - **AI-Assisted Development**: This project is developed by a human programmer with significant assistance from AI to speed up boilerplate and implementation.
 
-## Project Status
-
 Rumble is currently in active development.
+
+## Build Requirements
+
+These instructions assume you are using **macOS** on Apple Silicon and have homebrew installed.
+
+### Core Requirements
+- **CMake**: Required for both Android and iOS builds.
+  ```bash
+  brew install cmake
+  brew install protobuf
+  ```
+- **Rust**:
+  - **Install**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  - **Update**: `rustup update`
+  - **Targets**:
+    ```bash
+    rustup target add aarch64-apple-ios            # For iOS
+    rustup target add aarch64-apple-ios-sim        # For iOS (Silicon)
+    rustup target add aarch64-apple-darwin         # For macOS (Silicon)
+    rustup target add aarch64-linux-android        # For Android (ARM64)
+    ```
+
+### Android
+- **Android Studio**: `brew install android-studio`
+- **SDK & NDK**: NDK version `28.2.13676358` is required (install via Android Studio SDK Manager).
+- **Java**: JDK 21 is required (bundled with modern Android Studio).
+
+### iOS
+- **Xcode**: Required for building iOS and macOS applications.
+
+## macOS Permissions
+- Accessibility permissions are required for global hotkeys (standard for macOS chat apps).
 
 
 ## Platform Support Matrix
@@ -48,7 +78,6 @@ To ensure reliable audio on mobile (especially iOS), Rumble uses a custom high-p
 ## Tech Stack
 - **Framework**: Flutter
 - **UI System**: shadcn_ui (Flutter implementation)
-- **Protocol**: Mumble (via dumble)
 - **State Management**: Provider
 
 ## Branding

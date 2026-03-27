@@ -10,6 +10,24 @@
             "type": "dart"
         },
         {
+            "name": "rumble (Android)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "R3CX30J6M3B"
+        },
+        {
+            "name": "rumble (macOS)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "macos"
+        },
+        {
+            "name": "rumble (Web)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "chrome"
+        },
+        {
             "name": "rumble (profile mode)",
             "request": "launch",
             "type": "dart",

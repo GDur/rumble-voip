@@ -18,7 +18,8 @@ class HotkeyTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = Theme.of(context).platform == TargetPlatform.windows ||
+    final isDesktop =
+        Theme.of(context).platform == TargetPlatform.windows ||
         Theme.of(context).platform == TargetPlatform.linux ||
         Theme.of(context).platform == TargetPlatform.macOS;
     final theme = ShadTheme.of(context);
@@ -103,8 +104,9 @@ class HotkeyTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (isDesktop && (settings.pttKey != PttKey.none ||
-              settings.customHotkey != null)) ...[
+          if (isDesktop &&
+              (settings.pttKey != PttKey.none ||
+                  settings.customHotkey != null)) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
