@@ -128,7 +128,8 @@ class _ChannelTreeState extends State<ChannelTree> {
           ShadButton(
             child: const Text('Save Notice'),
             onPressed: () {
-              // Rust set_comment functionality would go here
+              Provider.of<MumbleService>(context, listen: false)
+                  .setComment(controller.text);
               Navigator.of(context).pop();
             },
           ),
