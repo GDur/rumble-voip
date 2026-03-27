@@ -178,10 +178,8 @@ pub fn setup_audio(
                 }
             }
 
-            // If we have less than 20ms of audio left, notify decode thread to generate more
-            if cons_out.occupied_len() < (output_rate / 50) as usize {
-                let _ = output_notify.try_send(());
-            }
+            // Always notify the decode thread to top up the buffer.
+            let _ = output_notify.try_send(());
         },
         |e| eprintln!("Output error: {}", e),
         None,

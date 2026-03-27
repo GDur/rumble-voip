@@ -168,8 +168,8 @@ impl RustAudioEngine {
         let (prod_in, cons_in) = rb_in.split();
         let (prod_out, cons_out) = rb_out.split();
 
-        let (in_notify_tx, in_notify_rx) = crossbeam_channel::bounded(10);
-        let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(10);
+        let (in_notify_tx, in_notify_rx) = crossbeam_channel::bounded(64);
+        let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(64);
 
         let audio_backend = crate::mumble::hardware::audio::setup_audio(
                 prod_in,
