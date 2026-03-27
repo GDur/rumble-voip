@@ -6,6 +6,20 @@ The goal is to create a seamless experience across all platforms—Mobile, Table
 
 Looking ahead, we plan to implement automatic updates to keep the experience seamless and effortless.
 
+## Platform Support Matrix
+
+| Platform | Works | Does not work |
+| :--- | :---: | :---: |
+| Android | x | |
+| iOS (Tablet and iPhones)| x |  |
+| macOS (Apple Silicon and Intel) | x | |
+| Windows | (x)* | |
+| Linux | (x)* | |
+| Web (can't work) | | x |
+
+\* *Experimental. Testing is ongoing for these platforms.*
+
+
 ## Why Rumble?
 
 - **Modern UI/UX**: A fresh, high-quality interface that doesn't feel like it's from the early 2000s.
@@ -48,20 +62,6 @@ These instructions assume you are using **macOS** on Apple Silicon and have home
 - Accessibility permissions are required for global hotkeys (standard for macOS chat apps).
 
 
-## Platform Support Matrix
-
-| Platform | Works | Does not work |
-| :--- | :---: | :---: |
-| Android | x | |
-| iOS (Tablet and iPhones)| x |  |
-| macOS (Apple Silicon and Intel) | x | |
-| Windows | (x)* | |
-| Linux | (x)* | |
-| Web (can't work) | | x |
-
-\* *Experimental. Requires native `libopus` libraries in the application directory; testing is ongoing for these platforms.*
-
-
 ### Currently Supported
 - **Mobile/Tablets(Android, iOs)**: Full voice functionality with hotkey/PTT support.
 - **Desktop (macOS, Linux, Windows)**: Global hotkey activation (Push-to-Talk) is functional across all three desktop platforms.
@@ -74,6 +74,7 @@ To ensure reliable audio on mobile (especially iOS), Rumble uses a custom high-p
 - **Self-Healing Hardware**: On every server reconnect or switch, Rumble re-verifies the hardware microphone status to recover from system-level audio interruptions.
 
 ### Planned for the Future
+see PLAN.md
 
 ## Tech Stack
 - **Framework**: Flutter

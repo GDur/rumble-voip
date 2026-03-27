@@ -1,5 +1,22 @@
 # Ideas and Plans to tackle next
 
+[] fix autojoin channel: check when current channel is being safed. Also rename in settings from folder to channel
+[] make it so that other actions can also be triggered by hotkeys. And that multiple hotkeys can activate one action. Eg F13 and Capslock could both trigger ptt.
+[] add a filter toggle which hides empty channels in the view
+[] make it so that the permission for mic question comes directly at the start of the program because it seems like iOs needs a reboot of the app after granting the permission
+[] when another user talks _don't_ make their label bold. leave it normal as is.
+[] the channel tree needs a hover effect. And selecting an item should be indicated on pointer down not just on pointer up. 
+  [] the hitbox for the channel chevrons needs to be bigger
+[] Atm the Settings Audio is one category. Its better to split it into  Audio Input and Audio Output
+[] Versioning: the app should follow a real versioning system probably starting at 0.1.0 Whcih should also always be reflected in the settings about section.
+[] make sure that custom hotkeys really work (maybe atm just the selectable ones work)
+[] make sure that the "suppress hotkey" is really working
+[] show how many chat notifications are there, if there are any (on mobile/when the toggle chat button is visible). small number and if more than 9 then maybe just a dot. disappears when messages have been read(after chat was opened)
+[] add tooltips for almost al elements/buttons etc
+[] make it possible on mobile to leave the app open in the background
+    - android: show some kind of indicator and or maybe a floating ptt button if possile too
+    - show some kind of indicator
+
 [x] mumble can usse certificates to identify users. lets add support for that.
 
 [] add auto activation (voice activity detection)
