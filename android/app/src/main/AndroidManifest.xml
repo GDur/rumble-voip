@@ -4,6 +4,7 @@
     <application
         android:label="Rumble"
         android:name="${applicationName}"
+        android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

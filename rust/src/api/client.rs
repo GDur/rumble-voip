@@ -164,7 +164,7 @@ impl RustAudioEngine {
         let event_sink = self.event_sink.lock().unwrap().clone().ok_or("Event sink not set".to_string())?;
 
         let rb_in = HeapRb::<f32>::new(8192);
-        let rb_out = HeapRb::<f32>::new(8192);
+        let rb_out = HeapRb::<f32>::new(32768);
         let (prod_in, cons_in) = rb_in.split();
         let (prod_out, cons_out) = rb_out.split();
 

@@ -77,10 +77,11 @@ pub fn spawn_encode_thread(
     network_tx: tokio::sync::mpsc::Sender<AudioPacket>,
     ptt_active: Arc<AtomicBool>,
     input_rate: u32,
-    config: MumbleConfig,
+    config_arc: Arc<std::sync::Mutex<MumbleConfig>>,
 ) {
     std::thread::spawn(move || {
-        let mut pipeline = CapturePipeline::new(input_rate, &config);
+        let initial_config = config_arc.lock().unwrap().clone();
+        let mut pipeline = CapturePipeline::new(input_rate, &initial_config);
         let mut was_ptt = false;
 
         loop {

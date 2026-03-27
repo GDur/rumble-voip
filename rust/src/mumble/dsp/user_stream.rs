@@ -51,9 +51,11 @@ impl UserVoiceStream {
     }
 
     pub fn push_packet(&mut self, packet: AudioPacket) {
-        self.jitter_buffer
-            .push_back(packet)
-            .expect("Jitter buffer overflow");
+        if self.jitter_buffer.is_full() {
+            // Drop oldest packet to make room if we overflow due to clock drift or network pileup.
+            let _ = self.jitter_buffer.pop_front();
+        }
+        let _ = self.jitter_buffer.push_back(packet);
     }
 
     /// Decodes audio into the provided buffer. Returns true if the buffer was filled.
