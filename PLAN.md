@@ -1,5 +1,11 @@
 # Ideas and Plans
 
+- [] make sure that the app (on android) does not stop or is going into sleep mode when in the background
+
+- [] make sure that links are clickable on all platforms
+
+- [] make it possible to load website previews (open graph) and urls eg for gifs, pdf's audio and video files
+
 - [] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
 
 
