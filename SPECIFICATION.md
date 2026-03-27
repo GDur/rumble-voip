@@ -29,3 +29,13 @@ This document defines the expected behaviors and implementation standards for th
 ## 5. UI/UX Preferences
 - **PTT Display**: The Push-To-Talk button must reflect the actual "Talking" state of the local user, not just the physical button press.
 - **Notice Icons**: Users with a comment/notice should have a visible icon (e.g., `LucideIcons.stickyNote`) that opens the notice view.
+
+## 6. Audio Engineering & Buffering
+- **Jitter Buffer**:
+    - **Reactivity**: Changes to the software jitter buffer (e.g., via settings) must be **instant (live)** without requiring a reconnect or restart.
+    - **Overflow strategy**: Implementation must use "tail-drop" (dropping oldest packets) when the buffer hits its capacity limit to avoid thread panics and reset clock-drift latency.
+- **Output Delay (Hardware Buffer)**:
+    - **Purpose**: Controls the low-level OS audio buffer size. Useful for mobile hardware (like Android) where smaller buffers cause "crackling" or "clicks."
+    - **Lifecycle**: Requires a **reconnect/restart** to re-open the audio output stream with the new hardware constraints.
+- **Filling Strategy**: Implementation should use **proactive filling**—notifying the decode thread to top up the buffer on every hardware callback—rather than waiting for a starvation threshold.
+- **Android Support**: `android:extractNativeLibs="true"` must be set in `AndroidManifest.xml` to prevent `dlopen` failures on large Rust debug binaries.
