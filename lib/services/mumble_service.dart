@@ -23,6 +23,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   final Set<int> _talkingUsers = {};
   final List<ChatMessage> _messages = [];
   int? _selfSession;
+  bool _isLocalPttActive = false;
   late SettingsService _settings;
 
   final ValueNotifier<double> volumeNotifier = ValueNotifier(0.0);
@@ -43,7 +44,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   String get currentChannelName => self?.channelId != null 
       ? _channels.firstWhere((c) => c.id == self!.channelId).name 
       : 'Not Connected';
-  bool get isTalking => _talkingUsers.contains(_selfSession);
+  bool get isTalking => _isLocalPttActive || _talkingUsers.contains(_selfSession);
   double get currentVolume => volumeNotifier.value;
   bool get isSuppressed => self?.isSuppressed ?? false;
 
@@ -328,6 +329,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   }
 
   void setPtt(bool active) {
+    _isLocalPttActive = active;
+    notifyListeners();
     _rustEngine.setPtt(active: active);
   }
 
@@ -410,10 +413,14 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   }
 
   Future<void> startPushToTalk() async {
+    _isLocalPttActive = true;
+    notifyListeners();
     await _rustEngine.setPtt(active: true);
   }
 
   Future<void> stopPushToTalk() async {
+    _isLocalPttActive = false;
+    notifyListeners();
     await _rustEngine.setPtt(active: false);
   }
 
