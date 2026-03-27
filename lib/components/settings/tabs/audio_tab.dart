@@ -362,6 +362,51 @@ class AudioTab extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
+          const Text(
+            'Output Delay (Hardware Buffer)',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ShadSlider(
+                    initialValue: settings.playbackHwBufferMs.toDouble(),
+                    min: 0.0,
+                    max: 100.0,
+                    divisions: 20,
+                    thumbRadius: 10,
+                    onChanged: (v) {
+                      final ms = v.round();
+                      settings.setPlaybackHwBufferMs(ms);
+                      mumbleService.updateAudioSettings(
+                        playbackHwBufferMs: ms,
+                      );
+                      onUpdate(() {});
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 60,
+                child: Text(
+                  settings.playbackHwBufferMs == 0
+                      ? 'Default'
+                      : '${settings.playbackHwBufferMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Increase if audio is choppy/crackly. 0 = OS Default.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

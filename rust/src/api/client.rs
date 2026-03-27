@@ -190,7 +190,7 @@ impl RustAudioEngine {
             network_tx,
             ptt_active,
             input_rate,
-            config.clone(),
+            self.config.clone(),
         );
 
         crate::mumble::dsp::spawn_decode_thread(
@@ -199,7 +199,7 @@ impl RustAudioEngine {
             udp_rx,
             event_sink,
             output_rate,
-            config,
+            self.config.clone(),
             global_volume,
             vol_cmd_rx,
         );

@@ -98,6 +98,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       bitrate: settings.outgoingAudioBitrate,
       msPerPacket: settings.outgoingAudioMsPerPacket,
       jitterBuffer: settings.incomingJitterBufferMs,
+      playbackHwBufferMs: settings.playbackHwBufferMs,
       captureDevice: captureDeviceId,
       playbackDevice: playbackDeviceId,
       inputGain: inputGain,
@@ -447,6 +448,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     int? outgoingAudioBitrate,
     int? outgoingAudioMsPerPacket,
     int? incomingJitterBufferMs,
+    int? playbackHwBufferMs,
     String? captureDeviceId,
     String? playbackDeviceId,
   }) async {
@@ -454,7 +456,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       outgoingAudioBitrate: outgoingAudioBitrate ?? bitrate ?? _settings.outgoingAudioBitrate,
       outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? msPerPacket ?? _settings.outgoingAudioMsPerPacket,
       incomingJitterBufferMs: incomingJitterBufferMs ?? jitterBuffer ?? _settings.incomingJitterBufferMs,
-      playbackHwBufferSize: const AudioBufferSize.default_(),
+      playbackHwBufferSize: (playbackHwBufferMs ?? _settings.playbackHwBufferMs) > 0 
+          ? AudioBufferSize.fixed((playbackHwBufferMs ?? _settings.playbackHwBufferMs) * 48) // 48 samples per ms @ 48kHz
+          : const AudioBufferSize.default_(),
       captureHwBufferSize: const AudioBufferSize.default_(),
       captureDeviceId: captureDeviceId ?? captureDevice,
       playbackDeviceId: playbackDeviceId ?? playbackDevice,

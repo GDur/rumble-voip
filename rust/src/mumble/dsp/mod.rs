@@ -119,15 +119,14 @@ pub fn spawn_decode_thread(
     udp_rx: Receiver<IncomingAudio>,
     event_sink: crate::frb_generated::StreamSink<AudioEvent>,
     output_rate: u32,
-    config: MumbleConfig,
+    config_arc: Arc<std::sync::Mutex<MumbleConfig>>,
     global_volume: Arc<AtomicU32>,
     vol_cmd_rx: Receiver<(u32, f32)>, // (session_id, volume)
 ) {
     std::thread::spawn(move || {
-        let mut mixer = PlaybackMixer::new(output_rate, &config, global_volume);
-        // Ensure the jitter buffer has a baseline number of frames before playback feels stable.
-        let target_latency_samples =
-            (output_rate as f32 * (config.incoming_jitter_buffer_ms as f32 / 1000.0)) as usize;
+        let initial_config = config_arc.lock().unwrap().clone();
+        let mut mixer = PlaybackMixer::new(output_rate, &initial_config, global_volume);
+        // We will calculate target_latency_samples dynamically inside the loop.
 
         loop {
             select! {
@@ -170,6 +169,10 @@ pub fn spawn_decode_thread(
                 }
                 recv(output_notify) -> msg => {
                     if msg.is_err() { break; }
+                    
+                    let jitter_ms = config_arc.lock().unwrap().incoming_jitter_buffer_ms;
+                    let target_latency_samples =
+                        (output_rate as f32 * (jitter_ms as f32 / 1000.0)) as usize;
 
                     // Fill the output ring buffer until target latency is reached.
                     while prod_out.occupied_len() < target_latency_samples {

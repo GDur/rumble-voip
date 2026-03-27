@@ -24,6 +24,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kOutgoingAudioBitrate = 'outgoing_audio_bitrate';
   static const String _kOutgoingAudioMsPerPacket = 'outgoing_audio_ms_per_packet';
   static const String _kIncomingJitterBufferMs = 'incoming_jitter_buffer_ms';
+  static const String _kPlaybackHwBufferMs = 'playback_hw_buffer_ms';
 
   final SharedPreferences _prefs;
 
@@ -43,6 +44,7 @@ class SettingsService extends ChangeNotifier {
   int _outgoingAudioBitrate;
   int _outgoingAudioMsPerPacket;
   int _incomingJitterBufferMs;
+  int _playbackHwBufferMs;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -59,6 +61,7 @@ class SettingsService extends ChangeNotifier {
       _outgoingAudioBitrate = _prefs.getInt(_kOutgoingAudioBitrate) ?? 72000,
       _outgoingAudioMsPerPacket = _prefs.getInt(_kOutgoingAudioMsPerPacket) ?? 10,
       _incomingJitterBufferMs = _prefs.getInt(_kIncomingJitterBufferMs) ?? 40,
+      _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -100,6 +103,7 @@ class SettingsService extends ChangeNotifier {
   int get outgoingAudioBitrate => _outgoingAudioBitrate;
   int get outgoingAudioMsPerPacket => _outgoingAudioMsPerPacket;
   int get incomingJitterBufferMs => _incomingJitterBufferMs;
+  int get playbackHwBufferMs => _playbackHwBufferMs;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -243,6 +247,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setIncomingJitterBufferMs(int ms) async {
     _incomingJitterBufferMs = ms;
     await _prefs.setInt(_kIncomingJitterBufferMs, ms);
+    notifyListeners();
+  }
+
+  Future<void> setPlaybackHwBufferMs(int ms) async {
+    _playbackHwBufferMs = ms;
+    await _prefs.setInt(_kPlaybackHwBufferMs, ms);
     notifyListeners();
   }
 }
