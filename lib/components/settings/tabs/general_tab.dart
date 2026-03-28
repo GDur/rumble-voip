@@ -70,9 +70,7 @@ class GeneralTab extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
-                child: Text('Remember last folder'),
-              ),
+              const Expanded(child: Text('Remember last channel')),
               const SizedBox(width: 8),
               ShadSwitch(
                 value: settings.rememberLastChannel,
