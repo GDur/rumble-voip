@@ -38,7 +38,7 @@
     - [x] Increase the hitbox size for the channel chevrons.
 - [x] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
 
-- [ ] audio input delay settings: add delay so that it is easier that the hotkey tab sound is not being transmitted on laptop keyboards for example)
+- [x] audio input delay settings: add delay so that it is easier that the hotkey tab sound is not being transmitted on laptop keyboards for example)
 
 - [ ] **Verify hotkeys**:
     - [x] Ensure custom hotkeys work correctly (currently only selectable ones might work).

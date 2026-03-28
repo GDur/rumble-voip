@@ -41,6 +41,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   String? _pttErrorMessage;
 
   StreamSubscription? _audioEventSubscription;
+  Timer? _pttStartTimer;
+  Timer? _pttHoldTimer;
 
   bool get isConnected => _isConnected;
   String? get error => _error;
@@ -485,9 +487,11 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   }
 
   void setPtt(bool active) {
-    _isLocalPttActive = active;
-    notifyListeners();
-    _rustEngine.setPtt(active: active);
+    if (active) {
+      startPushToTalk();
+    } else {
+      stopPushToTalk();
+    }
   }
 
   void setMute(bool mute) {
@@ -574,15 +578,43 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   }
 
   Future<void> startPushToTalk() async {
-    _isLocalPttActive = true;
-    notifyListeners();
-    await _rustEngine.setPtt(active: true);
+    _pttHoldTimer?.cancel();
+    _pttHoldTimer = null;
+
+    final delay = _settings.pttStartDelayMs;
+    if (delay > 0) {
+      _pttStartTimer?.cancel();
+      _pttStartTimer = Timer(Duration(milliseconds: delay), () async {
+        _isLocalPttActive = true;
+        notifyListeners();
+        await _rustEngine.setPtt(active: true);
+        _pttStartTimer = null;
+      });
+    } else {
+      _isLocalPttActive = true;
+      notifyListeners();
+      await _rustEngine.setPtt(active: true);
+    }
   }
 
   Future<void> stopPushToTalk() async {
-    _isLocalPttActive = false;
-    notifyListeners();
-    await _rustEngine.setPtt(active: false);
+    _pttStartTimer?.cancel();
+    _pttStartTimer = null;
+
+    final hold = _settings.pttHoldMs;
+    if (hold > 0) {
+      _pttHoldTimer?.cancel();
+      _pttHoldTimer = Timer(Duration(milliseconds: hold), () async {
+        _isLocalPttActive = false;
+        notifyListeners();
+        await _rustEngine.setPtt(active: false);
+        _pttHoldTimer = null;
+      });
+    } else {
+      _isLocalPttActive = false;
+      notifyListeners();
+      await _rustEngine.setPtt(active: false);
+    }
   }
 
   void refreshInputDevices() => _refreshDevices();
@@ -593,6 +625,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   @override
   void dispose() {
     _audioEventSubscription?.cancel();
+    _pttStartTimer?.cancel();
+    _pttHoldTimer?.cancel();
     _dumbleClient?.close();
     super.dispose();
   }

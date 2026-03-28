@@ -29,6 +29,8 @@ class SettingsService extends ChangeNotifier {
   static const String _kPlaybackHwBufferMs = 'playback_hw_buffer_ms';
   static const String _kRememberLastChannel = 'remember_last_channel';
   static const String _kHideEmptyChannels = 'hide_empty_channels';
+  static const String _kPttHoldMs = 'ptt_hold_ms';
+  static const String _kPtStartDelayMs = 'ptt_start_delay_ms';
 
   final SharedPreferences _prefs;
 
@@ -52,6 +54,8 @@ class SettingsService extends ChangeNotifier {
   int _playbackHwBufferMs;
   bool _rememberLastChannel;
   bool _hideEmptyChannels;
+  int _pttHoldMs;
+  int _pttStartDelayMs;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -71,6 +75,8 @@ class SettingsService extends ChangeNotifier {
       _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
       _rememberLastChannel = _prefs.getBool(_kRememberLastChannel) ?? true,
       _hideEmptyChannels = _prefs.getBool(_kHideEmptyChannels) ?? false,
+      _pttHoldMs = _prefs.getInt(_kPttHoldMs) ?? 200,
+      _pttStartDelayMs = _prefs.getInt(_kPtStartDelayMs) ?? 0,
       _hotkeyBindings = [],
       _userVolumes = {} {
     // Load user volumes
@@ -131,6 +137,8 @@ class SettingsService extends ChangeNotifier {
   int get playbackHwBufferMs => _playbackHwBufferMs;
   bool get rememberLastChannel => _rememberLastChannel;
   bool get hideEmptyChannels => _hideEmptyChannels;
+  int get pttHoldMs => _pttHoldMs;
+  int get pttStartDelayMs => _pttStartDelayMs;
   List<Map<String, dynamic>> get hotkeyBindings => List.unmodifiable(_hotkeyBindings);
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
@@ -326,6 +334,18 @@ class SettingsService extends ChangeNotifier {
   Future<void> setHideEmptyChannels(bool value) async {
     _hideEmptyChannels = value;
     await _prefs.setBool(_kHideEmptyChannels, value);
+    notifyListeners();
+  }
+
+  Future<void> setPttHoldMs(int ms) async {
+    _pttHoldMs = ms;
+    await _prefs.setInt(_kPttHoldMs, ms);
+    notifyListeners();
+  }
+
+  Future<void> setPtStartDelayMs(int ms) async {
+    _pttStartDelayMs = ms;
+    await _prefs.setInt(_kPtStartDelayMs, ms);
     notifyListeners();
   }
 }

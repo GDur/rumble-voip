@@ -187,6 +187,80 @@ class AudioInputTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
+            'PTT Start Delay',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: RumbleTooltip(
+                  message: 'Avoid transmitting your keyboard click sound',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.pttStartDelayMs.toDouble(),
+                      min: 0.0,
+                      max: 250.0,
+                      divisions: 25,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        settings.setPtStartDelayMs(v.round());
+                        onUpdate(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  '${settings.pttStartDelayMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'PTT Hold Time',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: RumbleTooltip(
+                  message: 'Hold the microphone open for a short time after release',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.pttHoldMs.toDouble(),
+                      min: 0.0,
+                      max: 2000.0,
+                      divisions: 40,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        settings.setPttHoldMs(v.round());
+                        onUpdate(() {});
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  '${settings.pttHoldMs} ms',
+                  style: theme.textTheme.muted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
             'Microphone Test',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),

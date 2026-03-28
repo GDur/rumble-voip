@@ -103,7 +103,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ? null
           : BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.5,
-              maxHeight: MediaQuery.of(context).size.height * 0.5,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
       title: title,
       child: SafeArea(
