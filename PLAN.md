@@ -18,13 +18,13 @@
 
 - [x] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
 
-- [ ] make the ptt buttons in the settings and the chatview about 70% seethrough
+- [ ] make the ptt buttons in the settings and the chatview about 70% seethrough (not in the standard view. only in the settings etc)
 
 - [x] when the user joins a server then it will alsmost always write a custom welcome message. this should be shown as it contiains sometimes hints on how to behave etc. (its a text contained in the server info)
 
 - [x] **Fix autojoin channel**: Check when the current channel is being saved. Also, rename "folder" to "channel" in the settings.
 
-- [ ] **Expand hotkey support**: Enable other actions to be triggered by hotkeys. Allow multiple hotkeys to activate a single action (e.g., F13 and Caps Lock could both trigger PTT).
+- [x] **Expand hotkey support**: Enable other actions to be triggered by hotkeys. Allow multiple hotkeys to activate a single action (e.g., F13 and Caps Lock could both trigger PTT).
 
 - [x] **Filter empty channels**: Add a toggle button in the top header to hide empty channels in the view.
 
@@ -37,11 +37,14 @@
     - [x] Indicate item selection on pointer down, not just on pointer up.
     - [x] Increase the hitbox size for the channel chevrons.
 - [x] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
+
+- [ ] audio input delay settings: add delay so that it is easier that the hotkey tab sound is not being transmitted on laptop keyboards for example)
+
 - [ ] **Verify hotkeys**:
-    - [ ] Ensure custom hotkeys work correctly (currently only selectable ones might work).
+    - [x] Ensure custom hotkeys work correctly (currently only selectable ones might work).
     - [ ] Ensure the "suppress hotkey" functionality works.
 - [x] **Chat notifications**: Show the number of unread chat messages (on mobile/when the chat toggle is visible). Use a small number, or just a dot if more than 9. The indicator should disappear after the chat is opened/read.
-- [ ] **Tooltips**: Add tooltips for almost all elements and buttons.
+- [ ] **Tooltips**: Add tooltips for almost all elements and buttons. (but not the ptt button!)
 - [x] **Background support (Mobile)**: Allow the app to remain active in the background.
     - [] **Android**: Show a persistent indicator and/or a floating PTT button if possible.
     - [x] **General**: Show some kind of active status indicator.

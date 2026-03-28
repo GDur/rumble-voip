@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:rumble/services/certificate_service.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Brand Colors (Moved here or should be in a global theme file)
 const kBrandGreen = Color(0xFF64FFDA);
@@ -37,9 +38,12 @@ class CertificateTab extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ShadButton.outline(
-                      size: ShadButtonSize.sm,
-                      onPressed: () async {
+                    RumbleTooltip(
+                      message:
+                          'Import an existing identity certificate from a .p12 or .pfx file',
+                      child: ShadButton.outline(
+                        size: ShadButtonSize.sm,
+                        onPressed: () async {
                         final result = await FilePicker.platform.pickFiles(
                           type: FileType.custom,
                           allowedExtensions: ['p12', 'pfx'],
@@ -86,14 +90,18 @@ class CertificateTab extends StatelessWidget {
                       },
                       child: const Text('Import P12'),
                     ),
+                  ),
                     const SizedBox(width: 8),
-                    ShadButton(
-                      size: ShadButtonSize.sm,
-                      onPressed: () async {
-                        await certService.generateCertificate('My Mumble Cert');
-                        onUpdate(() {});
-                      },
-                      child: const Text('Generate'),
+                    RumbleTooltip(
+                      message: 'Generate a new self-signed identity certificate',
+                      child: ShadButton(
+                        size: ShadButtonSize.sm,
+                        onPressed: () async {
+                          await certService.generateCertificate('My Mumble Cert');
+                          onUpdate(() {});
+                        },
+                        child: const Text('Generate'),
+                      ),
                     ),
                   ],
                 ),
@@ -158,8 +166,8 @@ class CertificateTab extends StatelessWidget {
               ),
               Row(
                 children: [
-                  ShadTooltip(
-                    builder: (context) => const Text('Set as default'),
+                  RumbleTooltip(
+                    message: 'Set as default',
                     child: ShadButton.ghost(
                       size: ShadButtonSize.sm,
                       onPressed: () {
@@ -175,8 +183,8 @@ class CertificateTab extends StatelessWidget {
                       ),
                     ),
                   ),
-                  ShadTooltip(
-                    builder: (context) => const Text('Export P12'),
+                  RumbleTooltip(
+                    message: 'Export P12',
                     child: ShadButton.ghost(
                       size: ShadButtonSize.sm,
                       onPressed: () async {
@@ -193,8 +201,8 @@ class CertificateTab extends StatelessWidget {
                       child: const Icon(LucideIcons.download, size: 16),
                     ),
                   ),
-                  ShadTooltip(
-                    builder: (context) => const Text('Delete'),
+                  RumbleTooltip(
+                    message: 'Delete',
                     child: ShadButton.ghost(
                       size: ShadButtonSize.sm,
                       onPressed: () {

@@ -13,6 +13,7 @@ import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/components/channel_tree.dart';
 import 'package:rumble/models/server.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
@@ -169,7 +170,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsService>(
       builder: (context, settings, _) => ShadApp(
-        builder: (context, child) => SafeArea(child: child!),
+        builder: (context, child) => child!,
         title: 'Rumble',
         debugShowCheckedModeBanner: false,
         themeMode: settings.themeMode,
@@ -552,11 +553,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
     final isSlim = MediaQuery.of(context).size.width < 600;
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.background,
-      body: SafeArea(
-        child: Column(
+ 
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: theme.colorScheme.background,
+        body: Column(
           children: [
             if (!connectivityService.isOnline)
               Container(
@@ -687,9 +688,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                ShadIconButton.ghost(
-                  icon: const Icon(LucideIcons.messageSquare, size: 20),
-                  onPressed: () => _showChatSheet(context, mumbleService),
+                RumbleTooltip(
+                  message: 'Show Chat',
+                  child: ShadIconButton.ghost(
+                    icon: const Icon(LucideIcons.messageSquare, size: 20),
+                    onPressed: () => _showChatSheet(context, mumbleService),
+                  ),
                 ),
                 if (mumbleService.unreadMessagesCount > 0)
                   Positioned(
@@ -726,17 +730,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           if (mumbleService.isConnected)
-            ShadIconButton.ghost(
-              icon: Icon(
-                LucideIcons.logOut,
-                color: theme.colorScheme.destructive,
-                size: 20,
+            RumbleTooltip(
+              message: 'Disconnect from server',
+              child: ShadIconButton.ghost(
+                icon: Icon(
+                  LucideIcons.logOut,
+                  color: theme.colorScheme.destructive,
+                  size: 20,
+                ),
+                onPressed: () => mumbleService.disconnect(),
               ),
-              onPressed: () => mumbleService.disconnect(),
             ),
-          ShadIconButton.ghost(
-            icon: const Icon(LucideIcons.settings, size: 20),
-            onPressed: () => _showSettingsDialog(context),
+          RumbleTooltip(
+            message: 'Settings',
+            child: ShadIconButton.ghost(
+              icon: const Icon(LucideIcons.settings, size: 20),
+              onPressed: () => _showSettingsDialog(context),
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -786,10 +796,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Row(
                   children: [
-                    ShadButton(
-                      leading: const Icon(LucideIcons.plus, size: 16),
-                      onPressed: () => _showAddServerDialog(context),
-                      child: const Text('Add Server'),
+                    RumbleTooltip(
+                      message: 'Add a new Mumble server',
+                      child: ShadButton(
+                        leading: const Icon(LucideIcons.plus, size: 16),
+                        onPressed: () => _showAddServerDialog(context),
+                        child: const Text('Add Server'),
+                      ),
                     ),
                   ],
                 ),
@@ -865,16 +878,22 @@ class _HomeScreenState extends State<HomeScreen> {
             style: theme.textTheme.muted.copyWith(fontSize: 16),
           ),
           const SizedBox(height: 40),
-          ShadButton(
-            size: ShadButtonSize.lg,
-            leading: const Icon(LucideIcons.plus, size: 20),
-            onPressed: () => _showAddServerDialog(context),
-            child: const Text('Add First Server'),
+          RumbleTooltip(
+            message: 'Add your first Mumble server to the list',
+            child: ShadButton(
+              size: ShadButtonSize.lg,
+              leading: const Icon(LucideIcons.plus, size: 20),
+              onPressed: () => _showAddServerDialog(context),
+              child: const Text('Add First Server'),
+            ),
           ),
           const SizedBox(height: 16),
-          ShadButton.ghost(
-            onPressed: () => _showSettingsDialog(context),
-            child: const Text('Application Settings'),
+          RumbleTooltip(
+            message: 'Open application settings',
+            child: ShadButton.ghost(
+              onPressed: () => _showSettingsDialog(context),
+              child: const Text('Application Settings'),
+            ),
           ),
         ],
       ),
@@ -930,26 +949,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 foregroundColor: kBrandGreen,
                 mutedColor: theme.colorScheme.mutedForeground,
               ),
-            ShadIconButton.ghost(
-              icon: Icon(
-                isMuted ? LucideIcons.micOff : LucideIcons.mic,
-                color: isMuted
-                    ? theme.colorScheme.destructive
-                    : theme.colorScheme.primary,
-                size: 20,
+            RumbleTooltip(
+              message: isMuted ? 'Unmute' : 'Mute',
+              child: ShadIconButton.ghost(
+                icon: Icon(
+                  isMuted ? LucideIcons.micOff : LucideIcons.mic,
+                  color: isMuted
+                      ? theme.colorScheme.destructive
+                      : theme.colorScheme.primary,
+                  size: 20,
+                ),
+                onPressed: () => service.toggleMute(),
               ),
-              onPressed: () => service.toggleMute(),
             ),
           ],
         ),
-        ShadIconButton.ghost(
-          icon: Icon(
-            isDeafened ? LucideIcons.headphoneOff : LucideIcons.headphones,
-            color: isDeafened
-                ? theme.colorScheme.destructive
-                : theme.colorScheme.primary,
+        RumbleTooltip(
+          message: isDeafened ? 'Undeafen' : 'Deafen',
+          child: ShadIconButton.ghost(
+            icon: Icon(
+              isDeafened ? LucideIcons.headphoneOff : LucideIcons.headphones,
+              color: isDeafened
+                  ? theme.colorScheme.destructive
+                  : theme.colorScheme.primary,
+            ),
+            onPressed: () => service.toggleDeafen(),
           ),
-          onPressed: () => service.toggleDeafen(),
         ),
       ],
     );
@@ -999,15 +1024,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      child: ShadIconButton.ghost(
-        onPressed: () => _volumePopoverController.toggle(),
-        icon: Icon(
-          settings.outputVolume == 0
-              ? LucideIcons.volumeX
-              : settings.outputVolume < 0.5
-                  ? LucideIcons.volume1
-                  : LucideIcons.volume2,
-          color: theme.colorScheme.primary,
+      child: RumbleTooltip(
+        message: 'Volume Settings',
+        child: ShadIconButton.ghost(
+          onPressed: () => _volumePopoverController.toggle(),
+          icon: Icon(
+            settings.outputVolume == 0
+                ? LucideIcons.volumeX
+                : settings.outputVolume < 0.5
+                    ? LucideIcons.volume1
+                    : LucideIcons.volume2,
+            color: theme.colorScheme.primary,
+          ),
         ),
       ),
     );

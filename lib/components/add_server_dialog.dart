@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/server_provider.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: add-edit-server-dialog
 class AddServerDialog extends StatefulWidget {
@@ -252,15 +253,18 @@ class _AddServerDialogState extends State<AddServerDialog> {
                       padding: EdgeInsets.all(8.0),
                       child: Icon(LucideIcons.lock, size: 16),
                     ),
-                    trailing: ShadIconButton.ghost(
-                      width: 24,
-                      height: 24,
-                      padding: EdgeInsets.zero,
-                      onPressed: () =>
-                          setState(() => _passwordObscure = !_passwordObscure),
-                      icon: Icon(
-                        _passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff,
-                        size: 16,
+                    trailing: RumbleTooltip(
+                      message: 'Toggle password visibility',
+                      child: ShadIconButton.ghost(
+                        width: 24,
+                        height: 24,
+                        padding: EdgeInsets.zero,
+                        onPressed: () =>
+                            setState(() => _passwordObscure = !_passwordObscure),
+                        icon: Icon(
+                          _passwordObscure ? LucideIcons.eye : LucideIcons.eyeOff,
+                          size: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -279,12 +283,8 @@ class _AddServerDialogState extends State<AddServerDialog> {
       children: [
         Text(text),
         const SizedBox(width: 4),
-        ShadTooltip(
-          builder: (context) => Container(
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(maxWidth: 200),
-            child: Text(tooltip),
-          ),
+        RumbleTooltip(
+          message: tooltip,
           child: Padding(
             padding: const EdgeInsets.all(4.0),
             child: Icon(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/server_provider.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: server-actions
 class ServerActions extends StatefulWidget {
@@ -87,17 +88,20 @@ class _ServerActionsState extends State<ServerActions> {
           ),
         );
       },
-      child: ShadIconButton.ghost(
-        icon: Icon(
-          LucideIcons.ellipsisVertical,
-          size: 16,
-          color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+      child: RumbleTooltip(
+        message: 'Server Actions',
+        child: ShadIconButton.ghost(
+          icon: Icon(
+            LucideIcons.ellipsisVertical,
+            size: 16,
+            color: theme.colorScheme.foreground.withValues(alpha: 0.5),
+          ),
+          width: 32,
+          height: 32,
+          padding: EdgeInsets.zero,
+          decoration: ShadDecoration(shape: BoxShape.circle),
+          onPressed: () => controller.toggle(),
         ),
-        width: 32,
-        height: 32,
-        padding: EdgeInsets.zero,
-        decoration: ShadDecoration(shape: BoxShape.circle),
-        onPressed: () => controller.toggle(),
       ),
     );
   }

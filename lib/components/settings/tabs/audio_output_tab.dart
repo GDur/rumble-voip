@@ -3,6 +3,7 @@ import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/src/rust/mumble/hardware/audio.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: audio-output-tab
 class AudioOutputTab extends StatelessWidget {
@@ -88,18 +89,21 @@ class AudioOutputTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ShadSlider(
-                    initialValue: settings.outputVolume,
-                    min: 0.0,
-                    max: 1.5,
-                    thumbRadius: 10,
-                    onChanged: (v) {
-                      settings.setOutputVolume(v);
-                      mumbleService.updateAudioSettings(outputVolume: v);
-                      onUpdate(() {});
-                    },
+                child: RumbleTooltip(
+                  message: 'Adjust the volume of other users',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.outputVolume,
+                      min: 0.0,
+                      max: 1.5,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        settings.setOutputVolume(v);
+                        mumbleService.updateAudioSettings(outputVolume: v);
+                        onUpdate(() {});
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -121,12 +125,15 @@ class AudioOutputTab extends StatelessWidget {
                 'Show volume indicator',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              ShadSwitch(
-                value: settings.showVolumeIndicator,
-                onChanged: (v) {
-                  settings.setShowVolumeIndicator(v);
-                  onUpdate(() {});
-                },
+              RumbleTooltip(
+                message: 'Show your volume level next to the mic icon',
+                child: ShadSwitch(
+                  value: settings.showVolumeIndicator,
+                  onChanged: (v) {
+                    settings.setShowVolumeIndicator(v);
+                    onUpdate(() {});
+                  },
+                ),
               ),
             ],
           ),
@@ -139,22 +146,26 @@ class AudioOutputTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ShadSlider(
-                    initialValue: settings.incomingJitterBufferMs.toDouble(),
-                    min: 0.0,
-                    max: 500.0,
-                    divisions: 50,
-                    thumbRadius: 10,
-                    onChanged: (v) {
-                      final ms = v.round();
-                      settings.setIncomingJitterBufferMs(ms);
-                      mumbleService.updateAudioSettings(
-                        incomingJitterBufferMs: ms,
-                      );
-                      onUpdate(() {});
-                    },
+                child: RumbleTooltip(
+                  message:
+                      'Smooth out network jitter (higher = more latency, but smoother audio)',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.incomingJitterBufferMs.toDouble(),
+                      min: 0.0,
+                      max: 500.0,
+                      divisions: 50,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        final ms = v.round();
+                        settings.setIncomingJitterBufferMs(ms);
+                        mumbleService.updateAudioSettings(
+                          incomingJitterBufferMs: ms,
+                        );
+                        onUpdate(() {});
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -177,22 +188,26 @@ class AudioOutputTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ShadSlider(
-                    initialValue: settings.playbackHwBufferMs.toDouble(),
-                    min: 0.0,
-                    max: 100.0,
-                    divisions: 20,
-                    thumbRadius: 10,
-                    onChanged: (v) {
-                      final ms = v.round();
-                      settings.setPlaybackHwBufferMs(ms);
-                      mumbleService.updateAudioSettings(
-                        playbackHwBufferMs: ms,
-                      );
-                      onUpdate(() {});
-                    },
+                child: RumbleTooltip(
+                  message:
+                      'Adjust hardware buffer size (increase if audio crackles)',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.playbackHwBufferMs.toDouble(),
+                      min: 0.0,
+                      max: 100.0,
+                      divisions: 20,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        final ms = v.round();
+                        settings.setPlaybackHwBufferMs(ms);
+                        mumbleService.updateAudioSettings(
+                          playbackHwBufferMs: ms,
+                        );
+                        onUpdate(() {});
+                      },
+                    ),
                   ),
                 ),
               ),

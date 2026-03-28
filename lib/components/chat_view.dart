@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:rumble/components/image_gallery.dart';
 import 'package:rumble/components/ptt_button.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -362,14 +363,17 @@ class _ChatViewState extends State<ChatView> {
                     Positioned(
                       bottom: 16,
                       right: 16,
-                      child: ShadIconButton.secondary(
-                        icon: const Icon(LucideIcons.chevronDown, size: 16),
-                        onPressed: () {
-                          _scrollToBottom();
-                          setState(() {
-                            _shouldAutoScroll = true;
-                          });
-                        },
+                      child: RumbleTooltip(
+                        message: 'Scroll to latest',
+                        child: ShadIconButton.secondary(
+                          icon: const Icon(LucideIcons.chevronDown, size: 16),
+                          onPressed: () {
+                            _scrollToBottom();
+                            setState(() {
+                              _shouldAutoScroll = true;
+                            });
+                          },
+                        ),
                       ),
                     ),
                 ],
@@ -396,9 +400,12 @@ class _ChatViewState extends State<ChatView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ShadIconButton(
-                    icon: const Icon(LucideIcons.send, size: 18),
-                    onPressed: _sendMessage,
+                  RumbleTooltip(
+                    message: 'Send message',
+                    child: ShadIconButton(
+                      icon: const Icon(LucideIcons.send, size: 18),
+                      onPressed: _sendMessage,
+                    ),
                   ),
                 ],
               ),

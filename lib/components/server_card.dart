@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/components/server_actions.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: server-card
 class ServerCard extends StatelessWidget {
@@ -121,16 +122,19 @@ class ServerCard extends StatelessWidget {
   }
 
   Widget _buildIcon(ShadThemeData theme, {double size = 40}) {
-    return Container(
-      padding: EdgeInsets.all(size / 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(size / 4),
-      ),
-      child: Icon(
-        LucideIcons.server,
-        color: theme.colorScheme.primary,
-        size: size / 2,
+    return RumbleTooltip(
+      message: 'Mumble Server',
+      child: Container(
+        padding: EdgeInsets.all(size / 4),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(size / 4),
+        ),
+        child: Icon(
+          LucideIcons.server,
+          color: theme.colorScheme.primary,
+          size: size / 2,
+        ),
       ),
     );
   }
@@ -166,46 +170,52 @@ class ServerCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.wifi,
-              color: ping != null
-                  ? _getPingColor(ping)
-                  : theme.colorScheme.mutedForeground,
-              size: 14,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              ping != null ? '${ping}ms' : '---',
-              style: TextStyle(
-                color: theme.colorScheme.foreground.withValues(alpha: 0.6),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+        RumbleTooltip(
+          message: 'Server Latency (Ping)',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.wifi,
+                color: ping != null
+                    ? _getPingColor(ping)
+                    : theme.colorScheme.mutedForeground,
+                size: 14,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                ping != null ? '${ping}ms' : '---',
+                style: TextStyle(
+                  color: theme.colorScheme.foreground.withValues(alpha: 0.6),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              LucideIcons.users,
-              color: theme.colorScheme.foreground.withValues(alpha: 0.4),
-              size: 14,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              userCount != null ? '$userCount/${maxUsers ?? "?"}' : '0/0',
-              style: TextStyle(
-                color: theme.colorScheme.foreground.withValues(alpha: 0.6),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+        RumbleTooltip(
+          message: 'Online Users',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.users,
+                color: theme.colorScheme.foreground.withValues(alpha: 0.4),
+                size: 14,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Text(
+                userCount != null ? '$userCount/${maxUsers ?? "?"}' : '0/0',
+                style: TextStyle(
+                  color: theme.colorScheme.foreground.withValues(alpha: 0.6),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -218,26 +228,29 @@ class ServerCard extends StatelessWidget {
   }) {
     return SizedBox(
       width: width,
-      child: ShadButton(
-        size: size ?? ShadButtonSize.regular,
-        onPressed: isConnecting ? null : () => onConnect(server),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Opacity(
-              opacity: isConnecting ? 0 : 1,
-              child: const Text('CONNECT'),
-            ),
-            if (isConnecting)
-              SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.primaryForeground,
-                ),
+      child: RumbleTooltip(
+        message: 'Connect to this server',
+        child: ShadButton(
+          size: size ?? ShadButtonSize.regular,
+          onPressed: isConnecting ? null : () => onConnect(server),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Opacity(
+                opacity: isConnecting ? 0 : 1,
+                child: const Text('CONNECT'),
               ),
-          ],
+              if (isConnecting)
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.primaryForeground,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

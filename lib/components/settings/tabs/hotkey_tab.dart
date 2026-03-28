@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/models/hotkey_action.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: hotkey-tab
 class HotkeyTab extends StatelessWidget {
@@ -39,11 +40,14 @@ class HotkeyTab extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               if (isDesktop)
-                ShadButton.outline(
-                  size: ShadButtonSize.sm,
-                  onPressed: () => _showAddActionMenu(context),
-                  leading: const Icon(LucideIcons.plus, size: 16),
-                  child: const Text('Add Hotkey'),
+                RumbleTooltip(
+                  message: 'Add a new global hotkey binding',
+                  child: ShadButton.outline(
+                    size: ShadButtonSize.sm,
+                    onPressed: () => _showAddActionMenu(context),
+                    leading: const Icon(LucideIcons.plus, size: 16),
+                    child: const Text('Add Hotkey'),
+                  ),
                 ),
             ],
           ),
@@ -81,25 +85,28 @@ class HotkeyTab extends StatelessWidget {
             const SizedBox(height: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 320),
-              child: ShadSelect<PttKey>(
-                placeholder: const Text('Select a preset key'),
-                initialValue: settings.pttKey,
-                onChanged: (value) {
-                  if (value != null) {
-                    settings.setPttKey(value);
-                    onUpdate(() {});
-                  }
-                },
-                selectedOptionBuilder: (context, value) {
-                  return Text(value.name.toUpperCase());
-                },
-                options: [
-                  ...PttKey.values.map((k) {
-                    String label = k.name.toUpperCase();
-                    if (k == PttKey.none) label = 'DISABLED';
-                    return ShadOption(value: k, child: Text(label));
-                  }),
-                ],
+              child: RumbleTooltip(
+                message: 'Quickly set a standard key for Push-To-Talk',
+                child: ShadSelect<PttKey>(
+                  placeholder: const Text('Select a preset key'),
+                  initialValue: settings.pttKey,
+                  onChanged: (value) {
+                    if (value != null) {
+                      settings.setPttKey(value);
+                      onUpdate(() {});
+                    }
+                  },
+                  selectedOptionBuilder: (context, value) {
+                    return Text(value.name.toUpperCase());
+                  },
+                  options: [
+                    ...PttKey.values.map((k) {
+                      String label = k.name.toUpperCase();
+                      if (k == PttKey.none) label = 'DISABLED';
+                      return ShadOption(value: k, child: Text(label));
+                    }),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -160,15 +167,19 @@ class HotkeyTab extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        ShadButton.ghost(
-                          width: 32,
-                          height: 32,
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            settings.removeHotkeyBinding(index);
-                            onUpdate(() {});
-                          },
-                          child: const Icon(LucideIcons.trash2, size: 16, color: Colors.red),
+                        RumbleTooltip(
+                          message: 'Remove this hotkey binding',
+                          child: ShadButton.ghost(
+                            width: 32,
+                            height: 32,
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              settings.removeHotkeyBinding(index);
+                              onUpdate(() {});
+                            },
+                            child: const Icon(LucideIcons.trash2,
+                                size: 16, color: Colors.red),
+                          ),
                         ),
                       ],
                     ),
@@ -242,16 +253,25 @@ class HotkeyTab extends StatelessWidget {
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      ShadButton.outline(
-                        size: ShadButtonSize.sm,
-                        onPressed: () => HotkeyService.of(context).openAccessibilitySettings(),
-                        child: const Text('Open System Settings'),
+                      RumbleTooltip(
+                        message:
+                            'Open macOS System Settings to grant Accessibility access',
+                        child: ShadButton.outline(
+                          size: ShadButtonSize.sm,
+                          onPressed: () => HotkeyService.of(context)
+                              .openAccessibilitySettings(),
+                          child: const Text('Open System Settings'),
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      ShadButton.ghost(
-                        size: ShadButtonSize.sm,
-                        onPressed: () => HotkeyService.of(context).checkPermission(),
-                        child: const Text('Refresh Status'),
+                      RumbleTooltip(
+                        message: 'Refresh the current permission state',
+                        child: ShadButton.ghost(
+                          size: ShadButtonSize.sm,
+                          onPressed: () =>
+                              HotkeyService.of(context).checkPermission(),
+                          child: const Text('Refresh Status'),
+                        ),
                       ),
                     ],
                   ),

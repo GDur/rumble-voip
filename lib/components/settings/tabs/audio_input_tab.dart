@@ -3,6 +3,7 @@ import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/src/rust/mumble/hardware/audio.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: audio-input-tab
 class AudioInputTab extends StatelessWidget {
@@ -83,22 +84,25 @@ class AudioInputTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ShadSlider(
-                    initialValue: settings.outgoingAudioBitrate / 1000,
-                    min: 32.0,
-                    max: 192.0,
-                    divisions: ((192.0 - 32.0) / 16.0).toInt(),
-                    thumbRadius: 10,
-                    onChanged: (v) {
-                      final bitrate = (v * 1000).round();
-                      settings.setOutgoingAudioBitrate(bitrate);
-                      mumbleService.updateAudioSettings(
-                        outgoingAudioBitrate: bitrate,
-                      );
-                      onUpdate(() {});
-                    },
+                child: RumbleTooltip(
+                  message: 'Adjust the outgoing audio quality',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.outgoingAudioBitrate / 1000,
+                      min: 32.0,
+                      max: 192.0,
+                      divisions: ((192.0 - 32.0) / 16.0).toInt(),
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        final bitrate = (v * 1000).round();
+                        settings.setOutgoingAudioBitrate(bitrate);
+                        mumbleService.updateAudioSettings(
+                          outgoingAudioBitrate: bitrate,
+                        );
+                        onUpdate(() {});
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -118,27 +122,31 @@ class AudioInputTab extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          ShadTabs<int>(
-            value: settings.outgoingAudioMsPerPacket,
-            onChanged: (v) {
-              settings.setOutgoingAudioMsPerPacket(v);
-              mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: v);
-              onUpdate(() {});
-            },
-            tabs: [
-              ShadTab(
-                value: 10,
-                child: const Text('10ms'),
-              ),
-              ShadTab(
-                value: 20,
-                child: const Text('20ms'),
-              ),
-              ShadTab(
-                value: 40,
-                child: const Text('40ms'),
-              ),
-            ],
+          RumbleTooltip(
+            message:
+                'Choose the package size (lower is less lag, higher is more stable)',
+            child: ShadTabs<int>(
+              value: settings.outgoingAudioMsPerPacket,
+              onChanged: (v) {
+                settings.setOutgoingAudioMsPerPacket(v);
+                mumbleService.updateAudioSettings(outgoingAudioMsPerPacket: v);
+                onUpdate(() {});
+              },
+              tabs: [
+                ShadTab(
+                  value: 10,
+                  child: const Text('10ms'),
+                ),
+                ShadTab(
+                  value: 20,
+                  child: const Text('20ms'),
+                ),
+                ShadTab(
+                  value: 40,
+                  child: const Text('40ms'),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -149,18 +157,21 @@ class AudioInputTab extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 48,
-                  child: ShadSlider(
-                    initialValue: settings.inputGain,
-                    min: 0.0,
-                    max: 8.0,
-                    thumbRadius: 10,
-                    onChanged: (v) {
-                      settings.setInputGain(v);
-                      mumbleService.updateAudioSettings(inputGain: v);
-                      onUpdate(() {});
-                    },
+                child: RumbleTooltip(
+                  message: 'Adjust the gain of your microphone',
+                  child: SizedBox(
+                    height: 48,
+                    child: ShadSlider(
+                      initialValue: settings.inputGain,
+                      min: 0.0,
+                      max: 8.0,
+                      thumbRadius: 10,
+                      onChanged: (v) {
+                        settings.setInputGain(v);
+                        mumbleService.updateAudioSettings(inputGain: v);
+                        onUpdate(() {});
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -180,35 +191,38 @@ class AudioInputTab extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          ValueListenableBuilder<double>(
-            valueListenable: mumbleService.volumeNotifier,
-            builder: (context, volume, child) {
-              final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
-              return Container(
-                height: 24,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: displayVolume,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.greenAccent, Colors.green],
+          RumbleTooltip(
+            message: 'Visual microphone level feedback',
+            child: ValueListenableBuilder<double>(
+              valueListenable: mumbleService.volumeNotifier,
+              builder: (context, volume, child) {
+                final displayVolume = (volume * volumeMultiplier).clamp(0.0, 1.0);
+                return Container(
+                  height: 24,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Stack(
+                    children: [
+                      FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: displayVolume,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Colors.greenAccent, Colors.green],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 8),
           const Text(

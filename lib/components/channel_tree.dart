@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/src/rust/api/client.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<MumbleChannel> channels;
@@ -499,12 +500,10 @@ class _ChannelTreeState extends State<ChannelTree> {
                       if (isRoot) ...[
                         const SizedBox(width: 4),
                         Consumer<SettingsService>(
-                          builder: (context, settings, _) => ShadTooltip(
-                            builder: (context) => Text(
-                              settings.hideEmptyChannels
-                                  ? 'Show empty channels'
-                                  : 'Hide empty channels',
-                            ),
+                          builder: (context, settings, _) => RumbleTooltip(
+                            message: settings.hideEmptyChannels
+                                ? 'Show empty channels'
+                                : 'Hide empty channels',
                             child: ShadIconButton.ghost(
                               width: 24,
                               height: 24,
@@ -530,21 +529,27 @@ class _ChannelTreeState extends State<ChannelTree> {
                     ],
                     if (channel.isEnterRestricted == true) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        LucideIcons.lock,
-                        size: 12,
-                        color: theme.colorScheme.mutedForeground,
+                      RumbleTooltip(
+                        message: 'Restricted Access',
+                        child: Icon(
+                          LucideIcons.lock,
+                          size: 12,
+                          color: theme.colorScheme.mutedForeground,
+                        ),
                       ),
                     ],
                     if (channel.description != null &&
                         channel.description!.isNotEmpty) ...[
                       const SizedBox(width: 6),
-                      NoticeButton(
-                        title: 'Channel Description',
-                        notice: HtmlUtils.sanitizeMumbleHtml(
-                          channel.description!,
+                      RumbleTooltip(
+                        message: 'Channel Info',
+                        child: NoticeButton(
+                          title: 'Channel Description',
+                          notice: HtmlUtils.sanitizeMumbleHtml(
+                            channel.description!,
+                          ),
+                          icon: LucideIcons.info,
                         ),
-                        icon: LucideIcons.info,
                       ),
                     ],
                   ],
@@ -713,10 +718,13 @@ class _ChannelTreeState extends State<ChannelTree> {
           ],
           if (u.comment != null && u.comment!.isNotEmpty) ...[
             const SizedBox(width: 6),
-            NoticeButton(
-              title: 'User Notice',
-              notice: HtmlUtils.sanitizeMumbleHtml(u.comment!),
-              icon: LucideIcons.fileText,
+            RumbleTooltip(
+              message: 'User Notice',
+              child: NoticeButton(
+                title: 'User Notice',
+                notice: HtmlUtils.sanitizeMumbleHtml(u.comment!),
+                icon: LucideIcons.fileText,
+              ),
             ),
           ],
         ],

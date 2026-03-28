@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/services/settings_service.dart';
+import 'package:rumble/components/rumble_tooltip.dart';
 
 // Component: general-tab
 class GeneralTab extends StatelessWidget {
@@ -23,25 +24,28 @@ class GeneralTab extends StatelessWidget {
           const SizedBox(height: 8),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
-            child: ShadSelect<ThemeMode>(
-              placeholder: const Text('Select Theme'),
-              initialValue: settings.themeMode,
-              onChanged: (value) {
-                if (value != null) {
-                  settings.setThemeMode(value);
-                  onUpdate(() {});
-                }
-              },
-              options: [
-                ShadOption(
-                  value: ThemeMode.system,
-                  child: const Text('System'),
-                ),
-                ShadOption(value: ThemeMode.light, child: const Text('Light')),
-                ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
-              ],
-              selectedOptionBuilder: (context, value) =>
-                  Text(value.name.toUpperCase()),
+            child: RumbleTooltip(
+              message: 'Choose between light, dark, or system theme',
+              child: ShadSelect<ThemeMode>(
+                placeholder: const Text('Select Theme'),
+                initialValue: settings.themeMode,
+                onChanged: (value) {
+                  if (value != null) {
+                    settings.setThemeMode(value);
+                    onUpdate(() {});
+                  }
+                },
+                options: [
+                  ShadOption(
+                    value: ThemeMode.system,
+                    child: const Text('System'),
+                  ),
+                  ShadOption(value: ThemeMode.light, child: const Text('Light')),
+                  ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
+                ],
+                selectedOptionBuilder: (context, value) =>
+                    Text(value.name.toUpperCase()),
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -57,12 +61,16 @@ class GeneralTab extends StatelessWidget {
                 child: Text('Reconnect to last server on startup'),
               ),
               const SizedBox(width: 8),
-              ShadSwitch(
-                value: settings.reconnectToLastServer,
-                onChanged: (val) {
-                  settings.setReconnectToLastServer(val);
-                  onUpdate(() {});
-                },
+              RumbleTooltip(
+                message:
+                    'Automatically connect to your last used server when the app starts',
+                child: ShadSwitch(
+                  value: settings.reconnectToLastServer,
+                  onChanged: (val) {
+                    settings.setReconnectToLastServer(val);
+                    onUpdate(() {});
+                  },
+                ),
               ),
             ],
           ),
@@ -72,12 +80,16 @@ class GeneralTab extends StatelessWidget {
             children: [
               const Expanded(child: Text('Remember last channel')),
               const SizedBox(width: 8),
-              ShadSwitch(
-                value: settings.rememberLastChannel,
-                onChanged: (val) {
-                  settings.setRememberLastChannel(val);
-                  onUpdate(() {});
-                },
+              RumbleTooltip(
+                message:
+                    'Join the last channel you were in when connecting to a server',
+                child: ShadSwitch(
+                  value: settings.rememberLastChannel,
+                  onChanged: (val) {
+                    settings.setRememberLastChannel(val);
+                    onUpdate(() {});
+                  },
+                ),
               ),
             ],
           ),
@@ -87,12 +99,16 @@ class GeneralTab extends StatelessWidget {
             children: [
               const Expanded(child: Text('Hide empty channels')),
               const SizedBox(width: 8),
-              ShadSwitch(
-                value: settings.hideEmptyChannels,
-                onChanged: (val) {
-                  settings.setHideEmptyChannels(val);
-                  onUpdate(() {});
-                },
+              RumbleTooltip(
+                message:
+                    'Filter out channels that have no users in the tree view',
+                child: ShadSwitch(
+                  value: settings.hideEmptyChannels,
+                  onChanged: (val) {
+                    settings.setHideEmptyChannels(val);
+                    onUpdate(() {});
+                  },
+                ),
               ),
             ],
           ),
