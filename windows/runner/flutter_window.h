@@ -7,6 +7,7 @@
 #include <flutter/standard_method_codec.h>
 #include <windows.h>
 
+#include <map>
 #include <memory>
 
 #include "win32_window.h"
@@ -36,8 +37,7 @@ class FlutterWindow : public Win32Window {
   static HHOOK keyboard_hook_;
   static HWND s_window_handle_;
   static std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> permissions_channel_;
-  static unsigned int ptt_vk_code_;
-  static bool ptt_suppress_;
+  static std::map<unsigned int, bool> ptt_keys_;
 
   static LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 };

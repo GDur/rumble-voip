@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:rumble/models/hotkey_action.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/components/settings/tabs/audio_input_tab.dart';
@@ -15,7 +16,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 class SettingsDialog extends StatefulWidget {
   final SettingsService settings;
   final MumbleService mumbleService;
-  final Function(BuildContext, SettingsService) onShowHotkeyRecorder;
+  final Function(BuildContext, SettingsService, {HotkeyAction? action})
+      onShowHotkeyRecorder;
 
   const SettingsDialog({
     super.key,

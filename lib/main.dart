@@ -27,6 +27,7 @@ import 'package:rumble/components/settings/settings_dialog.dart';
 import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
 import 'package:rumble/components/chat_view.dart';
+import 'package:rumble/models/hotkey_action.dart';
 import 'package:rumble/services/connectivity_service.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
 import 'package:rumble/utils/logger.dart';
@@ -364,10 +365,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showHotkeyRecorder(BuildContext context, SettingsService settings) {
+  void _showHotkeyRecorder(
+    BuildContext context,
+    SettingsService settings, {
+    HotkeyAction? action,
+  }) {
     showShadDialog(
       context: context,
-      builder: (context) => HotkeyRecorder(settings: settings),
+      builder: (context) => HotkeyRecorder(
+        settings: settings,
+        action: action ?? HotkeyAction.pushToTalk,
+      ),
     );
   }
 

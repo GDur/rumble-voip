@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:provider/provider.dart';
+import 'package:rumble/models/hotkey_action.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
 
@@ -15,7 +16,6 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     true,
   );
   final ValueNotifier<String?> appPath = ValueNotifier<String?>(null);
-  HotKey? _currentHotKey;
 
   static HotkeyService of(BuildContext context, {bool listen = false}) {
     return Provider.of<HotkeyService>(context, listen: listen);
@@ -56,9 +56,11 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     if (defaultTargetPlatform != TargetPlatform.windows) return;
 
     final settings = _settingsService;
-    int vkCode = 0;
 
+    final pttKeys = <Map<String, dynamic>>[];
+    
     if (settings.pttKey != PttKey.none) {
+      int vkCode = 0;
       switch (settings.pttKey) {
         case PttKey.control:
           vkCode = 0x11;
@@ -78,19 +80,33 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
         default:
           break;
       }
-    } else if (settings.customHotkey != null) {
-      vkCode =
-          int.tryParse(settings.customHotkey!['vkCode']?.toString() ?? '0') ??
-          0;
+      if (vkCode != 0) {
+        pttKeys.add({
+          'vkCode': vkCode,
+          'suppress': settings.pttSuppress,
+        });
+      }
+    }
+    
+    // Add all PTT bindings from the new list
+    for (final binding in settings.hotkeyBindings) {
+      if (binding['action'] == 'pushToTalk' && binding['vkCode'] != null) {
+        final vk = int.tryParse(binding['vkCode'].toString()) ?? 0;
+        if (vk != 0) {
+          pttKeys.add({
+            'vkCode': vk,
+            'suppress': binding['suppress'] ?? true,
+          });
+        }
+      }
     }
 
     try {
-      await _permissionsChannel.invokeMethod('setPttVkCode', {
-        'vkCode': vkCode,
-        'suppress': settings.pttSuppress,
+      await _permissionsChannel.invokeMethod('setPttKeys', {
+        'keys': pttKeys,
       });
     } catch (e) {
-      debugPrint('HotkeyService: Failed to set Windows PTT VK Code: $e');
+      debugPrint('HotkeyService: Failed to set Windows PTT VK Codes: $e');
     }
   }
 
@@ -120,58 +136,61 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
       // Standalone modifiers are handled via native monitors on macOS/Windows
       if (defaultTargetPlatform == TargetPlatform.macOS ||
           defaultTargetPlatform == TargetPlatform.windows) {
-        return;
+        // Continue to check other custom hotkeys even if preset is active
+      } else {
+        // Fallback for Linux (X11)
+        final key = _mapPttKeyToPhysicalKey(settings.pttKey);
+        if (key != null) {
+          final hotKey = HotKey(key: key, scope: HotKeyScope.system);
+          await hotKeyManager.register(
+            hotKey,
+            keyDownHandler: (_) => mumbleService.startPushToTalk(),
+            keyUpHandler: (_) => mumbleService.stopPushToTalk(),
+          );
+        }
       }
-
-      // Fallback for Linux (X11)
-      final key = _mapPttKeyToPhysicalKey(settings.pttKey);
-      if (key == null) return;
-      _currentHotKey = HotKey(key: key, scope: HotKeyScope.system);
-      await hotKeyManager.register(
-        _currentHotKey!,
-        keyDownHandler: (_) => mumbleService.startPushToTalk(),
-        keyUpHandler: (_) => mumbleService.stopPushToTalk(),
-      );
-      return;
     }
 
-    if (settings.customHotkey != null) {
+    for (final binding in settings.hotkeyBindings) {
+      final actionName = binding['action'] ?? 'pushToTalk';
+      final action = HotkeyAction.fromName(actionName);
+      
       final usbUsage =
           int.tryParse(
-            settings.customHotkey!['usbHidUsage']?.toString() ?? '',
+            (binding['usbHidUsage'] ?? binding['physical_id'] ?? '').toString(),
           ) ??
           0;
-      final modsString = settings.customHotkey!['modifiers'] ?? '';
+      final dynamic modsRaw = binding['modifiers'];
+      final List<String> modsList = modsRaw is List 
+          ? modsRaw.map((e) => e.toString()).toList()
+          : (modsRaw is String && modsRaw.isNotEmpty ? [modsRaw] : []);
 
       final key = _findPhysicalKeyByUsbHidUsage(usbUsage);
       if (key != null) {
         // If it's a standalone modifier on macOS/Windows, we handle it via native monitors
-        bool isStandaloneModifier = modsString.isEmpty && _isModifierKey(key);
+        bool isStandaloneModifier = modsList.isEmpty && _isModifierKey(key);
         if (isStandaloneModifier &&
             (defaultTargetPlatform == TargetPlatform.macOS ||
                 defaultTargetPlatform == TargetPlatform.windows)) {
-          // Special case for Windows: send the custom VK code to the native hook
-          if (defaultTargetPlatform == TargetPlatform.windows) {
-            _updateWindowsPttSettings();
-          }
-          return;
+          // These are handled by _handleNativeModifierFlags (macOS) or Windows native hook
+          continue;
         }
 
         List<HotKeyModifier> modifiers = [];
-        if (modsString.contains('control')) {
+        if (modsList.contains('control')) {
           modifiers.add(HotKeyModifier.control);
         }
-        if (modsString.contains('shift')) {
+        if (modsList.contains('shift')) {
           modifiers.add(HotKeyModifier.shift);
         }
-        if (modsString.contains('alt')) {
+        if (modsList.contains('alt')) {
           modifiers.add(HotKeyModifier.alt);
         }
-        if (modsString.contains('meta')) {
+        if (modsList.contains('meta')) {
           modifiers.add(HotKeyModifier.meta);
         }
 
-        _currentHotKey = HotKey(
+        final hotKey = HotKey(
           key: key,
           modifiers: modifiers,
           scope: HotKeyScope.system,
@@ -179,14 +198,42 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
 
         try {
           await hotKeyManager.register(
-            _currentHotKey!,
-            keyDownHandler: (_) => mumbleService.startPushToTalk(),
-            keyUpHandler: (_) => mumbleService.stopPushToTalk(),
+            hotKey,
+            keyDownHandler: (_) => _handleAction(action, true),
+            keyUpHandler: (_) => _handleAction(action, false),
           );
         } catch (e) {
-          debugPrint('HotkeyService: Error registering custom hotkey: $e');
+          debugPrint('HotkeyService: Error registering hotkey for $actionName: $e');
         }
       }
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      _updateWindowsPttSettings();
+    }
+  }
+
+  void _handleAction(HotkeyAction action, bool isDown) {
+    switch (action) {
+      case HotkeyAction.pushToTalk:
+        if (isDown) {
+          _mumbleService.startPushToTalk();
+        } else {
+          _mumbleService.stopPushToTalk();
+        }
+        break;
+      case HotkeyAction.toggleMute:
+        if (isDown) _mumbleService.toggleMute();
+        break;
+      case HotkeyAction.toggleDeafen:
+        if (isDown) _mumbleService.toggleDeafen();
+        break;
+      case HotkeyAction.toggleSpeakerMute:
+        if (isDown) {
+          final isDeafened = _mumbleService.isDeafened;
+          _mumbleService.setDeafen(!isDeafened);
+        }
+        break;
     }
   }
 
@@ -319,9 +366,11 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
 
   void _handleNativeModifierFlags(int flags) {
     final settings = _settingsService;
-    bool isPressed = false;
+    bool anyPttPressed = false;
 
+    // Check PTT Preset
     if (settings.pttKey != PttKey.none) {
+      bool isPressed = false;
       switch (settings.pttKey) {
         case PttKey.control:
           isPressed = (flags & (1 << 18)) != 0;
@@ -341,26 +390,32 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
         default:
           break;
       }
-    } else if (settings.customHotkey != null) {
-      final usbUsage =
-          int.tryParse(
-            settings.customHotkey!['usbHidUsage']?.toString() ?? '',
-          ) ??
-          0;
-      final modsString = settings.customHotkey!['modifiers'] ?? '';
+      if (isPressed) anyPttPressed = true;
+    }
+
+    // Check all recorded hotkey bindings
+    for (final binding in settings.hotkeyBindings) {
+      final actionName = binding['action'] ?? '';
+      final action = HotkeyAction.fromName(actionName);
+      
+      // Only handle PTT for now in native flags (since PTT is stateful press-and-hold)
+      // Toggle actions (mute/deafen) could also be here but they are simpler with hotKeyManager 
+      // if they use combinations. If they use standalone modifiers, we need them here.
+      if (action != HotkeyAction.pushToTalk) continue;
+
+      final usbUsage = int.tryParse((binding['usbHidUsage'] ?? binding['physical_id'] ?? '').toString()) ?? 0;
+      final modsString = binding['modifiers'] ?? '';
       final key = _findPhysicalKeyByUsbHidUsage(usbUsage);
 
       // We only handle standalone modifiers here
       if (key != null && modsString.isEmpty && _isModifierKey(key)) {
-        isPressed = _checkFlags(flags, key);
-      } else {
-        return; // Not a standalone modifier custom hotkey
+        if (_checkFlags(flags, key)) {
+          anyPttPressed = true;
+        }
       }
-    } else {
-      return;
     }
 
-    if (isPressed) {
+    if (anyPttPressed) {
       _mumbleService.startPushToTalk();
     } else {
       _mumbleService.stopPushToTalk();

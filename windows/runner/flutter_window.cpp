@@ -9,13 +9,14 @@
 HHOOK FlutterWindow::keyboard_hook_ = nullptr;
 HWND FlutterWindow::s_window_handle_ = nullptr;
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> FlutterWindow::permissions_channel_ = nullptr;
-unsigned int FlutterWindow::ptt_vk_code_ = 0;
-bool FlutterWindow::ptt_suppress_ = false;
+std::map<unsigned int, bool> FlutterWindow::ptt_keys_ = {};
 
 LRESULT CALLBACK FlutterWindow::KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
   if (nCode == HC_ACTION) {
     KBDLLHOOKSTRUCT* kbStruct = (KBDLLHOOKSTRUCT*)lParam;
-    if (ptt_vk_code_ != 0 && kbStruct->vkCode == ptt_vk_code_) {
+    auto it = ptt_keys_.find(kbStruct->vkCode);
+    if (it != ptt_keys_.end()) {
+      bool should_suppress = it->second;
       if (permissions_channel_) {
         bool isDown = (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN);
         bool isUp = (wParam == WM_KEYUP || wParam == WM_SYSKEYUP);
@@ -27,7 +28,7 @@ LRESULT CALLBACK FlutterWindow::KeyboardHookProc(int nCode, WPARAM wParam, LPARA
           };
           permissions_channel_->InvokeMethod("onNativeKey", std::make_unique<flutter::EncodableValue>(args));
           
-          if (ptt_suppress_) {
+          if (should_suppress) {
             return 1; // Suppress key
           }
         }
@@ -68,16 +69,27 @@ bool FlutterWindow::OnCreate() {
   permissions_channel_->SetMethodCallHandler(
       [](const flutter::MethodCall<flutter::EncodableValue>& call,
          std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        if (call.method_name().compare("setPttVkCode") == 0) {
+        if (call.method_name().compare("setPttKeys") == 0) {
           const auto* arguments = std::get_if<flutter::EncodableMap>(call.arguments());
           if (arguments) {
-            auto it = arguments->find(flutter::EncodableValue("vkCode"));
-            if (it != arguments->end()) {
-              FlutterWindow::ptt_vk_code_ = static_cast<unsigned int>(std::get<int>(it->second));
-            }
-            auto it_suppress = arguments->find(flutter::EncodableValue("suppress"));
-            if (it_suppress != arguments->end()) {
-              FlutterWindow::ptt_suppress_ = std::get<bool>(it_suppress->second);
+            auto it_keys = arguments->find(flutter::EncodableValue("keys"));
+            if (it_keys != arguments->end()) {
+              const auto* keys_list = std::get_if<flutter::EncodableList>(&it_keys->second);
+              if (keys_list) {
+                FlutterWindow::ptt_keys_.clear();
+                for (const auto& key_val : *keys_list) {
+                  const auto* key_map = std::get_if<flutter::EncodableMap>(&key_val);
+                  if (key_map) {
+                    auto it_vk = key_map->find(flutter::EncodableValue("vkCode"));
+                    auto it_suppress = key_map->find(flutter::EncodableValue("suppress"));
+                    if (it_vk != key_map->end() && it_suppress != key_map->end()) {
+                      unsigned int vk = static_cast<unsigned int>(std::get<int>(it_vk->second));
+                      bool suppress = std::get<bool>(it_suppress->second);
+                      FlutterWindow::ptt_keys_[vk] = suppress;
+                    }
+                  }
+                }
+              }
             }
           }
           result->Success();

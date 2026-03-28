@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.9.0] - 2026-03-28
+- feat: expand hotkey support with multi-key combinations and native Windows/macOS enhancements
+
 ## [0.8.0] - 2026-03-28
 - feat: implement chat unread notifications badge
 

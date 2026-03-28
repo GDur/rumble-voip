@@ -18,6 +18,8 @@
 
 - [x] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
 
+- [ ] make the ptt buttons in the settings and the chatview about 70% seethrough
+
 - [x] when the user joins a server then it will alsmost always write a custom welcome message. this should be shown as it contiains sometimes hints on how to behave etc. (its a text contained in the server info)
 
 - [x] **Fix autojoin channel**: Check when the current channel is being saved. Also, rename "folder" to "channel" in the settings.
@@ -40,9 +42,9 @@
     - [ ] Ensure the "suppress hotkey" functionality works.
 - [x] **Chat notifications**: Show the number of unread chat messages (on mobile/when the chat toggle is visible). Use a small number, or just a dot if more than 9. The indicator should disappear after the chat is opened/read.
 - [ ] **Tooltips**: Add tooltips for almost all elements and buttons.
-- [ ] **Background support (Mobile)**: Allow the app to remain active in the background.
-    - [ ] **Android**: Show a persistent indicator and/or a floating PTT button if possible.
-    - [ ] **General**: Show some kind of active status indicator.
+- [x] **Background support (Mobile)**: Allow the app to remain active in the background.
+    - [] **Android**: Show a persistent indicator and/or a floating PTT button if possible.
+    - [x] **General**: Show some kind of active status indicator.
 - [x] **Certificate support**: Mumble can use certificates to identify users. (Implemented)
 - [ ] **Voice Activity Detection (VAD)**:
     - [ ] Add auto-activation (VAD).

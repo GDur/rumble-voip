@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -8,6 +9,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kPttSuppress = 'ptt_suppress';
   static const String _kThemeMode = 'theme_mode';
   static const String _kCustomHotkey = 'custom_hotkey';
+  static const String _kHotkeyBindings = 'hotkey_bindings';
   static const String _kWindowWidth = 'window_width';
   static const String _kWindowHeight = 'window_height';
   static const String _kWindowX = 'window_x';
@@ -34,6 +36,7 @@ class SettingsService extends ChangeNotifier {
   bool _pttSuppress;
   ThemeMode _themeMode;
   Map<String, dynamic>? _customHotkey;
+  List<Map<String, dynamic>> _hotkeyBindings;
   bool _reconnectToLastServer;
   String? _lastServerJson;
   String? _captureDeviceId;
@@ -68,6 +71,7 @@ class SettingsService extends ChangeNotifier {
       _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
       _rememberLastChannel = _prefs.getBool(_kRememberLastChannel) ?? true,
       _hideEmptyChannels = _prefs.getBool(_kHideEmptyChannels) ?? false,
+      _hotkeyBindings = [],
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -90,7 +94,22 @@ class SettingsService extends ChangeNotifier {
         _customHotkey = Map<String, dynamic>.from(
           Uri.parse('http://foo?$customJson').queryParameters,
         );
+        // Migrating old custom hotkey to new list if not already there
+        if (_customHotkey != null) {
+           _hotkeyBindings.add({
+             'action': 'pushToTalk',
+             ..._customHotkey!,
+           });
+        }
       } catch (_) {}
+    }
+
+    final List<String>? bindingsJson = _prefs.getStringList(_kHotkeyBindings);
+    if (bindingsJson != null) {
+      _hotkeyBindings = bindingsJson
+          .map((s) => jsonDecode(s))
+          .cast<Map<String, dynamic>>()
+          .toList();
     }
   }
 
@@ -112,6 +131,7 @@ class SettingsService extends ChangeNotifier {
   int get playbackHwBufferMs => _playbackHwBufferMs;
   bool get rememberLastChannel => _rememberLastChannel;
   bool get hideEmptyChannels => _hideEmptyChannels;
+  List<Map<String, dynamic>> get hotkeyBindings => List.unmodifiable(_hotkeyBindings);
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -156,6 +176,39 @@ class SettingsService extends ChangeNotifier {
       await _prefs.remove(_kCustomHotkey);
     }
     notifyListeners();
+  }
+
+  Future<void> addHotkeyBinding(Map<String, dynamic> hotkey) async {
+    // Default to suppressing if not specified
+    if (!hotkey.containsKey('suppress')) {
+      hotkey['suppress'] = true;
+    }
+    _hotkeyBindings.add(hotkey);
+    await _saveHotkeyBindings();
+    notifyListeners();
+  }
+
+  Future<void> updateHotkeyBinding(int index, Map<String, dynamic> binding) async {
+    if (index >= 0 && index < _hotkeyBindings.length) {
+      _hotkeyBindings[index] = binding;
+      await _saveHotkeyBindings();
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeHotkeyBinding(int index) async {
+    if (index >= 0 && index < _hotkeyBindings.length) {
+      _hotkeyBindings.removeAt(index);
+      await _saveHotkeyBindings();
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveHotkeyBindings() async {
+    final List<String> bindingsJson = _hotkeyBindings
+        .map((b) => jsonEncode(b))
+        .toList();
+    await _prefs.setStringList(_kHotkeyBindings, bindingsJson);
   }
 
   Future<void> setWindowSize(Size size) async {
