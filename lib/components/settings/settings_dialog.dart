@@ -56,6 +56,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    final isMobile = _isMobile(context);
+
     final sideBarItems = [
       (id: 'general', label: 'General', icon: LucideIcons.settings),
       (id: 'hotkeys', label: 'Hotkeys', icon: LucideIcons.keyboard),
@@ -69,7 +72,6 @@ class _SettingsDialogState extends State<SettingsDialog> {
       (id: 'about', label: 'About', icon: LucideIcons.info),
     ];
 
-    final isMobile = _isMobile(context);
     final effectiveTab = _currentTab ?? (!isMobile ? 'general' : null);
 
     final title = Padding(
@@ -94,128 +96,45 @@ class _SettingsDialogState extends State<SettingsDialog> {
       ),
     );
 
+    final dialogHeight = isMobile
+        ? (MediaQuery.of(context).size.height -
+                MediaQuery.of(context).padding.top -
+                MediaQuery.of(context).padding.bottom) *
+            0.9
+        : MediaQuery.of(context).size.height * 0.8;
+
     return ShadDialog(
       padding: EdgeInsets.zero,
       radius: const BorderRadius.all(Radius.circular(16)),
       removeBorderRadiusWhenTiny: false,
       closeIconPosition: const ShadPosition(top: 12, right: 12),
-      constraints: isMobile
-          ? null
-          : BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.5,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-      title: title,
+      constraints: BoxConstraints(
+        maxWidth: isMobile
+            ? MediaQuery.of(context).size.width * 0.95
+            : MediaQuery.of(context).size.width * 0.6,
+        maxHeight: dialogHeight,
+      ),
       child: SafeArea(
         top: isMobile,
         bottom: isMobile,
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: isMobile ? 16 : 0),
+        child: SizedBox(
+          height: dialogHeight,
           child: Stack(
             children: [
-              SizedBox(
-                width: double.infinity,
-                height: isMobile
-                    ? (MediaQuery.of(context).size.height -
-                              MediaQuery.of(context).padding.top -
-                              MediaQuery.of(context).padding.bottom) *
-                          0.8
-                    : MediaQuery.of(context).size.height * 0.85,
-                child: isMobile
-                    ? _buildMobileContent(effectiveTab, sideBarItems)
-                    : Row(
-                        children: [
-                          // Sidebar
-                          Container(
-                            width: 200,
-                            decoration: BoxDecoration(
-                              border: Border(
-                                right: BorderSide(
-                                  color: ShadTheme.of(
-                                    context,
-                                  ).colorScheme.border,
-                                ),
-                              ),
-                            ),
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              children: [
-                                ...sideBarItems.map((item) {
-                                  final isSelected = effectiveTab == item.id;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: ShadButton.ghost(
-                                      onPressed: () =>
-                                          setState(() => _currentTab = item.id),
-                                      width: double.infinity,
-                                      gap: 12,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      backgroundColor: isSelected
-                                          ? ShadTheme.of(
-                                              context,
-                                            ).colorScheme.accent
-                                          : Colors.transparent,
-                                      pressedBackgroundColor: ShadTheme.of(
-                                        context,
-                                      ).colorScheme.accent,
-                                      leading: Icon(item.icon, size: 16),
-                                      child: Text(
-                                        item.label,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: isSelected
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                                const Spacer(),
-                                if (_version.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      'v$_version',
-                                      style: ShadTheme.of(
-                                        context,
-                                      ).textTheme.muted.copyWith(fontSize: 12),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          // Content
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(
-                                    child: _buildTabContent(effectiveTab!),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Align(
-                                    alignment: Alignment.bottomRight,
-                                    child: ShadButton(
-                                      onPressed: () =>
-                                          Navigator.of(context).pop(),
-                                      child: const Text('Done'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+              Column(
+                children: [
+                  title, // Headline is now fixed within this column
+                  Expanded(
+                    child: isMobile
+                        ? _buildMobileContent(effectiveTab, sideBarItems)
+                        : _buildDesktopContent(effectiveTab, sideBarItems),
+                  ),
+                  _buildFooter(theme), // Footer is now fixed within this column
+                ],
               ),
               if (isMobile && widget.mumbleService.isConnected)
                 Positioned(
-                  bottom:
-                      100, // Move it higher to clear bottom navigation buttons
+                  bottom: 110,
                   left: 0,
                   right: 0,
                   child: Center(
@@ -233,82 +152,124 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
+  Widget _buildDesktopContent(
+    String? effectiveTab,
+    List<({IconData icon, String id, String label})> sideBarItems,
+  ) {
+    final theme = ShadTheme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Sidebar
+        Container(
+          width: 200,
+          decoration: BoxDecoration(
+            border: Border(
+              right: BorderSide(color: theme.colorScheme.border),
+            ),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: sideBarItems.map((item) {
+                final isSelected = effectiveTab == item.id;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: ShadButton.ghost(
+                    onPressed: () => setState(() => _currentTab = item.id),
+                    width: double.infinity,
+                    gap: 12,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    backgroundColor: isSelected
+                        ? theme.colorScheme.accent
+                        : Colors.transparent,
+                    pressedBackgroundColor: theme.colorScheme.accent,
+                    leading: Icon(item.icon, size: 16),
+                    child: Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+        // Content
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: _buildTabContent(effectiveTab!),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter(ShadThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.border),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (_version.isNotEmpty)
+            Text(
+              'Rumble v$_version',
+              style: theme.textTheme.muted.copyWith(fontSize: 12),
+            )
+          else
+            const SizedBox.shrink(),
+          ShadButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMobileContent(
     String? effectiveTab,
     List<({IconData icon, String id, String label})> sideBarItems,
   ) {
     if (effectiveTab == null) {
       // Category List
-      return Padding(
+      return ListView.separated(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                children: sideBarItems.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: ShadButton.ghost(
-                      onPressed: () => setState(() => _currentTab = item.id),
-                      size: ShadButtonSize.lg,
-                      width: MediaQuery.of(context).size.width * 0.85,
-                      expands: true,
-                      gap: 16,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      leading: Icon(item.icon, size: 20),
-                      trailing: Icon(
-                        LucideIcons.chevronRight,
-                        size: 16,
-                        color: ShadTheme.of(
-                          context,
-                        ).colorScheme.mutedForeground,
-                      ),
-                      child: Container(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          item.label,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
+        itemCount: sideBarItems.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final item = sideBarItems[index];
+          return ShadButton.ghost(
+            onPressed: () => setState(() => _currentTab = item.id),
+            size: ShadButtonSize.lg,
+            width: double.infinity,
+            gap: 16,
+            mainAxisAlignment: MainAxisAlignment.start,
+            leading: Icon(item.icon, size: 20),
+            trailing: const Icon(LucideIcons.chevronRight, size: 16),
+            child: Text(
+              item.label,
+              style: const TextStyle(fontSize: 16),
             ),
-            const SizedBox(height: 16),
-            ShadButton(
-              onPressed: () => Navigator.of(context).pop(),
-              width: MediaQuery.of(context).size.width * 0.85,
-              child: const Text('Done'),
-            ),
-            if (_version.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  'Rumble v$_version',
-                  style: ShadTheme.of(
-                    context,
-                  ).textTheme.muted.copyWith(fontSize: 11),
-                ),
-              ),
-          ],
-        ),
+          );
+        },
       );
     } else {
       // Tab Detail
       return Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Expanded(child: _buildTabContent(effectiveTab)),
-            const SizedBox(height: 16),
-            ShadButton.outline(
-              onPressed: () => setState(() => _currentTab = null),
-              width: MediaQuery.of(context).size.width * 0.85,
-              child: const Text('Back to Settings'),
-            ),
-          ],
-        ),
+        child: _buildTabContent(effectiveTab),
       );
     }
   }

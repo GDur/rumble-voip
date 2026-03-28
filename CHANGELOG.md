@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.10.0] - 2026-03-28
+- feat: standardize tooltips and restructure settings dialog with persistent footer
+
 ## [0.9.0] - 2026-03-28
 - feat: expand hotkey support with multi-key combinations and native Windows/macOS enhancements
 
