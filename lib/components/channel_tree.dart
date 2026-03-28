@@ -623,7 +623,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                   color: (isTalking || isSelected)
                       ? theme.colorScheme.foreground
                       : theme.colorScheme.foreground.withValues(alpha: 0.6),
-                  fontWeight: (isTalking || isMe || isSelected)
+                  fontWeight: (isMe || isSelected)
                       ? FontWeight.w700
                       : FontWeight.w400,
                 ),

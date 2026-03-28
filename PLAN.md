@@ -26,9 +26,9 @@
 
 - [x] **Filter empty channels**: Add a toggle button in the top header to hide empty channels in the view.
 
-- [ ] **Microphone permissions**: Request mic permissions immediately at app startup, as iOS seems to require an app restart after granting permissions. make sure that the ptt does not only work once. (as is now the case, make sure that we initialize the audio stuff once and then we one send it when we activate the ptt (if we try to initiate the audio. setup a second time it does not work anymore))
+- [x] **Microphone permissions**: Request mic permissions immediately at app startup, as iOS seems to require an app restart after granting permissions. make sure that the ptt does not only work once. (as is now the case, make sure that we initialize the audio stuff once and then we one send it when we activate the ptt (if we try to initiate the audio. setup a second time it does not work anymore))
 
-- [ ] **Voice activity indicator**: When another user talks, do *not* make their label bold. Keep it normal.
+- [x] **Voice activity indicator**: When another user talks, do *not* make their label bold. Keep it normal.
 
 - [ ] **Channel tree refinements**:
     - [ ] Add a hover effect to the channel tree.

@@ -30,6 +30,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   MumbleServer? _currentServer;
   int? _targetChannelId;
   void Function(MumbleServer)? onServerUpdated;
+  bool _audioInitialized = false;
 
   // Trackers to avoid adding duplicate listeners
   final Set<int> _trackedUserListeners = {};
@@ -183,13 +184,16 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
       // Hand over crypt keys to rust
       final crypt = _dumbleClient!.cryptState;
-      await _rustEngine.initializeAudio(
-        host: server.host,
-        port: server.port,
-        key: crypt.key,
-        encryptNonce: crypt.clientNonce,
-        decryptNonce: crypt.serverNonce,
-      );
+      if (!_audioInitialized) {
+        await _rustEngine.initializeAudio(
+          host: server.host,
+          port: server.port,
+          key: crypt.key,
+          encryptNonce: crypt.clientNonce,
+          decryptNonce: crypt.serverNonce,
+        );
+        _audioInitialized = true;
+      }
 
       _syncChannels();
       _syncUsers();
@@ -235,6 +239,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       _talkingUsers.clear();
       _trackedUserListeners.clear();
       _trackedChannelListeners.clear();
+      _audioInitialized = false;
       notifyListeners();
       developer.log('MumbleService: Disconnected.', name: 'MumbleService');
     }
@@ -299,7 +304,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   @override
   void onCryptStateChanged() {
     final crypt = _dumbleClient?.cryptState;
-    if (crypt != null && _isConnected) {
+    if (crypt != null && _isConnected && !_audioInitialized) {
        _rustEngine.initializeAudio(
           host: _dumbleClient!.options.host,
           port: _dumbleClient!.options.port,
@@ -307,6 +312,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
           encryptNonce: crypt.clientNonce,
           decryptNonce: crypt.serverNonce,
         );
+        _audioInitialized = true;
     }
   }
   

@@ -41,6 +41,11 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     await BackgroundService.initialize();
 
+    // Request microphone permission immediately at startup on mobile
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      PermissionUtils.requestMicrophonePermission();
+    }
+
     // Catch Flutter framework errors
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
