@@ -21,6 +21,10 @@ Future<List<AudioDevice>> listAudioOutputDevices() =>
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustAudioEngine>>
 abstract class RustAudioEngine implements RustOpaqueInterface {
+  Future<void> debugInjectPcm({required List<double> samples});
+
+  Stream<Float32List> debugStartRecording();
+
   Future<void> disconnect();
 
   Stream<AudioEvent> getEventStream();

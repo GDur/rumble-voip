@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.11.0] - 2026-03-28
+- feat: implement automated audio integrity testing with Rust debug hooks and frequency analysis
+
 ## [0.10.2] - 2026-03-28
 - refactor: decouple MumbleService from native audio for testing and expand test suite
 

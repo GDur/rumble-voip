@@ -560,6 +560,20 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     _syncUsers(); // Immediate local sync for snappy UI
   }
 
+  // Debug methods for audio testing
+
+  /// Injects PCM samples directly into the Mumble transmission stream.
+  /// Used for automated audio integrity tests.
+  Future<void> debugInjectPcm(List<double> samples) async {
+    await _rustEngine.debugInjectPcm(samples: samples.map((e) => e.toDouble()).toList());
+  }
+
+  /// Starts recording the final mixed audio output from the Mumble server.
+  /// Used for automated audio integrity tests.
+  Stream<List<double>> debugStartRecording() {
+    return _rustEngine.debugStartRecording();
+  }
+
   bool get isMuted => _dumbleClient?.self.selfMute ?? false;
   bool get isDeafened => _dumbleClient?.self.selfDeaf ?? false;
 

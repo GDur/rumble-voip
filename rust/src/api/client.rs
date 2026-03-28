@@ -1,10 +1,9 @@
 use crate::frb_generated::StreamSink;
 use crate::mumble::hardware::audio::{self, AudioDevice};
-use crate::mumble::{MumbleCommand};
 use flutter_rust_bridge::frb;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use ringbuf::traits::Split;
+use ringbuf::traits::{Producer, Split};
 use ringbuf::HeapRb;
 use crossbeam_channel::unbounded;
 
@@ -60,6 +59,8 @@ pub struct RustAudioEngine {
     vol_cmd_tx: crossbeam_channel::Sender<(u32, f32)>,
     vol_cmd_rx: crossbeam_channel::Receiver<(u32, f32)>,
     _active_audio: Arc<Mutex<Option<crate::mumble::hardware::audio::AudioBackend>>>,
+    debug_inject_tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<Vec<f32>>>>>,
+    debug_record_tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<Vec<f32>>>>>,
 }
 
 impl RustAudioEngine {
@@ -87,7 +88,31 @@ impl RustAudioEngine {
             vol_cmd_tx,
             vol_cmd_rx,
             _active_audio: Arc::new(Mutex::new(None)),
+            debug_inject_tx: Arc::new(Mutex::new(None)),
+            debug_record_tx: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub async fn debug_inject_pcm(&self, samples: Vec<f32>) {
+        if let Some(tx) = self.debug_inject_tx.lock().await.as_ref() {
+            let _ = tx.send(samples).await;
+        }
+    }
+
+    pub async fn debug_start_recording(&self, sink: StreamSink<Vec<f32>>) {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+        {
+            let mut guard = self.debug_record_tx.lock().await;
+            *guard = Some(tx);
+        }
+        
+        self.runtime.spawn(async move {
+            while let Some(samples) = rx.recv().await {
+                if let Err(_) = sink.add(samples) {
+                    break;
+                }
+            }
+        });
     }
 
     pub fn get_event_stream(&self, sink: StreamSink<AudioEvent>) {
@@ -184,6 +209,14 @@ impl RustAudioEngine {
         let input_rate = audio_backend.input_rate();
         let output_rate = audio_backend.output_rate();
 
+        let (inj_tx, mut inj_rx) = tokio::sync::mpsc::channel(100);
+        {
+            let mut guard = self.debug_inject_tx.lock().await;
+            *guard = Some(inj_tx);
+        }
+
+        let debug_record_tx = self.debug_record_tx.clone();
+
         crate::mumble::dsp::spawn_encode_thread(
             cons_in,
             in_notify_rx,
@@ -191,6 +224,7 @@ impl RustAudioEngine {
             ptt_active,
             input_rate,
             self.config.clone(),
+            inj_rx,
         );
 
         crate::mumble::dsp::spawn_decode_thread(
@@ -202,6 +236,7 @@ impl RustAudioEngine {
             self.config.clone(),
             global_volume,
             vol_cmd_rx,
+            debug_record_tx,
         );
 
         let mut guard = self._active_audio.lock().await;
