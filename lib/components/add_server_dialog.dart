@@ -7,8 +7,9 @@ import 'package:rumble/services/server_provider.dart';
 // Component: add-edit-server-dialog
 class AddServerDialog extends StatefulWidget {
   final MumbleServer? server;
+  final String? errorField;
 
-  const AddServerDialog({super.key, this.server});
+  const AddServerDialog({super.key, this.server, this.errorField});
 
   @override
   State<AddServerDialog> createState() => _AddServerDialogState();
@@ -125,12 +126,20 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     ),
                     placeholder: const Text('mumble.example.com'),
                     controller: _hostController,
-                    autofocus: true,
+                    autofocus: widget.errorField == null,
                     onChanged: (val) {
                       if (_isAutoName) {
                         setState(() => _nameController.text = val);
                       }
                     },
+                    decoration: widget.errorField == 'host'
+                        ? ShadDecoration(
+                            border: ShadBorder.all(
+                              color: Colors.orange.shade400,
+                              width: 2,
+                            ),
+                          )
+                        : null,
                     validator: (v) {
                       if (v.isEmpty) return 'Host address is required';
                       return null;
@@ -149,6 +158,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     placeholder: const Text('My Awesome Server'),
                     controller: _nameController,
                     onChanged: (val) => setState(() => _isAutoName = false),
+                    decoration: widget.errorField == 'name'
+                        ? ShadDecoration(
+                            border: ShadBorder.all(
+                              color: Colors.orange.shade400,
+                              width: 2,
+                            ),
+                          )
+                        : null,
                     validator: (v) {
                       if (v.isEmpty) return 'Display name is required';
                       return null;
@@ -169,6 +186,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
                           placeholder: const Text('64738'),
                           controller: _portController,
                           keyboardType: TextInputType.number,
+                          decoration: widget.errorField == 'port'
+                              ? ShadDecoration(
+                                  border: ShadBorder.all(
+                                    color: Colors.orange.shade400,
+                                    width: 2,
+                                  ),
+                                )
+                              : null,
                           validator: (v) {
                             if (int.tryParse(v) == null) return 'Invalid port';
                             return null;
@@ -189,6 +214,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
                           ),
                           placeholder: const Text('Your Nickname'),
                           controller: _usernameController,
+                          decoration: widget.errorField == 'username'
+                              ? ShadDecoration(
+                                  border: ShadBorder.all(
+                                    color: Colors.orange.shade400,
+                                    width: 2,
+                                  ),
+                                )
+                              : null,
                           validator: (v) {
                             if (v.length < 2) return 'Username too short';
                             return null;
@@ -207,6 +240,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     placeholder: const Text('Secret Password'),
                     controller: _passwordController,
                     obscureText: _passwordObscure,
+                    decoration: widget.errorField == 'password'
+                        ? ShadDecoration(
+                            border: ShadBorder.all(
+                              color: Colors.orange.shade400,
+                              width: 2,
+                            ),
+                          )
+                        : null,
                     leading: const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: Icon(LucideIcons.lock, size: 16),

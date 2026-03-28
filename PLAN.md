@@ -6,9 +6,9 @@
 - [x] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and show it in the settings always at the bottom as a fine print for easy access.
 
 
-- [] make sure that the app (on android) does not stop or is going into sleep mode when in the background. maybe we can have an indicator that the app is still on somehow in a nice clean way
+- [x] make sure that the app (on android) does not stop or is going into sleep mode when in the background. maybe we can have an indicator that the app is still on somehow in a nice clean way
 
- - [] when on eg android then then top and bottom OS menus can lay over the sonner (toasts) which makes them unreadable. move them then so that they are still readable.
+- [x] when on eg android then then top and bottom OS menus can lay over the sonner (toasts) which makes them unreadable. move them then so that they are still readable.
 
 - [] add the possibility to add photos via a (+) file explorer too on all platfoms
 

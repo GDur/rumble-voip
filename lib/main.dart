@@ -163,6 +163,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsService>(
       builder: (context, settings, _) => ShadApp(
+        builder: (context, child) => SafeArea(child: child!),
         title: 'Rumble',
         debugShowCheckedModeBanner: false,
         themeMode: settings.themeMode,
@@ -175,6 +176,16 @@ class MyApp extends StatelessWidget {
           primaryButtonTheme: const ShadButtonTheme(
             backgroundColor: kBrandGreenButton,
             foregroundColor: Colors.white,
+          ),
+          primaryToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, 32),
+            duration: const Duration(seconds: 4),
+          ),
+          destructiveToastTheme: ShadToastTheme(
+            alignment: Alignment.bottomCenter,
+            offset: const Offset(0, 32),
+            duration: const Duration(seconds: 4),
           ),
           textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
         ),
@@ -323,10 +334,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showAddServerDialog(BuildContext context, {MumbleServer? server}) {
+  void _showAddServerDialog(
+    BuildContext context, {
+    MumbleServer? server,
+    String? errorField,
+  }) {
     showShadDialog(
       context: context,
-      builder: (context) => AddServerDialog(server: server),
+      builder: (context) => AddServerDialog(server: server, errorField: errorField),
     );
   }
 
@@ -489,13 +504,20 @@ class _HomeScreenState extends State<HomeScreen> {
       message = e.toString().split(':').last.trim();
     }
 
+    String? errorField;
     if (errorStr.contains('password')) {
       message = message.isEmpty ? 'Incorrect password.' : message;
       showEdit = true;
+      errorField = 'password';
     } else if (errorStr.contains('hostname') ||
         errorStr.contains('host not found')) {
       message = 'Invalid server address.';
       showEdit = true;
+      errorField = 'host';
+    } else if (errorStr.contains('username')) {
+      message = 'Invalid username.';
+      showEdit = true;
+      errorField = 'username';
     }
 
     if (mounted) {
@@ -505,7 +527,9 @@ class _HomeScreenState extends State<HomeScreen> {
           description: Text(message),
         ),
       );
-      if (showEdit) _showAddServerDialog(context, server: server);
+      if (showEdit) {
+        _showAddServerDialog(context, server: server, errorField: errorField);
+      }
     }
   }
 
