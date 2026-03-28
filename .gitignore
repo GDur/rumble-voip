@@ -57,6 +57,11 @@ plugins/**/.flutter-plugins-dependencies
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
+
+# debugging etc
+.env
+
+
 # Rust related
 rust/target/
 rust_builder/.dart_tool/

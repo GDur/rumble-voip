@@ -35,6 +35,7 @@ dependencies:
   image: ^4.8.0
   photo_view: ^0.15.0
   dumble: ^0.8.9
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +83,7 @@ flutter:
     - assets/icon.png
     - assets/splash_foreground.png
     - assets/splash_with_bg.png
+    - .env
 
 dependency_overrides:
   pointycastle: ^4.0.0

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/models/server.dart';
 import 'package:rumble/services/mumble_ping_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ServerProvider extends ChangeNotifier {
   List<MumbleServer> _servers = [];
@@ -49,6 +50,9 @@ class ServerProvider extends ChangeNotifier {
       debugPrint('Error loading servers: $e');
       _servers = List.from(initialServers);
     } finally {
+      if (kDebugMode) {
+        _injectDebugServers();
+      }
       _isLoading = false;
       notifyListeners();
       refreshAllPings();
@@ -57,7 +61,7 @@ class ServerProvider extends ChangeNotifier {
 
   Future<void> refreshAllPings() async {
     for (int i = 0; i < _servers.length; i++) {
-      _pingServer(i);
+        _pingServer(i);
     }
   }
 
@@ -73,17 +77,16 @@ class ServerProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Ping failed for ${server.host}: $e');
-      // Optionally clear old data if it fails
-      // _servers[index] = _servers[index].copyWith(ping: null);
-      // notifyListeners();
     }
   }
 
   Future<void> _saveServers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      // Only save servers that are not injected in debug mode
+      final persistableServers = _servers.where((s) => !s.id.startsWith('debug_auto_')).toList();
       final String encoded = jsonEncode(
-        _servers.map((s) => s.toJson()).toList(),
+        persistableServers.map((s) => s.toJson()).toList(),
       );
       await prefs.setString('mumble_servers', encoded);
     } catch (e) {
@@ -127,6 +130,62 @@ class ServerProvider extends ChangeNotifier {
       _servers[index] = server;
       await _saveServers();
       notifyListeners();
+    }
+  }
+
+  void _injectDebugServers() {
+    final debugUsername = generateDefaultUsername();
+
+    // 1. Check for the general DEBUG_SERVERS format: "Name|Host|Port|Password;Name2|..."
+    final serversRaw = dotenv.env['DEBUG_SERVERS'];
+    if (serversRaw != null && serversRaw.isNotEmpty) {
+      final serverParts = serversRaw.split(';');
+      for (final part in serverParts) {
+         final fields = part.split('|');
+         if (fields.length >= 2) {
+           final name = fields[0];
+           final host = fields[1];
+           final port = fields.length > 2 ? int.tryParse(fields[2]) ?? 64738 : 64738;
+           final password = fields.length > 3 ? fields[3] : '';
+           
+           final server = MumbleServer(
+             id: 'debug_auto_${host}_$port',
+             name: name,
+             host: host,
+             port: port,
+             username: debugUsername,
+             password: password,
+           );
+           
+           _addIfMissing(server);
+         }
+      }
+    }
+
+    // 2. Fallback to the individual TWC_SERVER_* variables for backwards compatibility
+    final twcHost = dotenv.env['TWC_SERVER_HOST'];
+    if (twcHost != null && twcHost.isNotEmpty) {
+      final name = dotenv.env['TWC_SERVER_NAME'] ?? 'TWC Server (Debug)';
+      final portStr = dotenv.env['TWC_SERVER_PORT'];
+      final port = int.tryParse(portStr ?? '64738') ?? 64738;
+      final password = dotenv.env['TWC_SERVER_PASSWORD'] ?? '';
+
+      final twcServer = MumbleServer(
+        id: 'debug_auto_${twcHost}_$port',
+        name: name,
+        host: twcHost,
+        port: port,
+        username: debugUsername,
+        password: password,
+      );
+
+      _addIfMissing(twcServer);
+    }
+  }
+
+  void _addIfMissing(MumbleServer server) {
+    if (!_servers.any((s) => s.id == server.id || (s.host == server.host && s.port == server.port))) {
+      _servers.insert(0, server);
     }
   }
 }

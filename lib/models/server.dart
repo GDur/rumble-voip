@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MumbleServer {
   final String id;
@@ -84,9 +85,9 @@ class MumbleServer {
   );
 }
 
-String _generateDefaultUsername() {
-  // Current branch: rust-plugin
-  const branch = 'RustPluginDumble';
+String generateDefaultUsername() {
+  // Use BRANCH_NAME from .env or fallback to 'RustPluginDumble'
+  final branch = dotenv.env['BRANCH_NAME'] ?? 'RustPluginDumble';
   String platform;
   if (kIsWeb) {
     platform = 'Web';
@@ -125,23 +126,4 @@ String _generateDefaultUsername() {
   return 'Rumble$branch$platform$randomName';
 }
 
-final List<MumbleServer> initialServers = [
-  MumbleServer(
-    name: 'chat.revslair.net',
-    host: 'chat.revslair.net',
-    port: 64738,
-    username: _generateDefaultUsername(),
-  ),
-  MumbleServer(
-    name: 'Rogue Server',
-    host: 'mumble.rogueserver.com',
-    port: 64738,
-    username: _generateDefaultUsername(),
-  ),
-  MumbleServer(
-    name: 'TWC Server',
-    host: 'mumble.twcclan.org',
-    port: 64738,
-    username: _generateDefaultUsername(),
-  ),
-];
+final List<MumbleServer> initialServers = [];

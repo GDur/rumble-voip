@@ -1,7 +1,7 @@
 # Ideas and Plans
 
 
-- [] add the TWC server only when in the debug mode using the .env as the source.
+- [x] add the TWC server only when in the debug mode using the .env as the source.
 
 - [ ] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and reflect it in the "About" section of the settings.
 

@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rumble/utils/permissions.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/server_provider.dart';
@@ -35,6 +36,15 @@ const kBrandGreenButton = Color.fromARGB(255, 79, 196, 157);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    // In many environments (like release or CI), .env might not exist.
+    // We log it and continue so the app still starts correctly.
+    debugPrint('Warning: .env file could not be loaded: $e');
+  }
   
   // Initialize Rust
   await RustLib.init();
