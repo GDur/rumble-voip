@@ -18,12 +18,14 @@
 
 - [x] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
 
-
 - [x] when the user joins a server then it will alsmost always write a custom welcome message. this should be shown as it contiains sometimes hints on how to behave etc. (its a text contained in the server info)
 
-- [ ] **Fix autojoin channel**: Check when the current channel is being saved. Also, rename "folder" to "channel" in the settings.
+- [x] **Fix autojoin channel**: Check when the current channel is being saved. Also, rename "folder" to "channel" in the settings.
+
 - [ ] **Expand hotkey support**: Enable other actions to be triggered by hotkeys. Allow multiple hotkeys to activate a single action (e.g., F13 and Caps Lock could both trigger PTT).
-- [ ] **Filter empty channels**: Add a toggle to hide empty channels in the view.
+
+- [ ] **Filter empty channels**: Add a toggle button in the top header to hide empty channels in the view.
+
 - [ ] **Microphone permissions**: Request mic permissions immediately at app startup, as iOS seems to require an app restart after granting permissions.
 - [ ] **Voice activity indicator**: When another user talks, do *not* make their label bold. Keep it normal.
 - [ ] **Channel tree refinements**:

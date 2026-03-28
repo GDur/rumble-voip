@@ -395,9 +395,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
     final currentChannelId = selfFromMap.channel.channelId;
 
-    // If we've reached our target folder, clear the sticky target
+    // If we've reached our target channel, clear the sticky target
     if (_targetChannelId != null && currentChannelId == _targetChannelId) {
-      debugPrint('Mumble: Target folder reached. Clearing target sticky.');
+      debugPrint('Mumble: Target channel reached. Clearing target sticky.');
       _targetChannelId = null;
     }
 
