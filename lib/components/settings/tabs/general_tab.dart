@@ -81,6 +81,21 @@ class GeneralTab extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Expanded(child: Text('Hide empty channels')),
+              const SizedBox(width: 8),
+              ShadSwitch(
+                value: settings.hideEmptyChannels,
+                onChanged: (val) {
+                  settings.setHideEmptyChannels(val);
+                  onUpdate(() {});
+                },
+              ),
+            ],
+          ),
         ],
       ),
     );

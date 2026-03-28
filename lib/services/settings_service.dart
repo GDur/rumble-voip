@@ -26,6 +26,7 @@ class SettingsService extends ChangeNotifier {
   static const String _kIncomingJitterBufferMs = 'incoming_jitter_buffer_ms';
   static const String _kPlaybackHwBufferMs = 'playback_hw_buffer_ms';
   static const String _kRememberLastChannel = 'remember_last_channel';
+  static const String _kHideEmptyChannels = 'hide_empty_channels';
 
   final SharedPreferences _prefs;
 
@@ -47,6 +48,7 @@ class SettingsService extends ChangeNotifier {
   int _incomingJitterBufferMs;
   int _playbackHwBufferMs;
   bool _rememberLastChannel;
+  bool _hideEmptyChannels;
 
   SettingsService(this._prefs)
     : _pttKey = PttKey.values[_prefs.getInt(_kPttKey) ?? 0],
@@ -65,6 +67,7 @@ class SettingsService extends ChangeNotifier {
       _incomingJitterBufferMs = _prefs.getInt(_kIncomingJitterBufferMs) ?? 40,
       _playbackHwBufferMs = _prefs.getInt(_kPlaybackHwBufferMs) ?? 0,
       _rememberLastChannel = _prefs.getBool(_kRememberLastChannel) ?? true,
+      _hideEmptyChannels = _prefs.getBool(_kHideEmptyChannels) ?? false,
       _userVolumes = {} {
     // Load user volumes
     final List<String>? userVols = _prefs.getStringList(_kUserVolumes);
@@ -108,6 +111,7 @@ class SettingsService extends ChangeNotifier {
   int get incomingJitterBufferMs => _incomingJitterBufferMs;
   int get playbackHwBufferMs => _playbackHwBufferMs;
   bool get rememberLastChannel => _rememberLastChannel;
+  bool get hideEmptyChannels => _hideEmptyChannels;
   Map<String, double> get userVolumes => Map.unmodifiable(_userVolumes);
 
   double? get windowWidth => _prefs.getDouble(_kWindowWidth);
@@ -263,6 +267,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setRememberLastChannel(bool value) async {
     _rememberLastChannel = value;
     await _prefs.setBool(_kRememberLastChannel, value);
+    notifyListeners();
+  }
+
+  Future<void> setHideEmptyChannels(bool value) async {
+    _hideEmptyChannels = value;
+    await _prefs.setBool(_kHideEmptyChannels, value);
     notifyListeners();
   }
 }

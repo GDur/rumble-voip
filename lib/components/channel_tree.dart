@@ -9,6 +9,7 @@ import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/src/rust/api/client.dart';
 import 'package:rumble/utils/html_utils.dart';
+import 'package:rumble/services/settings_service.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<MumbleChannel> channels;
@@ -46,12 +47,14 @@ class _ChannelTreeState extends State<ChannelTree> {
   // Track flattened list of visible items for keyboard navigation
   final List<dynamic> _visibleItems = [];
 
-  Set<int> get _channelsWithUsers {
-    final result = <int>{};
+  Set<int> _getVisibleChannelIds(bool hideEmpty) {
+    if (!hideEmpty) return widget.channels.map((c) => c.id).toSet();
+    
+    final result = <int>{0}; // Root always visible
 
     void addPath(int? channelId) {
       int? currentId = channelId;
-      while (currentId != null) {
+      while (currentId != null && !result.contains(currentId)) {
         result.add(currentId);
         final current = widget.channels.cast<MumbleChannel?>().firstWhere(
           (c) => c?.id == currentId,
@@ -71,6 +74,8 @@ class _ChannelTreeState extends State<ChannelTree> {
 
     return result;
   }
+
+  Set<int> get _channelsWithUsers => _getVisibleChannelIds(true);
 
   bool _isExpanded(int channelId) {
     if (_channelsWithUsers.contains(channelId)) return true;
@@ -200,15 +205,18 @@ class _ChannelTreeState extends State<ChannelTree> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsService>(context);
+    final visibleChannelIds = _getVisibleChannelIds(settings.hideEmptyChannels);
+    
     _visibleItems.clear();
     final rootChannels = widget.channels
-        .where((c) => c.parentId == null || c.id == 0)
+        .where((c) => (c.parentId == null || c.id == 0) && visibleChannelIds.contains(c.id))
         .toList();
 
     // Sort root channels
     rootChannels.sort((a, b) => a.position.compareTo(b.position));
 
-    _buildVisibleItems(rootChannels);
+    _buildVisibleItems(rootChannels, visibleChannelIds);
 
     return Shortcuts(
       shortcuts: {
@@ -245,7 +253,7 @@ class _ChannelTreeState extends State<ChannelTree> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: rootChannels
-                    .map((c) => _buildChannelItem(context, c, 0))
+                    .map((c) => _buildChannelItem(context, c, 0, visibleChannelIds))
                     .toList(),
               ),
             ),
@@ -255,7 +263,7 @@ class _ChannelTreeState extends State<ChannelTree> {
     );
   }
 
-  void _buildVisibleItems(List<MumbleChannel> currentChannels) {
+  void _buildVisibleItems(List<MumbleChannel> currentChannels, Set<int> visibleChannelIds) {
     for (var channel in currentChannels) {
       _visibleItems.add(channel);
       if (_isExpanded(channel.id)) {
@@ -275,7 +283,7 @@ class _ChannelTreeState extends State<ChannelTree> {
 
         // Add subchannels
         final subChannels = widget.channels
-            .where((c) => c.parentId == channel.id)
+            .where((c) => c.parentId == channel.id && visibleChannelIds.contains(c.id))
             .toList();
 
         // Sort subchannels
@@ -286,7 +294,7 @@ class _ChannelTreeState extends State<ChannelTree> {
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
 
-        _buildVisibleItems(subChannels);
+        _buildVisibleItems(subChannels, visibleChannelIds);
       }
     }
   }
@@ -358,10 +366,11 @@ class _ChannelTreeState extends State<ChannelTree> {
     BuildContext context,
     MumbleChannel channel,
     int depth,
+    Set<int> visibleChannelIds,
   ) {
     final theme = ShadTheme.of(context);
     final subChannels = widget.channels
-        .where((c) => c.parentId == channel.id)
+        .where((c) => c.parentId == channel.id && visibleChannelIds.contains(c.id))
         .toList();
     final usersInChannel = widget.users
         .where((u) => u.channelId == channel.id)
@@ -451,7 +460,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                       ),
                     ),
                   ),
-                  if (userCount > 0 || isRoot)
+                  if (userCount > 0 || isRoot) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -468,6 +477,38 @@ class _ChannelTreeState extends State<ChannelTree> {
                         style: theme.textTheme.muted.copyWith(fontSize: 10),
                       ),
                     ),
+                    if (isRoot) ...[
+                      const SizedBox(width: 4),
+                      Consumer<SettingsService>(
+                        builder: (context, settings, _) => ShadTooltip(
+                          builder: (context) => Text(
+                            settings.hideEmptyChannels
+                                ? 'Show empty channels'
+                                : 'Hide empty channels',
+                          ),
+                          child: ShadIconButton.ghost(
+                            width: 24,
+                            height: 24,
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              settings.setHideEmptyChannels(
+                                !settings.hideEmptyChannels,
+                              );
+                            },
+                            icon: Icon(
+                              settings.hideEmptyChannels
+                                  ? LucideIcons.eyeOff
+                                  : LucideIcons.eye,
+                              size: 14,
+                              color: settings.hideEmptyChannels
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.mutedForeground,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   if (channel.isEnterRestricted == true) ...[
                     const SizedBox(width: 4),
                     Icon(
@@ -494,7 +535,7 @@ class _ChannelTreeState extends State<ChannelTree> {
         ),
         if (expanded) ...[
           ...usersInChannel.map((u) => _buildUserItem(context, u, depth)),
-          ...subChannels.map((c) => _buildChannelItem(context, c, depth + 1)),
+          ...subChannels.map((c) => _buildChannelItem(context, c, depth + 1, visibleChannelIds)),
         ],
       ],
     );
