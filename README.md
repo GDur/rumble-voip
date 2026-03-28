@@ -22,7 +22,8 @@ Looking ahead, we plan to implement automatic updates to keep the experience sea
 
 ## Why Rumble?
 
-- **Modern UI/UX**: A fresh, high-quality interface that doesn't feel like it's from the early 2000s.
+- **Modern UI/UX**: A fresh, high-quality interface.
+
 - **Cross-Platform**: Built to work everywhere. One codebase, one experience.
 - **Interoperable**: Rumble works in tandem with original Mumble clients. You can switch to Rumble without forcing your friends or community to change anything.
 - **AI-Assisted Development**: This project is developed by a human programmer with significant assistance from AI to speed up boilerplate and implementation.
