@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:rumble/services/background_service.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -38,6 +39,7 @@ const kBrandGreenButton = Color.fromARGB(255, 79, 196, 157);
 void main() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
+    await BackgroundService.initialize();
 
     // Catch Flutter framework errors
     FlutterError.onError = (FlutterErrorDetails details) {

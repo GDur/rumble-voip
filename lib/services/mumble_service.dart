@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:rumble/services/background_service.dart';
 import 'package:rumble/models/certificate.dart';
 import 'package:rumble/models/chat_message.dart';
 import 'package:rumble/models/server.dart';
@@ -170,6 +171,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       
       _selfSession = _dumbleClient!.self.session;
       debugPrint('Mumble: Handshake finished. Self session: $_selfSession');
+
+      // Start background service to prevent sleep
+      await BackgroundService.start(serverName: server.name);
       
       // Target channel to join once sync is stable
       if (_settings.rememberLastChannel && server.lastChannelId != null) {
@@ -219,6 +223,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         name: 'MumbleService',
       );
     } finally {
+      // Stop background service
+      await BackgroundService.stop();
+      
       _isConnected = false;
       _currentServer = null;
       _selfSession = null;

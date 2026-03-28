@@ -38,6 +38,8 @@ dependencies:
   photo_view: ^0.15.0
   dumble: ^0.8.9
   flutter_dotenv: ^6.0.0
+  flutter_foreground_task: ^9.2.1
+  wakelock_plus: ^1.2.1
 
 dev_dependencies:
   flutter_test:
