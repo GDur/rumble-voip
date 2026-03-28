@@ -510,26 +510,39 @@ class _HomeScreenState extends State<HomeScreen> {
       name: 'HomeScreen',
       level: 1000,
     );
-    final errorStr = e.toString().toLowerCase();
+
     String message = 'Failed to connect to server.';
     bool showEdit = false;
+    String? errorField;
 
-    if (e.toString().contains(':')) {
-      message = e.toString().split(':').last.trim();
+    final errorStr = e.toString().toLowerCase();
+
+    if (e is SocketException) {
+      message = e.message;
+      if (e.osError?.message != null && e.osError!.message.isNotEmpty) {
+        message += ' (${e.osError!.message})';
+      }
+    } else if (e.toString().contains(':')) {
+      // Fallback for other errors with a message after ":"
+      final parts = e.toString().split(':');
+      if (parts.length > 1) {
+        message = parts.last.trim();
+      } else {
+        message = e.toString();
+      }
+    } else {
+      message = e.toString();
     }
 
-    String? errorField;
     if (errorStr.contains('password')) {
-      message = message.isEmpty ? 'Incorrect password.' : message;
       showEdit = true;
       errorField = 'password';
     } else if (errorStr.contains('hostname') ||
-        errorStr.contains('host not found')) {
-      message = 'Invalid server address.';
+        errorStr.contains('host not found') ||
+        errorStr.contains('failed to resolve')) {
       showEdit = true;
       errorField = 'host';
     } else if (errorStr.contains('username')) {
-      message = 'Invalid username.';
       showEdit = true;
       errorField = 'username';
     }

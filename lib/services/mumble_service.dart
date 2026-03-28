@@ -165,11 +165,24 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         context: context,
       );
 
+      // DebugGING for iOS resolution and connection
+      debugPrint('[MumbleService] Attempting to connect to ${server.host}:${server.port}');
+      if (Platform.isIOS) {
+        try {
+          final addresses = await InternetAddress.lookup(server.host);
+          debugPrint('[MumbleService] Resolved addresses: ${addresses.map((a) => a.address).join(', ')}');
+        } catch (dnsError) {
+          debugPrint('[MumbleService] DNS Resolution failed (but trying dumble connect anyway): $dnsError');
+        }
+        // Small delay as an experimental fix for some iOS networking race conditions
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
       _dumbleClient = await dumble.MumbleClient.connect(
         options: options,
         onBadCertificate: (cert) => true,
         useUdp: true, 
-      );
+      ).timeout(const Duration(seconds: 10)); // Added a timeout to avoid hangs on iOS
       
       _isConnected = true; 
       _dumbleClient!.add(this);

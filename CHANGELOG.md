@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.10.1] - 2026-03-28
+- fix: configure iOS AVAudioSession for microphone access and improve connection error reporting
+
 ## [0.10.0] - 2026-03-28
 - feat: standardize tooltips and restructure settings dialog with persistent footer
 
