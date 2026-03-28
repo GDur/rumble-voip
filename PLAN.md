@@ -26,7 +26,7 @@
 
 - [x] **Filter empty channels**: Add a toggle button in the top header to hide empty channels in the view.
 
-- [ ] **Microphone permissions**: Request mic permissions immediately at app startup, as iOS seems to require an app restart after granting permissions.
+- [x] **Microphone permissions**: Request mic permissions immediately at app startup, as iOS seems to require an app restart after granting permissions.
 
 - [ ] **Voice activity indicator**: When another user talks, do *not* make their label bold. Keep it normal.
 - [ ] **Channel tree refinements**:

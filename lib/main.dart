@@ -282,6 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkLastServer();
+    _requestInitialPermissions();
 
     // Listen for PTT errors/warnings globally in the Home Screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,6 +290,25 @@ class _HomeScreenState extends State<HomeScreen> {
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
       mumbleService.addListener(_handlePttWarning);
     });
+  }
+
+  Future<void> _requestInitialPermissions() async {
+    // Request microphone permission immediately at startup as requested
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+      final wasGranted = await PermissionUtils.isMicrophonePermissionGranted();
+      if (!wasGranted) {
+        final granted = await PermissionUtils.requestMicrophonePermission();
+        if (granted && Platform.isIOS && mounted) {
+           ShadToaster.of(context).show(
+            const ShadToast(
+              title: Text('Restart Recommended'),
+              description: Text('Microphone access granted. You might need to restart Rumble for changes to take effect.'),
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
