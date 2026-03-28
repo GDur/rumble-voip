@@ -34,7 +34,7 @@
     - [x] Add a hover effect to the channel tree.
     - [x] Indicate item selection on pointer down, not just on pointer up.
     - [x] Increase the hitbox size for the channel chevrons.
-- [ ] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
+- [x] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
 - [ ] **Verify hotkeys**:
     - [ ] Ensure custom hotkeys work correctly (currently only selectable ones might work).
     - [ ] Ensure the "suppress hotkey" functionality works.

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/mumble_service.dart';
-import 'package:rumble/components/settings/tabs/audio_tab.dart';
+import 'package:rumble/components/settings/tabs/audio_input_tab.dart';
+import 'package:rumble/components/settings/tabs/audio_output_tab.dart';
 import 'package:rumble/components/settings/tabs/general_tab.dart';
 import 'package:rumble/components/settings/tabs/hotkey_tab.dart';
 import 'package:rumble/components/settings/tabs/certificate_tab.dart';
@@ -56,7 +57,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final sideBarItems = [
       (id: 'general', label: 'General', icon: LucideIcons.settings),
       (id: 'hotkeys', label: 'Hotkeys', icon: LucideIcons.keyboard),
-      (id: 'audio', label: 'Audio', icon: LucideIcons.volume2),
+      (id: 'audioInput', label: 'Audio Input', icon: LucideIcons.mic),
+      (id: 'audioOutput', label: 'Audio Output', icon: LucideIcons.volume2),
       (
         id: 'certificates',
         label: 'Certificates',
@@ -304,8 +306,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Widget _buildTabContent(String tab) {
     switch (tab) {
-      case 'audio':
-        return AudioTab(
+      case 'audioInput':
+        return AudioInputTab(
+          settings: widget.settings,
+          mumbleService: widget.mumbleService,
+          onUpdate: setState,
+        );
+      case 'audioOutput':
+        return AudioOutputTab(
           settings: widget.settings,
           mumbleService: widget.mumbleService,
           onUpdate: setState,

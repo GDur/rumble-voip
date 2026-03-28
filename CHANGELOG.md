@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.7.0] - 2026-03-28
+- feat: split audio settings into dedicated Input and Output tabs in the settings dialog.
+
 ## [0.6.0] - 2026-03-28
 - feat: implement immediate channel/user selection using PointerDown and unify hover effects. Refined channel tree layout.
 
