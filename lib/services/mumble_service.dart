@@ -415,16 +415,18 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     if (_dumbleClient == null) return;
     final currentChannel = _dumbleClient!.self.channel;
     
+    final sanitizedMessage = HtmlUtils.sanitizeMumbleHtml(message);
+    
     _dumbleClient!.sendMessage(
       message: dumble.OutgoingTextMessage(
-        message: message,
+        message: sanitizedMessage,
         channels: [currentChannel],
       ),
     );
     
     _messages.add(ChatMessage(
       senderName: _dumbleClient!.self.name ?? 'Me',
-      content: message,
+      content: sanitizedMessage,
       timestamp: DateTime.now(),
       isSelf: true,
     ));

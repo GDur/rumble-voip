@@ -9,6 +9,7 @@ import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart
 import 'package:intl/intl.dart';
 import 'package:rumble/components/image_gallery.dart';
 import 'package:rumble/components/ptt_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -231,6 +232,13 @@ class _ChatViewState extends State<ChatView> {
                                         final index = allImages.indexOf(imageData.sources.first.url);
                                         ImageGalleryDialog.show(context, allImages, index >= 0 ? index : 0);
                                       },
+                                      onTapUrl: (url) async {
+                                        final uri = Uri.parse(url);
+                                        if (await canLaunchUrl(uri)) {
+                                          await launchUrl(uri);
+                                        }
+                                        return true;
+                                      },
                                     ),
                                   ],
                                 ),
@@ -319,6 +327,13 @@ class _ChatViewState extends State<ChatView> {
                                         uniqueImages,
                                         index >= 0 ? index : 0,
                                       );
+                                    },
+                                    onTapUrl: (url) async {
+                                      final uri = Uri.parse(url);
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri);
+                                      }
+                                      return true;
                                     },
                                     customStylesBuilder: (element) {
                                       if (element.localName == 'img') {

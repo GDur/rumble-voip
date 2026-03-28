@@ -6,17 +6,21 @@ import 'package:image/image.dart' as img;
 class HtmlUtils {
   /// Some Mumble clients URL-encode or add newlines to the base64 data in data URIs.
   /// This method finds those data URIs and ensures they are properly decoded and cleaned.
+  /// It also linkifies plain text URLs if they aren't already part of an <a> tag.
   static String sanitizeMumbleHtml(String html) {
     if (html.isEmpty) return html;
 
-    // Pattern to find data URIs in src attributes
+    // 1. Linkify plain text URLs (only if they aren't already part of an <a> tag)
+    String linkifiedHtml = linkify(html);
+
+    // 2. Pattern to find data URIs in src attributes
     // We use a broader match and then clean the inside.
     final dataUriPattern = RegExp(
       r"""data:[^;]+;base64,[^"'>]+""",
       caseSensitive: false,
     );
 
-    return html.replaceAllMapped(dataUriPattern, (match) {
+    return linkifiedHtml.replaceAllMapped(dataUriPattern, (match) {
       String dataUri = match.group(0)!;
       
       // 1. Handle URL-encoding if present
@@ -47,6 +51,56 @@ class HtmlUtils {
       }
 
       return dataUri;
+    });
+  }
+
+  /// Converts plain URLs in text to clickable HTML <a> tags.
+  static String linkify(String html) {
+    if (html.isEmpty) return html;
+
+    // Regex for URLs that are NOT preceded by href=" or src="
+    // We also want to avoid linkifying if it's already inside an <a> tag.
+    // Since Dart's RegExp is limited, we'll use a simple heuristic:
+    // If it already has <a> tags, we assume it's already linkified.
+    if (html.contains('<a') || html.contains('<img')) {
+      return html;
+    }
+
+    final urlRegex = RegExp(
+      r'(https?://[^\s<"]+)',
+      caseSensitive: false,
+    );
+
+    return html.replaceAllMapped(urlRegex, (match) {
+      final url = match.group(1)!; // Use the first group (the URL itself)
+      
+      // Heuristic to handle trailing punctuation (e.g., at the end of a sentence)
+      var cleanedUrl = url;
+      var suffix = '';
+      
+      // While the URL ends with a common trailing punctuation char that shouldn't be part of the URL
+      // We check if it's likely not part of a query string or similar
+      final trailingPunctuation = RegExp(r'[.,;!?)\]]$');
+      while (trailingPunctuation.hasMatch(cleanedUrl)) {
+        // If it ends with ')', check if there's a matching '(' in the URL (e.g. Wikipedia links)
+        if (cleanedUrl.endsWith(')') && cleanedUrl.contains('(')) {
+          break;
+        }
+        suffix = cleanedUrl.substring(cleanedUrl.length - 1) + suffix;
+        cleanedUrl = cleanedUrl.substring(0, cleanedUrl.length - 1);
+      }
+      
+      // Image preview check
+      final lowerUrl = cleanedUrl.toLowerCase();
+      if (lowerUrl.endsWith('.gif') || 
+          lowerUrl.endsWith('.png') || 
+          lowerUrl.endsWith('.jpg') || 
+          lowerUrl.endsWith('.jpeg') || 
+          lowerUrl.endsWith('.webp')) {
+        return '<a href="$cleanedUrl"><img src="$cleanedUrl" /></a>$suffix';
+      }
+
+      return '<a href="$cleanedUrl">$cleanedUrl</a>$suffix';
     });
   }
 

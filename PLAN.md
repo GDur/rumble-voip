@@ -1,10 +1,18 @@
 # Ideas and Plans
 
+
+- [] add the TWC server only when in the debug mode using the .env as the source.
+
+- [ ] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and reflect it in the "About" section of the settings.
+
+
 - [] make sure that the app (on android) does not stop or is going into sleep mode when in the background
+
+ - [] when on eg android then then top and bottom OS menus can lay over the sonner (toasts) which makes them unreadable. move them then so that they are still readable.
 
 - [] add the possibility to add photos via a (+) file explorer too on all platfoms
 
-- [] make sure that links are clickable on all platforms
+- [x] make sure that users can post links and use links in their notice and that they are shown as clickable links. make sure that links are clickable on all platforms
 
 - [] make it possible to load website previews (open graph) and urls eg for gifs, pdf's audio and video files
 
@@ -23,7 +31,6 @@
     - [ ] Indicate item selection on pointer down, not just on pointer up.
     - [ ] Increase the hitbox size for the channel chevrons.
 - [ ] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
-- [ ] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and reflect it in the "About" section of the settings.
 - [ ] **Verify hotkeys**:
     - [ ] Ensure custom hotkeys work correctly (currently only selectable ones might work).
     - [ ] Ensure the "suppress hotkey" functionality works.
