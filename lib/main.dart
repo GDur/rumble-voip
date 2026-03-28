@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 import 'package:rumble/utils/permissions.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -35,7 +36,30 @@ const kBrandGreenText = Color(0xFF065F46);
 const kBrandGreenButton = Color.fromARGB(255, 79, 196, 157);
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Catch Flutter framework errors
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      developer.log(
+        'Flutter Framework Error',
+        error: details.exception,
+        stackTrace: details.stack,
+        level: 1000,
+      );
+    };
+
+    // Catch asynchronous errors outside of the Flutter framework
+    PlatformDispatcher.instance.onError = (error, stack) {
+      developer.log(
+        'Asynchronous Error',
+        error: error,
+        stackTrace: stack,
+        level: 1000,
+      );
+      return true; // Error was handled
+    };
   
   // Load environment variables
   try {
@@ -85,41 +109,49 @@ void main() async {
     });
   }
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ConnectivityService()),
-        ChangeNotifierProvider(
-          create: (_) => MumbleService()
-            ..initialize(
-              settingsService,
-              settingsService.inputGain,
-              settingsService.outputVolume,
-              settingsService.captureDeviceId,
-              settingsService.playbackDeviceId,
-            ),
-        ),
-        ChangeNotifierProvider(create: (_) => ServerProvider()),
-        ChangeNotifierProvider.value(value: settingsService),
-        ChangeNotifierProvider(
-          create: (_) => CertificateService()..loadCertificates(),
-        ),
-        ChangeNotifierProxyProvider2<
-          MumbleService,
-          SettingsService,
-          HotkeyService
-        >(
-          create: (context) => HotkeyService(
-            Provider.of<MumbleService>(context, listen: false),
-            Provider.of<SettingsService>(context, listen: false),
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => ConnectivityService()),
+          ChangeNotifierProvider(
+            create: (_) => MumbleService()
+              ..initialize(
+                settingsService,
+                settingsService.inputGain,
+                settingsService.outputVolume,
+                settingsService.captureDeviceId,
+                settingsService.playbackDeviceId,
+              ),
           ),
-          update: (context, mumble, settings, previous) =>
-              previous ?? HotkeyService(mumble, settings),
-        ),
-      ],
-      child: const MyApp(),
-    ),
-  );
+          ChangeNotifierProvider(create: (_) => ServerProvider()),
+          ChangeNotifierProvider.value(value: settingsService),
+          ChangeNotifierProvider(
+            create: (_) => CertificateService()..loadCertificates(),
+          ),
+          ChangeNotifierProxyProvider2<
+            MumbleService,
+            SettingsService,
+            HotkeyService
+          >(
+            create: (context) => HotkeyService(
+              Provider.of<MumbleService>(context, listen: false),
+              Provider.of<SettingsService>(context, listen: false),
+            ),
+            update: (context, mumble, settings, previous) =>
+                previous ?? HotkeyService(mumble, settings),
+          ),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  }, (error, stack) {
+    developer.log(
+      'Unhandled Top-level Error',
+      error: error,
+      stackTrace: stack,
+      level: 1000,
+    );
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -441,6 +473,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _handleConnectionError(Object e, MumbleServer server) {
+    developer.log(
+      'Connection Error to ${server.name}',
+      error: e,
+      name: 'HomeScreen',
+      level: 1000,
+    );
     final errorStr = e.toString().toLowerCase();
     String message = 'Failed to connect to server.';
     bool showEdit = false;
@@ -602,17 +640,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   color: theme.colorScheme.primary,
                 ),
               ),
-              if (mumbleService.isConnected)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    '${mumbleService.users.length}/${mumbleService.maxUsers ?? "?"} Users',
-                    style: theme.textTheme.muted.copyWith(
-                      fontSize: 10,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
             ],
           ),
           const Spacer(),

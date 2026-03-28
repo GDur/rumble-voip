@@ -8,6 +8,7 @@ import 'package:rumble/components/settings/tabs/hotkey_tab.dart';
 import 'package:rumble/components/settings/tabs/certificate_tab.dart';
 import 'package:rumble/components/settings/tabs/about_tab.dart';
 import 'package:rumble/components/ptt_button.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 // Component: settings-dialog
 class SettingsDialog extends StatefulWidget {
@@ -28,6 +29,7 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   String? _currentTab;
+  String _version = '';
 
   bool _isMobile(BuildContext context) {
     return MediaQuery.of(context).size.width < 600;
@@ -39,6 +41,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
     // Refresh devices whenever the dialog is opened to catch new ones
     widget.mumbleService.refreshInputDevices();
     widget.mumbleService.refreshOutputDevices();
+    _loadPackageInfo();
+  }
+
+  Future<void> _loadPackageInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() => _version = info.version);
+    }
   }
 
   @override
@@ -125,35 +135,48 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           ),
                           padding: const EdgeInsets.all(12),
                           child: Column(
-                            children: sideBarItems.map((item) {
-                              final isSelected = effectiveTab == item.id;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: ShadButton.ghost(
-                                  onPressed: () =>
-                                      setState(() => _currentTab = item.id),
-                                  width: double.infinity,
-                                  gap: 12,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  backgroundColor: isSelected
-                                      ? ShadTheme.of(context).colorScheme.accent
-                                      : Colors.transparent,
-                                  pressedBackgroundColor: ShadTheme.of(
-                                    context,
-                                  ).colorScheme.accent,
-                                  leading: Icon(item.icon, size: 16),
+                            children: [
+                              ...sideBarItems.map((item) {
+                                final isSelected = effectiveTab == item.id;
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  child: ShadButton.ghost(
+                                    onPressed: () =>
+                                        setState(() => _currentTab = item.id),
+                                    width: double.infinity,
+                                    gap: 12,
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    backgroundColor: isSelected
+                                        ? ShadTheme.of(context).colorScheme.accent
+                                        : Colors.transparent,
+                                    pressedBackgroundColor: ShadTheme.of(
+                                      context,
+                                    ).colorScheme.accent,
+                                    leading: Icon(item.icon, size: 16),
+                                    child: Text(
+                                      item.label,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+                              const Spacer(),
+                              if (_version.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    item.label,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                                    'v$_version',
+                                    style: ShadTheme.of(context).textTheme.muted.copyWith(
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
-                              );
-                            }).toList(),
+                            ],
                           ),
                         ),
                         // Content
@@ -247,6 +270,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
               width: MediaQuery.of(context).size.width * 0.85,
               child: const Text('Done'),
             ),
+            if (_version.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(
+                  'Rumble v$_version',
+                  style: ShadTheme.of(context).textTheme.muted.copyWith(
+                    fontSize: 11,
+                  ),
+                ),
+              ),
           ],
         ),
       );

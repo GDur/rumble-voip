@@ -379,6 +379,7 @@ class _ChannelTreeState extends State<ChannelTree> {
     );
 
     int userCount = usersInChannel.length;
+    final bool isRoot = channel.id == 0;
     final bool isMyChannel = widget.self?.channelId == channel.id;
     final bool expanded = _isExpanded(channel.id);
     final bool hasChildren =
@@ -450,7 +451,7 @@ class _ChannelTreeState extends State<ChannelTree> {
                       ),
                     ),
                   ),
-                  if (userCount > 0)
+                  if (userCount > 0 || isRoot)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -461,7 +462,9 @@ class _ChannelTreeState extends State<ChannelTree> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '$userCount',
+                        isRoot
+                            ? '${widget.users.length}/${Provider.of<MumbleService>(context, listen: false).maxUsers ?? "?"}'
+                            : '$userCount',
                         style: theme.textTheme.muted.copyWith(fontSize: 10),
                       ),
                     ),

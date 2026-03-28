@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Component: about-tab
 class AboutTab extends StatelessWidget {
@@ -20,10 +21,6 @@ class AboutTab extends StatelessWidget {
               'Rumble',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const Text(
-              'v1.0.0',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
             const SizedBox(height: 24),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 40),
@@ -32,6 +29,13 @@ class AboutTab extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 15),
               ),
+            ),
+            const SizedBox(height: 16),
+            ShadButton.outline(
+              size: ShadButtonSize.sm,
+              leading: const Icon(LucideIcons.github, size: 16),
+              onPressed: () => launchUrl(Uri.parse('https://github.com/GDur/rumble-voip/')),
+              child: const Text('View on GitHub'),
             ),
             const SizedBox(height: 40),
             const Text(

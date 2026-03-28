@@ -83,10 +83,8 @@ class ServerProvider extends ChangeNotifier {
   Future<void> _saveServers() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Only save servers that are not injected in debug mode
-      final persistableServers = _servers.where((s) => !s.id.startsWith('debug_auto_')).toList();
       final String encoded = jsonEncode(
-        persistableServers.map((s) => s.toJson()).toList(),
+        _servers.map((s) => s.toJson()).toList(),
       );
       await prefs.setString('mumble_servers', encoded);
     } catch (e) {

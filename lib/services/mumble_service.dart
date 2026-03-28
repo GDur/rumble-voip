@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:rumble/models/certificate.dart';
@@ -52,7 +53,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     return res;
   }
   MumbleUser? get self => _selfSession != null ? _users[_selfSession] : null;
-  int? get maxUsers => _dumbleClient?.serverInfo.config?.maxUsers;
+  int? get maxUsers => _dumbleClient?.serverInfo.config?.maxUsers ?? _currentServer?.maxUsers;
 
   // UI-specific getters
   String get currentChannelName => self?.channelId != null 
@@ -91,6 +92,12 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
           _syncUsers();
         },
         disconnected: (reason) {
+          developer.log(
+            'Audio Engine Disconnected',
+            error: reason,
+            name: 'MumbleService',
+            level: 1000,
+          );
           _error = reason;
           disconnect();
         },
@@ -198,20 +205,32 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     }
   }
 
-  void disconnect() {
-    _dumbleClient?.close();
-    _dumbleClient = null;
-    _currentServer = null;
-    _rustEngine.disconnect();
-    _isConnected = false;
-    _selfSession = null;
-    _targetChannelId = null;
-    _channels = [];
-    _users.clear();
-    _talkingUsers.clear();
-    _trackedUserListeners.clear();
-    _trackedChannelListeners.clear();
-    notifyListeners();
+  Future<void> disconnect() async {
+    developer.log('MumbleService: Disconnecting...', name: 'MumbleService');
+    try {
+      await _dumbleClient?.close();
+      _dumbleClient = null;
+      await _rustEngine.disconnect();
+    } catch (e, st) {
+      developer.log(
+        'Error during disconnect',
+        error: e,
+        stackTrace: st,
+        name: 'MumbleService',
+      );
+    } finally {
+      _isConnected = false;
+      _currentServer = null;
+      _selfSession = null;
+      _targetChannelId = null;
+      _channels = [];
+      _users.clear();
+      _talkingUsers.clear();
+      _trackedUserListeners.clear();
+      _trackedChannelListeners.clear();
+      notifyListeners();
+      developer.log('MumbleService: Disconnected.', name: 'MumbleService');
+    }
   }
 
   // --- dumble.MumbleClientListener implementation ---
@@ -259,6 +278,13 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
   @override
   void onError(Object error, [StackTrace? stackTrace]) {
+    developer.log(
+      'Mumble Runtime Error',
+      error: error,
+      stackTrace: stackTrace,
+      name: 'MumbleService',
+      level: 1000,
+    );
     _error = error.toString();
     disconnect();
   }

@@ -3,7 +3,7 @@
 
 - [x] add the TWC server only when in the debug mode using the .env as the source.
 
-- [ ] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and reflect it in the "About" section of the settings.
+- [x] **Versioning**: Implement a formal versioning system (starting at 0.1.0) and show it in the settings always at the bottom as a fine print for easy access.
 
 
 - [] make sure that the app (on android) does not stop or is going into sleep mode when in the background
