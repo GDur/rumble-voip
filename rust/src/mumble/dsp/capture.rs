@@ -5,7 +5,7 @@ use crate::mumble::dsp::{
     MAX_OPUS_PACKET_SIZE, MAX_PACKET_SAMPLES,
 };
 use opus_head_sys::*;
-use sonora::config::{GainController2, HighPassFilter, NoiseSuppression};
+use sonora::config::{AdaptiveDigital, FixedDigital, GainController2, HighPassFilter, NoiseSuppression};
 use sonora::{AudioProcessing, Config, StreamConfig};
 use sonora_common_audio::push_sinc_resampler::PushSincResampler;
 
@@ -52,7 +52,11 @@ impl CapturePipeline {
 
         let apm_config = Config {
             noise_suppression: Some(NoiseSuppression::default()),
-            gain_controller2: Some(GainController2::default()),
+            gain_controller2: Some(GainController2 {
+                fixed_digital: FixedDigital { gain_db: 12.0 },
+                adaptive_digital: Some(AdaptiveDigital::default()),
+                ..GainController2::default()
+            }),
             high_pass_filter: Some(HighPassFilter::default()),
             ..Default::default()
         };

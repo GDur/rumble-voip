@@ -155,7 +155,7 @@ class AudioTab extends StatelessWidget {
                   child: ShadSlider(
                     initialValue: settings.inputGain,
                     min: 0.0,
-                    max: 2.0,
+                    max: 8.0,
                     thumbRadius: 10,
                     onChanged: (v) {
                       settings.setInputGain(v);

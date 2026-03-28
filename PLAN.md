@@ -2,11 +2,13 @@
 
 - [] make sure that the app (on android) does not stop or is going into sleep mode when in the background
 
+- [] add the possibility to add photos via a (+) file explorer too on all platfoms
+
 - [] make sure that links are clickable on all platforms
 
 - [] make it possible to load website previews (open graph) and urls eg for gifs, pdf's audio and video files
 
-- [] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
+- [x] make sure that the new input gain is the same as the original one (atm the new clients are much quieter thant the old version. Other users have to use 10 to 16 db boost in the custom user volume settings)
 
 
 - [ ] when the user joins a server then it will alsmost always write a custom welcome message. this should be shown as it contiains sometimes hints on how to behave etc.
