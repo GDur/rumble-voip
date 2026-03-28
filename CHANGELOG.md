@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.10.2] - 2026-03-28
+- refactor: decouple MumbleService from native audio for testing and expand test suite
+
+- Introduced DeviceLister abstraction to enable audio device mocking.
+- Refactored MumbleService for dependency injection of RustAudioEngine and DeviceLister.
+- Added SettingsService unit tests for persistence and defaults.
+- Added ChannelTree widget tests for hierarchical rendering and filtering.
+- Fixed settings_navigation_test.dart and server_management_test.dart stability issues.
+- Removed obsolete test/widget_test.dart boilerplate.
+
 ## [0.10.1] - 2026-03-28
 - fix: configure iOS AVAudioSession for microphone access and improve connection error reporting
 

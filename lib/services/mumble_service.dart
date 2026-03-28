@@ -15,8 +15,27 @@ import 'package:rumble/src/rust/mumble/hardware/audio.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:dumble/dumble.dart' as dumble;
 
+abstract class DeviceLister {
+  Future<List<AudioDevice>> listInputDevices();
+  Future<List<AudioDevice>> listOutputDevices();
+}
+
+class DefaultDeviceLister implements DeviceLister {
+  @override
+  Future<List<AudioDevice>> listInputDevices() => listAudioInputDevices();
+  @override
+  Future<List<AudioDevice>> listOutputDevices() => listAudioOutputDevices();
+}
+
 class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
-  final RustAudioEngine _rustEngine = RustAudioEngine();
+  final RustAudioEngine _rustEngine;
+  final DeviceLister _deviceLister;
+
+  MumbleService({
+    RustAudioEngine? rustEngine,
+    DeviceLister? deviceLister,
+  }) : _rustEngine = rustEngine ?? RustAudioEngine(),
+       _deviceLister = deviceLister ?? DefaultDeviceLister();
   dumble.MumbleClient? _dumbleClient;
   bool _isConnected = false;
   String? _error;
@@ -131,8 +150,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   List<AudioDevice> get outputDevices => _outputDevices;
 
   Future<void> _refreshDevices() async {
-    _inputDevices = await listAudioInputDevices();
-    _outputDevices = await listAudioOutputDevices();
+    _inputDevices = await _deviceLister.listInputDevices();
+    _outputDevices = await _deviceLister.listOutputDevices();
     notifyListeners();
   }
 

@@ -39,128 +39,131 @@ const kBrandGreenText = Color(0xFF065F46);
 const kBrandGreenButton = Color.fromARGB(255, 79, 196, 157);
 
 void main() async {
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await BackgroundService.initialize();
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await BackgroundService.initialize();
 
-    // Request microphone permission immediately at startup on mobile
-    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      PermissionUtils.requestMicrophonePermission();
-    }
+      // Request microphone permission immediately at startup on mobile
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        PermissionUtils.requestMicrophonePermission();
+      }
 
-    // Catch Flutter framework errors
-    FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
-      developer.log(
-        'Flutter Framework Error',
-        error: details.exception,
-        stackTrace: details.stack,
-        level: 1000,
+      // Catch Flutter framework errors
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        developer.log(
+          'Flutter Framework Error',
+          error: details.exception,
+          stackTrace: details.stack,
+          level: 1000,
+        );
+      };
+
+      // Catch asynchronous errors outside of the Flutter framework
+      PlatformDispatcher.instance.onError = (error, stack) {
+        developer.log(
+          'Asynchronous Error',
+          error: error,
+          stackTrace: stack,
+          level: 1000,
+        );
+        return true; // Error was handled
+      };
+
+      // Load environment variables
+      try {
+        await dotenv.load(fileName: ".env");
+      } catch (e) {
+        // In many environments (like release or CI), .env might not exist.
+        // We log it and continue so the app still starts correctly.
+        debugPrint('Warning: .env file could not be loaded: $e');
+      }
+
+      // Initialize Rust
+      await RustLib.init();
+      setupLogger();
+
+      final prefs = await SharedPreferences.getInstance();
+      final settingsService = SettingsService(prefs);
+
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux ||
+              defaultTargetPlatform == TargetPlatform.macOS)) {
+        await windowManager.ensureInitialized();
+        await hotKeyManager.unregisterAll();
+
+        double? width = settingsService.windowWidth;
+        double? height = settingsService.windowHeight;
+        double? x = settingsService.windowX;
+        double? y = settingsService.windowY;
+
+        WindowOptions windowOptions = WindowOptions(
+          size: width != null && height != null
+              ? Size(width, height)
+              : const Size(1100, 750),
+          center: x == null || y == null,
+          backgroundColor: Colors.transparent,
+          skipTaskbar: false,
+          titleBarStyle: TitleBarStyle.normal,
+          title: 'Rumble',
+        );
+
+        await windowManager.waitUntilReadyToShow(windowOptions, () async {
+          if (x != null && y != null) {
+            await windowManager.setPosition(Offset(x, y));
+          }
+          await windowManager.show();
+          await windowManager.focus();
+        });
+      }
+
+      runApp(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => ConnectivityService()),
+            ChangeNotifierProvider(
+              create: (_) => MumbleService()
+                ..initialize(
+                  settingsService,
+                  settingsService.inputGain,
+                  settingsService.outputVolume,
+                  settingsService.captureDeviceId,
+                  settingsService.playbackDeviceId,
+                ),
+            ),
+            ChangeNotifierProvider(create: (_) => ServerProvider()),
+            ChangeNotifierProvider.value(value: settingsService),
+            ChangeNotifierProvider(
+              create: (_) => CertificateService()..loadCertificates(),
+            ),
+            ChangeNotifierProxyProvider2<
+              MumbleService,
+              SettingsService,
+              HotkeyService
+            >(
+              create: (context) => HotkeyService(
+                Provider.of<MumbleService>(context, listen: false),
+                Provider.of<SettingsService>(context, listen: false),
+              ),
+              update: (context, mumble, settings, previous) =>
+                  previous ?? HotkeyService(mumble, settings),
+            ),
+          ],
+          child: const MyApp(),
+        ),
       );
-    };
-
-    // Catch asynchronous errors outside of the Flutter framework
-    PlatformDispatcher.instance.onError = (error, stack) {
+    },
+    (error, stack) {
       developer.log(
-        'Asynchronous Error',
+        'Unhandled Top-level Error',
         error: error,
         stackTrace: stack,
         level: 1000,
       );
-      return true; // Error was handled
-    };
-  
-  // Load environment variables
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    // In many environments (like release or CI), .env might not exist.
-    // We log it and continue so the app still starts correctly.
-    debugPrint('Warning: .env file could not be loaded: $e');
-  }
-  
-  // Initialize Rust
-  await RustLib.init();
-  setupLogger();
-
-  final prefs = await SharedPreferences.getInstance();
-  final settingsService = SettingsService(prefs);
-
-  if (!kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.windows ||
-          defaultTargetPlatform == TargetPlatform.linux ||
-          defaultTargetPlatform == TargetPlatform.macOS)) {
-    await windowManager.ensureInitialized();
-    await hotKeyManager.unregisterAll();
-
-    double? width = settingsService.windowWidth;
-    double? height = settingsService.windowHeight;
-    double? x = settingsService.windowX;
-    double? y = settingsService.windowY;
-
-    WindowOptions windowOptions = WindowOptions(
-      size: width != null && height != null
-          ? Size(width, height)
-          : const Size(1100, 750),
-      center: x == null || y == null,
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.normal,
-      title: 'Rumble',
-    );
-
-    await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      if (x != null && y != null) {
-        await windowManager.setPosition(Offset(x, y));
-      }
-      await windowManager.show();
-      await windowManager.focus();
-    });
-  }
-
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => ConnectivityService()),
-          ChangeNotifierProvider(
-            create: (_) => MumbleService()
-              ..initialize(
-                settingsService,
-                settingsService.inputGain,
-                settingsService.outputVolume,
-                settingsService.captureDeviceId,
-                settingsService.playbackDeviceId,
-              ),
-          ),
-          ChangeNotifierProvider(create: (_) => ServerProvider()),
-          ChangeNotifierProvider.value(value: settingsService),
-          ChangeNotifierProvider(
-            create: (_) => CertificateService()..loadCertificates(),
-          ),
-          ChangeNotifierProxyProvider2<
-            MumbleService,
-            SettingsService,
-            HotkeyService
-          >(
-            create: (context) => HotkeyService(
-              Provider.of<MumbleService>(context, listen: false),
-              Provider.of<SettingsService>(context, listen: false),
-            ),
-            update: (context, mumble, settings, previous) =>
-                previous ?? HotkeyService(mumble, settings),
-          ),
-        ],
-        child: const MyApp(),
-      ),
-    );
-  }, (error, stack) {
-    developer.log(
-      'Unhandled Top-level Error',
-      error: error,
-      stackTrace: stack,
-      level: 1000,
-    );
-  });
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -348,7 +351,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     showShadDialog(
       context: context,
-      builder: (context) => AddServerDialog(server: server, errorField: errorField),
+      builder: (context) =>
+          AddServerDialog(server: server, errorField: errorField),
     );
   }
 
@@ -415,7 +419,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: BackdropFilter(
                 filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: ShadSheet(
-                  backgroundColor: theme.colorScheme.background.withValues(alpha: 0.6),
+                  backgroundColor: theme.colorScheme.background.withValues(
+                    alpha: 0.6,
+                  ),
                   padding: EdgeInsets.zero,
                   scrollable: false,
                   constraints: BoxConstraints(
@@ -448,21 +454,28 @@ class _HomeScreenState extends State<HomeScreen> {
     MumbleService service,
     MumbleServer server,
   ) async {
-    debugPrint('[DEBUG] _connectToServer to: ${server.name} @ ${server.host}:${server.port}');
+    debugPrint(
+      '[DEBUG] _connectToServer to: ${server.name} @ ${server.host}:${server.port}',
+    );
     if (mounted) setState(() => _connectingServerId = server.id);
     try {
       // Request microphone permission on mobile platforms
-      debugPrint('[DEBUG] Platform check: isAndroid=${Platform.isAndroid}, isIOS=${Platform.isIOS}');
+      debugPrint(
+        '[DEBUG] Platform check: isAndroid=${Platform.isAndroid}, isIOS=${Platform.isIOS}',
+      );
       if (Platform.isAndroid || Platform.isIOS) {
         debugPrint('[DEBUG] Requesting microphone permission...');
-        final hasPermission = await PermissionUtils.requestMicrophonePermission();
+        final hasPermission =
+            await PermissionUtils.requestMicrophonePermission();
         debugPrint('[DEBUG] Microphone permission result: $hasPermission');
         if (!hasPermission) {
           if (mounted) {
             ShadToaster.of(context).show(
               const ShadToast.destructive(
                 title: Text('Permission Denied'),
-                description: Text('Microphone access is required to connect to a server.'),
+                description: Text(
+                  'Microphone access is required to connect to a server.',
+                ),
               ),
             );
           }
@@ -485,7 +498,10 @@ class _HomeScreenState extends State<HomeScreen> {
       // Set update callback for persisting last joined channel
       service.onServerUpdated = (updatedServer) {
         if (mounted) {
-           Provider.of<ServerProvider>(context, listen: false).updateServer(updatedServer);
+          Provider.of<ServerProvider>(
+            context,
+            listen: false,
+          ).updateServer(updatedServer);
         }
       };
 
@@ -566,7 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
     final isSlim = MediaQuery.of(context).size.width < 600;
- 
+
     return SafeArea(
       child: Scaffold(
         backgroundColor: theme.colorScheme.background,
@@ -575,7 +591,10 @@ class _HomeScreenState extends State<HomeScreen> {
             if (!connectivityService.isOnline)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 6,
+                  horizontal: 16,
+                ),
                 color: Colors.blue.withValues(alpha: 0.9),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -630,7 +649,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             talkingUsers: mumbleService.talkingUsers,
                             self: mumbleService.self,
                             hasMicPermission: mumbleService.hasMicPermission,
-                            onChannelTap: (c) => mumbleService.joinChannel(c.id),
+                            onChannelTap: (c) =>
+                                mumbleService.joinChannel(c.id),
                           ),
                         ),
                         ShadResizablePanel(
@@ -1045,8 +1065,8 @@ class _HomeScreenState extends State<HomeScreen> {
             settings.outputVolume == 0
                 ? LucideIcons.volumeX
                 : settings.outputVolume < 0.5
-                    ? LucideIcons.volume1
-                    : LucideIcons.volume2,
+                ? LucideIcons.volume1
+                : LucideIcons.volume2,
             color: theme.colorScheme.primary,
           ),
         ),
@@ -1130,7 +1150,7 @@ class _VolumeIndicatorPainter extends CustomPainter {
 
     // 3. Draw indicator circle
     final innerPaint = Paint()..style = PaintingStyle.fill;
-    
+
     if (isMuted || isDeafened) {
       innerPaint.color = mutedColor.withValues(alpha: 0.1);
     } else {
@@ -1151,4 +1171,3 @@ class _VolumeIndicatorPainter extends CustomPainter {
         oldDelegate.mutedColor != mutedColor;
   }
 }
-

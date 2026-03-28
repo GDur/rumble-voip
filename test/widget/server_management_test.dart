@@ -8,12 +8,31 @@ import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/certificate_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
+import 'package:rumble/services/connectivity_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../test_utils.dart';
 
 void main() {
+  setUpAll(() async {
+    await setupTestDependencies();
+  });
+
   testWidgets('Server management: add, archive, and connect attempt', (
     WidgetTester tester,
   ) async {
+    final mockRustEngine = MockRustAudioEngine();
+    final mockDeviceLister = MockDeviceLister();
+    
+    // Mock audio engine methods
+    when(() => mockRustEngine.getEventStream()).thenAnswer((_) => const Stream.empty());
+    when(() => mockRustEngine.setConfig(config: any(named: 'config'))).thenAnswer((_) async {});
+    when(() => mockRustEngine.setInputGain(gain: any(named: 'gain'))).thenAnswer((_) async {});
+    when(() => mockRustEngine.setOutputVolume(volume: any(named: 'volume'))).thenAnswer((_) async {});
+
+    // Mock device lister methods
+    when(() => mockDeviceLister.listInputDevices()).thenAnswer((_) async => []);
+    when(() => mockDeviceLister.listOutputDevices()).thenAnswer((_) async => []);
+
     // 1. Setup
     final mockPrefs = {
       'reconnect_last_server': false,
@@ -28,7 +47,11 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider(create: (_) => MumbleService()),
+          ChangeNotifierProvider(create: (_) => ConnectivityService()),
+          ChangeNotifierProvider(create: (_) => MumbleService(
+            rustEngine: mockRustEngine,
+            deviceLister: mockDeviceLister,
+          )),
           ChangeNotifierProvider.value(value: serverProvider),
           ChangeNotifierProvider.value(value: settingsService),
           ChangeNotifierProvider(create: (_) => CertificateService()),
