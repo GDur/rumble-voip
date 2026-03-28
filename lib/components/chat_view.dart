@@ -34,6 +34,7 @@ class _ChatViewState extends State<ChatView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final mumbleService = context.read<MumbleService>();
       _lastMessageCount = mumbleService.messages.length;
+      mumbleService.clearUnreadCount();
       mumbleService.addListener(_onMessagesUpdated);
       _focusNode.onKeyEvent = _onKeyEvent;
     });
@@ -75,6 +76,7 @@ class _ChatViewState extends State<ChatView> {
     // Only act if messages were actually added
     if (newCount > _lastMessageCount) {
       _lastMessageCount = newCount;
+      mumbleService.clearUnreadCount();
       if (_shouldAutoScroll) {
         _scrollToBottom();
       }

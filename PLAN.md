@@ -38,7 +38,7 @@
 - [ ] **Verify hotkeys**:
     - [ ] Ensure custom hotkeys work correctly (currently only selectable ones might work).
     - [ ] Ensure the "suppress hotkey" functionality works.
-- [ ] **Chat notifications**: Show the number of unread chat messages (on mobile/when the chat toggle is visible). Use a small number, or just a dot if more than 9. The indicator should disappear after the chat is opened/read.
+- [x] **Chat notifications**: Show the number of unread chat messages (on mobile/when the chat toggle is visible). Use a small number, or just a dot if more than 9. The indicator should disappear after the chat is opened/read.
 - [ ] **Tooltips**: Add tooltips for almost all elements and buttons.
 - [ ] **Background support (Mobile)**: Allow the app to remain active in the background.
     - [ ] **Android**: Show a persistent indicator and/or a floating PTT button if possible.

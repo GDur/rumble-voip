@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.8.0] - 2026-03-28
+- feat: implement chat unread notifications badge
+
 ## [0.7.0] - 2026-03-28
 - feat: split audio settings into dedicated Input and Output tabs in the settings dialog.
 

@@ -25,6 +25,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   final Set<int> _talkingUsers = {};
   final List<ChatMessage> _messages = [];
   int? _selfSession;
+  int _unreadMessagesCount = 0;
   bool _isLocalPttActive = false;
   late SettingsService _settings;
   MumbleServer? _currentServer;
@@ -46,6 +47,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   List<MumbleChannel> get channels => _channels;
   List<MumbleUser> get users => _users.values.toList();
   List<ChatMessage> get messages => _messages;
+  int get unreadMessagesCount => _unreadMessagesCount;
   int? get selfSession => _selfSession;
   Map<int, bool> get talkingUsers {
     final res = {for (var uid in _talkingUsers) uid: true};
@@ -280,7 +282,17 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         isSelf: message.actor?.session == _selfSession,
       ),
     );
+    if (message.actor?.session != _selfSession) {
+      _unreadMessagesCount++;
+    }
     notifyListeners();
+  }
+
+  void clearUnreadCount() {
+    if (_unreadMessagesCount != 0) {
+      _unreadMessagesCount = 0;
+      notifyListeners();
+    }
   }
 
   @override

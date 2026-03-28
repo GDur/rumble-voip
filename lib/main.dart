@@ -676,9 +676,46 @@ class _HomeScreenState extends State<HomeScreen> {
           const Spacer(),
           _buildVolumeControl(mumbleService),
           if (showChatToggle)
-            ShadIconButton.ghost(
-              icon: const Icon(LucideIcons.messageSquare, size: 20),
-              onPressed: () => _showChatSheet(context, mumbleService),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ShadIconButton.ghost(
+                  icon: const Icon(LucideIcons.messageSquare, size: 20),
+                  onPressed: () => _showChatSheet(context, mumbleService),
+                ),
+                if (mumbleService.unreadMessagesCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.background,
+                          width: 1.5,
+                        ),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Center(
+                        child: Text(
+                          mumbleService.unreadMessagesCount > 9
+                              ? ''
+                              : mumbleService.unreadMessagesCount.toString(),
+                          style: TextStyle(
+                            color: theme.colorScheme.primaryForeground,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           if (mumbleService.isConnected)
             ShadIconButton.ghost(
