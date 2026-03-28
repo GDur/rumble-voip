@@ -49,7 +49,7 @@ class _ChannelTreeState extends State<ChannelTree> {
 
   Set<int> _getVisibleChannelIds(bool hideEmpty) {
     if (!hideEmpty) return widget.channels.map((c) => c.id).toSet();
-    
+
     final result = <int>{0}; // Root always visible
 
     void addPath(int? channelId) {
@@ -133,8 +133,10 @@ class _ChannelTreeState extends State<ChannelTree> {
           ShadButton(
             child: const Text('Save Notice'),
             onPressed: () {
-              Provider.of<MumbleService>(context, listen: false)
-                  .setComment(controller.text);
+              Provider.of<MumbleService>(
+                context,
+                listen: false,
+              ).setComment(controller.text);
               Navigator.of(context).pop();
             },
           ),
@@ -207,10 +209,14 @@ class _ChannelTreeState extends State<ChannelTree> {
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsService>(context);
     final visibleChannelIds = _getVisibleChannelIds(settings.hideEmptyChannels);
-    
+
     _visibleItems.clear();
     final rootChannels = widget.channels
-        .where((c) => (c.parentId == null || c.id == 0) && visibleChannelIds.contains(c.id))
+        .where(
+          (c) =>
+              (c.parentId == null || c.id == 0) &&
+              visibleChannelIds.contains(c.id),
+        )
         .toList();
 
     // Sort root channels
@@ -253,7 +259,10 @@ class _ChannelTreeState extends State<ChannelTree> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: rootChannels
-                    .map((c) => _buildChannelItem(context, c, 0, visibleChannelIds))
+                    .map(
+                      (c) =>
+                          _buildChannelItem(context, c, 0, visibleChannelIds),
+                    )
                     .toList(),
               ),
             ),
@@ -263,7 +272,10 @@ class _ChannelTreeState extends State<ChannelTree> {
     );
   }
 
-  void _buildVisibleItems(List<MumbleChannel> currentChannels, Set<int> visibleChannelIds) {
+  void _buildVisibleItems(
+    List<MumbleChannel> currentChannels,
+    Set<int> visibleChannelIds,
+  ) {
     for (var channel in currentChannels) {
       _visibleItems.add(channel);
       if (_isExpanded(channel.id)) {
@@ -283,7 +295,10 @@ class _ChannelTreeState extends State<ChannelTree> {
 
         // Add subchannels
         final subChannels = widget.channels
-            .where((c) => c.parentId == channel.id && visibleChannelIds.contains(c.id))
+            .where(
+              (c) =>
+                  c.parentId == channel.id && visibleChannelIds.contains(c.id),
+            )
             .toList();
 
         // Sort subchannels
@@ -370,7 +385,9 @@ class _ChannelTreeState extends State<ChannelTree> {
   ) {
     final theme = ShadTheme.of(context);
     final subChannels = widget.channels
-        .where((c) => c.parentId == channel.id && visibleChannelIds.contains(c.id))
+        .where(
+          (c) => c.parentId == channel.id && visibleChannelIds.contains(c.id),
+        )
         .toList();
     final usersInChannel = widget.users
         .where((u) => u.channelId == channel.id)
@@ -400,142 +417,147 @@ class _ChannelTreeState extends State<ChannelTree> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        GestureDetector(
-          onDoubleTap: () => _onEnterChannel(channel),
-          onTap: () => _selectChannel(channel),
-          behavior: HitTestBehavior.opaque,
-          child: MouseRegion(
-            onEnter: (_) => setState(() => _hoveredChannelId = channel.id),
-            onExit: (_) => setState(() => _hoveredChannelId = null),
-            child: Container(
-              margin: const EdgeInsets.only(
-                left: 4,
-                right: 12,
-                top: 1,
-                bottom: 1,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                    : isHovered
-                    ? theme.colorScheme.accent.withValues(alpha: 0.05)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  SizedBox(width: depth * 16.0),
-                  GestureDetector(
-                    onTap: () => _toggleChannel(channel.id),
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      alignment: Alignment.center,
-                      child: hasChildren && channel.id != 0
-                          ? Icon(
-                              expanded
-                                  ? LucideIcons.chevronDown
-                                  : LucideIcons.chevronRight,
-                              size: 14,
-                              color: theme.colorScheme.foreground.withValues(
-                                alpha: 0.4,
-                              ),
-                            )
-                          : null,
+        Listener(
+          onPointerDown: (_) => _selectChannel(channel),
+          child: GestureDetector(
+            onDoubleTap: () => _onEnterChannel(channel),
+            behavior: HitTestBehavior.opaque,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) => setState(() => _hoveredChannelId = channel.id),
+              onExit: (_) => setState(() => _hoveredChannelId = null),
+              child: Container(
+                margin: const EdgeInsets.only(
+                  left: 4,
+                  right: 12,
+                  top: 1,
+                  bottom: 1,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                      : isHovered
+                      ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    SizedBox(width: depth * 16.0),
+                    GestureDetector(
+                      onTap: () => _toggleChannel(channel.id),
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        alignment: Alignment.center,
+                        child: hasChildren && channel.id != 0
+                            ? Icon(
+                                expanded
+                                    ? LucideIcons.chevronDown
+                                    : LucideIcons.chevronRight,
+                                size: 14,
+                                color: theme.colorScheme.foreground.withValues(
+                                  alpha: 0.4,
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Text(
-                        channel.name,
-                        softWrap: false,
-                        style: theme.textTheme.small.copyWith(
-                          color: isMyChannel
-                              ? theme.colorScheme.primary
-                              : theme.textTheme.small.color,
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Text(
+                          channel.name,
+                          softWrap: false,
+                          style: theme.textTheme.small.copyWith(
+                            color: isMyChannel
+                                ? theme.colorScheme.primary
+                                : theme.textTheme.small.color,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  if (userCount > 0 || isRoot) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 1,
+                    if (userCount > 0 || isRoot) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.muted.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          isRoot
+                              ? '${widget.users.length}/${Provider.of<MumbleService>(context, listen: false).maxUsers ?? "?"}'
+                              : '$userCount',
+                          style: theme.textTheme.muted.copyWith(fontSize: 10),
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.muted.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        isRoot
-                            ? '${widget.users.length}/${Provider.of<MumbleService>(context, listen: false).maxUsers ?? "?"}'
-                            : '$userCount',
-                        style: theme.textTheme.muted.copyWith(fontSize: 10),
-                      ),
-                    ),
-                    if (isRoot) ...[
-                      const SizedBox(width: 4),
-                      Consumer<SettingsService>(
-                        builder: (context, settings, _) => ShadTooltip(
-                          builder: (context) => Text(
-                            settings.hideEmptyChannels
-                                ? 'Show empty channels'
-                                : 'Hide empty channels',
-                          ),
-                          child: ShadIconButton.ghost(
-                            width: 24,
-                            height: 24,
-                            padding: EdgeInsets.zero,
-                            onPressed: () {
-                              settings.setHideEmptyChannels(
-                                !settings.hideEmptyChannels,
-                              );
-                            },
-                            icon: Icon(
+                      if (isRoot) ...[
+                        const SizedBox(width: 4),
+                        Consumer<SettingsService>(
+                          builder: (context, settings, _) => ShadTooltip(
+                            builder: (context) => Text(
                               settings.hideEmptyChannels
-                                  ? LucideIcons.eyeOff
-                                  : LucideIcons.eye,
-                              size: 14,
-                              color: settings.hideEmptyChannels
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.mutedForeground,
+                                  ? 'Show empty channels'
+                                  : 'Hide empty channels',
+                            ),
+                            child: ShadIconButton.ghost(
+                              width: 24,
+                              height: 24,
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                settings.setHideEmptyChannels(
+                                  !settings.hideEmptyChannels,
+                                );
+                              },
+                              icon: Icon(
+                                settings.hideEmptyChannels
+                                    ? LucideIcons.eyeOff
+                                    : LucideIcons.eye,
+                                size: 14,
+                                color: settings.hideEmptyChannels
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.mutedForeground,
+                              ),
                             ),
                           ),
                         ),
+                      ],
+                    ],
+                    if (channel.isEnterRestricted == true) ...[
+                      const SizedBox(width: 4),
+                      Icon(
+                        LucideIcons.lock,
+                        size: 12,
+                        color: theme.colorScheme.mutedForeground,
+                      ),
+                    ],
+                    if (channel.description != null &&
+                        channel.description!.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      NoticeButton(
+                        title: 'Channel Description',
+                        notice: HtmlUtils.sanitizeMumbleHtml(
+                          channel.description!,
+                        ),
+                        icon: LucideIcons.info,
                       ),
                     ],
                   ],
-                  if (channel.isEnterRestricted == true) ...[
-                    const SizedBox(width: 4),
-                    Icon(
-                      LucideIcons.lock,
-                      size: 12,
-                      color: theme.colorScheme.mutedForeground,
-                    ),
-                  ],
-                  if (channel.description != null &&
-                      channel.description!.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    NoticeButton(
-                      title: 'Channel Description',
-                      notice: HtmlUtils.sanitizeMumbleHtml(
-                        channel.description!,
-                      ),
-                      icon: LucideIcons.info,
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
         ),
         if (expanded) ...[
           ...usersInChannel.map((u) => _buildUserItem(context, u, depth)),
-          ...subChannels.map((c) => _buildChannelItem(context, c, depth + 1, visibleChannelIds)),
+          ...subChannels.map(
+            (c) => _buildChannelItem(context, c, depth + 1, visibleChannelIds),
+          ),
         ],
       ],
     );
@@ -750,8 +772,8 @@ class _ChannelTreeState extends State<ChannelTree> {
       );
     }
 
-    return GestureDetector(
-      onTapDown: (_) => _selectUser(u),
+    return Listener(
+      onPointerDown: (_) => _selectUser(u),
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hoveredUserSession = u.session),

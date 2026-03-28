@@ -30,10 +30,10 @@
 
 - [x] **Voice activity indicator**: When another user talks, do *not* make their label bold. Keep it normal.
 
-- [ ] **Channel tree refinements**:
-    - [ ] Add a hover effect to the channel tree.
-    - [ ] Indicate item selection on pointer down, not just on pointer up.
-    - [ ] Increase the hitbox size for the channel chevrons.
+- [x] **Channel tree refinements**:
+    - [x] Add a hover effect to the channel tree.
+    - [x] Indicate item selection on pointer down, not just on pointer up.
+    - [x] Increase the hitbox size for the channel chevrons.
 - [ ] **Split Audio Settings**: Currently, Audio is one category. Split it into "Audio Input" and "Audio Output".
 - [ ] **Verify hotkeys**:
     - [ ] Ensure custom hotkeys work correctly (currently only selectable ones might work).

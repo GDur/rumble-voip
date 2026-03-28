@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.6.0] - 2026-03-28
+- feat: implement immediate channel/user selection using PointerDown and unify hover effects. Refined channel tree layout.
+
 ## [0.5.0] - 2026-03-28
 - feat: remove bold user labels during voice activity and fix PTT only working once by guarding audio initialization. Request mic permissions at app startup.
 
