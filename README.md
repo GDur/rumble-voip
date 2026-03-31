@@ -1,4 +1,4 @@
-# Rumble
+# Rumble | Mumble Reloaded
 
 **Rumble** is a **free and open-source** alternative Mumble client designed to bring a modern UI/UX to the rock-solid Mumble protocol.
 
