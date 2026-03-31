@@ -1,10 +1,12 @@
 # Rumble
 
-**Rumble** is an alternative Mumble voice chat client built with [Flutter](https://flutter.dev), designed to bring a modern UI/UX to the rock-solid Mumble protocol.
+**Rumble** is a **free and open-source** alternative Mumble client designed to bring a modern UI/UX to the rock-solid Mumble protocol.
 
-The goal is to create a seamless experience across all platforms—Mobile, Tablet, and Desktop. While we strive for the high performance and low latency that Mumble is known for, Rumble's primary focus is on **user convenience** and **modern UI/UX**. From intuitive offline indicators to helpful setup guides for macOS accessibility permissions, we believe that a great user experience is just as important as the protocol itself.
+<img src="docs/assets/desktop_row.png" width="100%" alt="Desktop examples">
+<img src="docs/assets/mobile_row.png" width="100%" alt="Mobile examples">
 
-Looking ahead, we plan to implement automatic updates to keep the experience seamless and effortless.
+The goal of Rumble is to create a seamless experience across all platforms—Mobile, Tablet, and Desktop. While we strive for the high performance and low latency that Mumble is known for, Rumble's primary focus is on **user convenience** and **modern UI/UX**. From intuitive offline indicators to helpful setup guides for macOS accessibility permissions, we believe that a great user experience is just as important as the protocol itself.
+
 
 ## Platform Support Matrix
 
@@ -23,8 +25,10 @@ Looking ahead, we plan to implement automatic updates to keep the experience sea
 ## Why Rumble?
 
 - **Modern UI/UX**: A fresh, high-quality interface.
+- **Free and Open Source**: No hidden fees, no trackers, and no proprietary lock-in. Just a pure community-driven project.
 
 - **Cross-Platform**: Built to work everywhere. One codebase, one experience.
+
 - **Interoperable**: Rumble works in tandem with original Mumble clients. You can switch to Rumble without forcing your friends or community to change anything.
 - **AI-Assisted Development**: This project is developed by a human programmer with significant assistance from AI to speed up boilerplate and implementation.
 

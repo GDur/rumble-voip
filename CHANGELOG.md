@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.2] - 2026-03-31
+- docs: add screenshots to README and emphasize open source and free model
+
 ## [0.13.1] - 2026-03-31
 - fix: certificate p12 import fallback using openssl by disabling debug sandbox and adding error toasts
 
