@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.0] - 2026-03-31
+- feat: add markdown chat support, update build docs, and app icons
+
 ## [0.12.0] - 2026-03-31
 - feat: add 3-second countdown dialog before auto-connecting to last server
 

@@ -500,7 +500,11 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     if (_dumbleClient == null) return;
     final currentChannel = _dumbleClient!.self.channel;
     
-    final sanitizedMessage = HtmlUtils.sanitizeMumbleHtml(message);
+    // First convert markdown to HTML
+    final html = HtmlUtils.markdownToHtml(message);
+    
+    // Then sanitize it for Mumble (e.g. handle base64 images, etc)
+    final sanitizedMessage = HtmlUtils.sanitizeMumbleHtml(html);
     
     _dumbleClient!.sendMessage(
       message: dumble.OutgoingTextMessage(

@@ -45,10 +45,18 @@ These instructions assume you are using **macOS** on Apple Silicon and have home
   - **Update**: `rustup update`
   - **Targets**:
     ```bash
-    rustup target add aarch64-apple-ios            # For iOS
-    rustup target add aarch64-apple-ios-sim        # For iOS (Silicon)
-    rustup target add aarch64-apple-darwin         # For macOS (Silicon)
-    rustup target add aarch64-linux-android        # For Android (ARM64)
+    # For iOS
+    rustup target add aarch64-apple-ios
+    # For iOS (Silicon Simulator)
+    rustup target add aarch64-apple-ios-sim
+    # For macOS (Silicon)
+    rustup target add aarch64-apple-darwin
+    # For macOS (Intel)
+    rustup target add x86_64-apple-darwin
+    # For Android (ARM64)
+    rustup target add aarch64-linux-android
+    # For Windows (x64)
+    rustup target add x86_64-pc-windows-msvc
     ```
 
 ### Android
@@ -58,6 +66,14 @@ These instructions assume you are using **macOS** on Apple Silicon and have home
 
 ### iOS
 - **Xcode**: Required for building iOS and macOS applications.
+
+### Windows
+- **Visual Studio 2022**: Required with the "Desktop development with C++" workload. This must be built on a Windows machine.
+- **Build Tools**:
+  - **Perl**: Required for building OpenSSL (e.g., [Strawberry Perl](https://strawberryperl.com/) or `choco install strawberryperl`).
+  - **NASM**: Required for assembly optimizations (or `choco install nasm`).
+  - **CMake**: Required for C++ dependencies.
+- **Command**: `flutter build windows --release`
 
 ## macOS Permissions
 - Accessibility permissions are required for global hotkeys (standard for macOS chat apps).

@@ -5,7 +5,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:rumble/utils/html_utils.dart';
-import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:intl/intl.dart';
 import 'package:rumble/components/image_gallery.dart';
 import 'package:rumble/components/ptt_button.dart';
@@ -124,6 +124,21 @@ class _ChatViewState extends State<ChatView> {
     }
   }
 
+  void _copyMessage(String content) {
+    final markdown = HtmlUtils.htmlToMarkdown(content);
+    Clipboard.setData(ClipboardData(text: markdown));
+    
+    if (mounted) {
+      ShadToaster.of(context).show(
+        ShadToast(
+          title: const Text('Copied'),
+          description: const Text('Message copied with formatting intact'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   Future<void> _handlePaste() async {
     try {
       final imageBytes = await Pasteboard.image;
@@ -148,6 +163,17 @@ class _ChatViewState extends State<ChatView> {
 
       if (isV && modifierPressed) {
         _handlePaste();
+        return KeyEventResult.ignored;
+      }
+
+      // Handle Enter to send, Shift+Enter for new line
+      final bool isEnter = event.logicalKey == LogicalKeyboardKey.enter || 
+                           event.logicalKey == LogicalKeyboardKey.numpadEnter;
+      final bool isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+      if (isEnter && !isShiftPressed) {
+        _sendMessage();
+        return KeyEventResult.handled;
       }
     }
     return KeyEventResult.ignored;
@@ -223,6 +249,7 @@ class _ChatViewState extends State<ChatView> {
                                     const SizedBox(height: 4),
                                     HtmlWidget(
                                       msg.content,
+                                      enableCaching: true,
                                       textStyle: theme.textTheme.muted.copyWith(
                                         fontSize: 12,
                                         fontStyle: FontStyle.italic,
@@ -305,51 +332,94 @@ class _ChatViewState extends State<ChatView> {
                                             ),
                                     ),
                                   ),
-                                  child: HtmlWidget(
-                                    msg.content,
-                                    textStyle: theme.textTheme.p.copyWith(fontSize: 14),
-                                    onTapImage: (imageData) {
-                                      // Extract LATEST unique images from mumbleService.messages
-                                      final currentMessages = context.read<MumbleService>().messages;
-                                      final allImages = currentMessages
-                                          .expand((m) => HtmlUtils.extractImageSources(m.content))
-                                          .toList();
-                                      // Handle duplicates by getting unique list while preserving order
-                                      final uniqueImages = <String>[];
-                                      for (final img in allImages) {
-                                        if (!uniqueImages.contains(img)) {
-                                          uniqueImages.add(img);
-                                        }
-                                      }
-                                      
-                                      final currentUrl = imageData.sources.first.url;
-                                      final index = uniqueImages.indexOf(currentUrl);
-                                      
-                                      ImageGalleryDialog.show(
-                                        context,
-                                        uniqueImages,
-                                        index >= 0 ? index : 0,
-                                      );
-                                    },
-                                    onTapUrl: (url) async {
-                                      final uri = Uri.parse(url);
-                                      if (await canLaunchUrl(uri)) {
-                                        await launchUrl(uri);
-                                      }
-                                      return true;
-                                    },
-                                    customStylesBuilder: (element) {
-                                      if (element.localName == 'img') {
-                                        return {
-                                          'width': 'auto',
-                                          'max-width': '100%',
-                                          'height': 'auto',
-                                          'cursor': 'pointer',
-                                          'border-radius': '8px',
-                                        };
-                                      }
-                                      return null;
-                                    },
+                                  child: Stack(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 24),
+                                        child: HtmlWidget(
+                                          msg.content,
+                                          enableCaching: true,
+                                          textStyle: theme.textTheme.p.copyWith(
+                                            fontSize: 14,
+                                            height: 1.4,
+                                          ),
+                                          onTapImage: (imageData) {
+                                            // Extract LATEST unique images from mumbleService.messages
+                                            final currentMessages = context.read<MumbleService>().messages;
+                                            final allImages = currentMessages
+                                                .expand((m) => HtmlUtils.extractImageSources(m.content))
+                                                .toList();
+                                            // Handle duplicates by getting unique list while preserving order
+                                            final uniqueImages = <String>[];
+                                            for (final img in allImages) {
+                                              if (!uniqueImages.contains(img)) {
+                                                uniqueImages.add(img);
+                                              }
+                                            }
+                                            
+                                            final currentUrl = imageData.sources.first.url;
+                                            final index = uniqueImages.indexOf(currentUrl);
+                                            
+                                            ImageGalleryDialog.show(
+                                              context,
+                                              uniqueImages,
+                                              index >= 0 ? index : 0,
+                                            );
+                                          },
+                                          onTapUrl: (url) async {
+                                            final uri = Uri.parse(url);
+                                            if (await canLaunchUrl(uri)) {
+                                              await launchUrl(uri);
+                                            }
+                                            return true;
+                                          },
+                                          customStylesBuilder: (element) {
+                                            if (element.localName == 'img') {
+                                              return {
+                                                'width': 'auto',
+                                                'max-width': '100%',
+                                                'height': 'auto',
+                                                'cursor': 'pointer',
+                                                'border-radius': '8px',
+                                              };
+                                            }
+                                            if (element.localName == 'ul' || element.localName == 'ol') {
+                                              return {
+                                                'padding-left': '12px',
+                                                'margin-top': '4px',
+                                                'margin-bottom': '4px',
+                                                'list-style-type': element.localName == 'ul' ? 'disc' : 'decimal',
+                                              };
+                                            }
+                                            if (element.localName == 'li') {
+                                              return {
+                                                'margin-bottom': '4px',
+                                                'display': 'list-item',
+                                              };
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ),
+                                      Positioned(
+                                        right: -8,
+                                        top: -8,
+                                        child: RumbleTooltip(
+                                          message: 'Copy message',
+                                          child: ShadIconButton.ghost(
+                                            icon: Icon(
+                                              LucideIcons.copy,
+                                              size: 14,
+                                              color: theme.colorScheme.mutedForeground.withValues(alpha: 0.5),
+                                            ),
+                                            width: 32,
+                                            height: 32,
+                                            padding: EdgeInsets.zero,
+                                            onPressed: () => _copyMessage(msg.content),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -395,8 +465,10 @@ class _ChatViewState extends State<ChatView> {
                       controller: _controller,
                       focusNode: _focusNode,
                       autofocus: true,
+                      minLines: 1,
+                      maxLines: 5,
+                      keyboardType: TextInputType.multiline,
                       placeholder: const Text('Type a message...'),
-                      onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
                   const SizedBox(width: 8),

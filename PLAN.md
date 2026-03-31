@@ -50,17 +50,17 @@
     - [] **Android**: Show a persistent indicator and/or a floating PTT button if possible.
     - [x] **General**: Show some kind of active status indicator.
 - [x] **Certificate support**: Mumble can use certificates to identify users. (Implemented)
-- [ ] **Voice Activity Detection (VAD)**:
+- [ ] **Voice Activity Detection (VAD)** ([#1](https://github.com/GDur/rumble-voip/issues/1)):
     - [ ] Add auto-activation (VAD).
     - [ ] Add a slider to control VAD sensitivity.
-- [ ] **Audio Transmission Options**:
+- [ ] **Audio Transmission Options** ([#1](https://github.com/GDur/rumble-voip/issues/1)):
     - [ ] Add an "Always Send" voice option.
     - [ ] Add a button to toggle between PTT, Always Send, and Auto-Activate.
-- [ ] **Audio Processing**: Add echo cancellation.
+- [ ] **Audio Processing**: Add echo cancellation ([#1](https://github.com/GDur/rumble-voip/issues/1)).
 - [ ] **User Controls**: Add mute and individual sound level controls for each user in the channel tree.
-- [ ] **Resizable Chat**: Add a hidable chat pane on the right side using the [shadcn_ui Resizable](https://mariuti.com/flutter-shadcn-ui/components/resizable/) component.
+- [ ] **Resizable Chat** ([#2](https://github.com/GDur/rumble-voip/issues/2)): Add a hidable chat pane on the right side using the [shadcn_ui Resizable](https://mariuti.com/flutter-shadcn-ui/components/resizable/) component.
     - [ ] Add support for private messaging (possibly with "pop-out" chat windows).
-- [ ] **Floating Overlay (Mobile)**: Add a floating component that appears when connected to a server.
+- [ ] **Floating Overlay (Mobile)** ([#3](https://github.com/GDur/rumble-voip/issues/3)): Add a floating component that appears when connected to a server.
     - [ ] The component should show the PTT button and names of active speakers.
     - [ ] Enabled by default, but toggleable in settings.
     - [ ] Allow the component to be moved by dragging.

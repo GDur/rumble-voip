@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
+import 'package:markdown/markdown.dart' as md;
+import 'package:html2md/html2md.dart' as h2m;
 
 /// Utilities for handling and sanitizing HTML content from Mumble.
 class HtmlUtils {
@@ -141,6 +143,37 @@ class HtmlUtils {
 
     // Wrap in standard HTML that old Qt clients usually accept
     return '<img src="data:$mimeType;base64,$base64String" />';
+  }
+
+  /// Converts Markdown to Mumble-compatible HTML.
+  static String markdownToHtml(String markdown) {
+    if (markdown.isEmpty) return markdown;
+    
+    // Normalize newlines to ensure consistent parsing
+    final normalized = markdown.replaceAll('\r\n', '\n');
+    
+    // Use GitHub Flavored Markdown for better compatibility with modern expectations
+    return md.markdownToHtml(
+      normalized,
+      extensionSet: md.ExtensionSet.gitHubFlavored,
+    );
+  }
+
+  /// Converts HTML to Markdown for easy copying/pasting between apps.
+  static String htmlToMarkdown(String html) {
+    if (html.isEmpty) return html;
+    
+    try {
+      // 1. We don't want to convert images to markdown because they are usually base64
+      // and would bloat the clipboard. We'll replace <img> tags with [Image]
+      String cleanHtml = html.replaceAll(RegExp(r'<img[^>]*>'), '[Image]');
+      
+      // 2. Convert to markdown
+      return h2m.convert(cleanHtml);
+    } catch (e) {
+      // Fallback: strip tags if conversion fails
+      return html.replaceAll(RegExp(r'<[^>]*>'), '');
+    }
   }
 
   /// Extracts all image sources from an HTML string.
