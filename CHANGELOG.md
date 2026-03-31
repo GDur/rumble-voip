@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.12.0] - 2026-03-31
+- feat: add 3-second countdown dialog before auto-connecting to last server
+
 ## [0.11.0] - 2026-03-28
 - feat: implement automated audio integrity testing with Rust debug hooks and frequency analysis
 

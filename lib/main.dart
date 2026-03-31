@@ -24,6 +24,7 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:rumble/components/server_card.dart';
 import 'package:rumble/components/ptt_button.dart';
 import 'package:rumble/components/add_server_dialog.dart';
+import 'package:rumble/components/auto_connect_dialog.dart';
 import 'package:rumble/components/settings/settings_dialog.dart';
 import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
@@ -339,7 +340,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
 
       Timer(const Duration(milliseconds: 500), () {
-        if (mounted) _connectToServer(mumbleService, lastServer);
+        if (mounted) {
+          showShadDialog(
+            context: context,
+            builder: (context) => AutoConnectDialog(
+              server: lastServer,
+              onCancel: () {
+                // User cancelled auto-connect
+              },
+              onConnect: () {
+                _connectToServer(mumbleService, lastServer);
+              },
+            ),
+          );
+        }
       });
     }
   }
