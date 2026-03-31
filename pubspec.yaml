@@ -2,7 +2,7 @@ name: rumble
 description: "Rumble: A modern, cross-platform Mumble voice chat client built with Flutter."
 publish_to: 'none'
 
-version: 0.13.0+15
+version: 0.13.1+16
 
 environment:
   sdk: ^3.11.3

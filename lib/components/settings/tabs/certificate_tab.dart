@@ -84,7 +84,26 @@ class CertificateTab extends StatelessWidget {
                             ),
                           );
 
-                          await certService.importFromP12(data, password, name);
+                          final cert = await certService.importFromP12(data, password, name);
+                          
+                          if (!context.mounted) return;
+                          
+                          if (cert == null) {
+                            ShadToaster.of(context).show(
+                              const ShadToast.destructive(
+                                title: Text('Import Failed'),
+                                description: Text('Could not import the certificate. Please check the password or the file format.'),
+                              ),
+                            );
+                          } else {
+                            ShadToaster.of(context).show(
+                              const ShadToast(
+                                title: Text('Import Successful'),
+                                description: Text('Certificate imported successfully.'),
+                              ),
+                            );
+                          }
+                          
                           onUpdate(() {});
                         }
                       },

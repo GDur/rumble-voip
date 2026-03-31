@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.1] - 2026-03-31
+- fix: certificate p12 import fallback using openssl by disabling debug sandbox and adding error toasts
+
 ## [0.13.0] - 2026-03-31
 - feat: add markdown chat support, update build docs, and app icons
 

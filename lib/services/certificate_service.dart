@@ -226,6 +226,9 @@ class CertificateService extends ChangeNotifier {
 
     try {
       final tempDir = await getTemporaryDirectory();
+      if (!tempDir.existsSync()) {
+        await tempDir.create(recursive: true);
+      }
       final tempFile = File(
         '${tempDir.path}/rumble_import_${DateTime.now().millisecondsSinceEpoch}.p12',
       );
