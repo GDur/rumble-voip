@@ -10,7 +10,10 @@ class MainFlutterWindow: NSWindow {
     self.setFrame(windowFrame, display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
-
+    
+    // Hide the window initially to prevent the "jump" and facilitate a smooth fade-in.
+    self.setIsVisible(false)
+    
     let channel = FlutterMethodChannel(name: "com.rumble.app/permissions", binaryMessenger: flutterViewController.engine.binaryMessenger)
     channel.setMethodCallHandler { (call, result) in
       if call.method == "checkAccessibility" {

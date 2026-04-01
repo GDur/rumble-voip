@@ -32,6 +32,7 @@ import 'package:rumble/models/hotkey_action.dart';
 import 'package:rumble/services/connectivity_service.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
 import 'package:rumble/utils/logger.dart';
+import 'package:rumble/components/loading_screen.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -99,6 +100,7 @@ void main() async {
         double? x = settingsService.windowX;
         double? y = settingsService.windowY;
 
+        // Configure window initially hidden and transparent for fade-in
         WindowOptions windowOptions = WindowOptions(
           size: width != null && height != null
               ? Size(width, height)
@@ -114,8 +116,8 @@ void main() async {
           if (x != null && y != null) {
             await windowManager.setPosition(Offset(x, y));
           }
-          await windowManager.show();
-          await windowManager.focus();
+          // Start fully transparent
+          await windowManager.setOpacity(0.0);
         });
       }
 
@@ -173,10 +175,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SettingsService>(
       builder: (context, settings, _) => ShadApp(
-        builder: (context, child) => child!,
+        builder: (context, child) => _WindowResizeListener(child: child!),
         title: 'Rumble',
         debugShowCheckedModeBanner: false,
         themeMode: settings.themeMode,
+        // ... (styles kept same)
         theme: ShadThemeData(
           brightness: Brightness.light,
           colorScheme: const ShadSlateColorScheme.light(
@@ -221,9 +224,73 @@ class MyApp extends StatelessWidget {
           ),
           textTheme: ShadTextTheme(p: const TextStyle(fontFamily: 'Outfit')),
         ),
-        home: const _WindowResizeListener(child: HomeScreen()),
+        home: const LoadingPage(),
       ),
     );
+  }
+}
+
+class LoadingPage extends StatefulWidget {
+  const LoadingPage({super.key});
+
+  @override
+  State<LoadingPage> createState() => _LoadingPageState();
+}
+
+class _LoadingPageState extends State<LoadingPage> {
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Give window manager a moment to settle position/size before showing
+    if (!kIsWeb && 
+        (defaultTargetPlatform == TargetPlatform.windows || 
+         defaultTargetPlatform == TargetPlatform.linux || 
+         defaultTargetPlatform == TargetPlatform.macOS)) {
+      
+      // Wait for sizes/position to be applied
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      // Show window (still at 0.0 opacity)
+      await windowManager.show();
+      await windowManager.focus();
+      
+      // Fade in smoothly
+      double opacity = 0.0;
+      const duration = Duration(milliseconds: 300);
+      const steps = 15;
+      final stepDelay = duration.inMilliseconds ~/ steps;
+      
+      for (int i = 1; i <= steps; i++) {
+        await Future.delayed(Duration(milliseconds: stepDelay));
+        opacity = i / steps;
+        await windowManager.setOpacity(opacity);
+      }
+      
+      // Ensure final opacity is 1.0
+      await windowManager.setOpacity(1.0);
+    }
+    
+    // Transition to HomeScreen smoothly
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const LoadingScreen();
   }
 }
 
@@ -237,6 +304,8 @@ class _WindowResizeListener extends StatefulWidget {
 
 class _WindowResizeListenerState extends State<_WindowResizeListener>
     with WindowListener {
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
@@ -250,6 +319,7 @@ class _WindowResizeListenerState extends State<_WindowResizeListener>
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.linux ||
@@ -259,19 +329,53 @@ class _WindowResizeListenerState extends State<_WindowResizeListener>
     super.dispose();
   }
 
-  @override
-  void onWindowResize() async {
-    final settings = Provider.of<SettingsService>(context, listen: false);
-    final size = await windowManager.getSize();
-    settings.setWindowSize(size);
+  void _saveWindowState() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 200), () async {
+      try {
+        final settings = Provider.of<SettingsService>(context, listen: false);
+        final size = await windowManager.getSize();
+        final pos = await windowManager.getPosition();
+        final isMaximized = await windowManager.isMaximized();
+
+        // Avoid saving if window is minimized or too small (transition states)
+        if (size.width > 200 && size.height > 200 && !isMaximized) {
+          debugPrint('[DEBUG] Saving window - pos: $pos, size: $size');
+          await settings.setWindowSize(size);
+          await settings.setWindowPosition(pos);
+        }
+      } catch (e) {
+        debugPrint('Error saving window state: $e');
+      }
+    });
   }
 
   @override
-  void onWindowMove() async {
-    final settings = Provider.of<SettingsService>(context, listen: false);
-    final pos = await windowManager.getPosition();
-    settings.setWindowPosition(pos);
-  }
+  void onWindowResized() => _saveWindowState();
+
+  @override
+  void onWindowMoved() => _saveWindowState();
+
+  @override
+  void onWindowResize() => _saveWindowState();
+
+  @override
+  void onWindowMove() => _saveWindowState();
+
+  @override
+  void onWindowMaximize() => _saveWindowState();
+
+  @override
+  void onWindowUnmaximize() => _saveWindowState();
+
+  @override
+  void onWindowFocus() => _saveWindowState();
+
+  @override
+  void onWindowBlur() => _saveWindowState();
+
+  @override
+  void onWindowClose() => _saveWindowState();
 
   @override
   Widget build(BuildContext context) => widget.child;
