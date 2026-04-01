@@ -24,7 +24,6 @@ import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:rumble/components/server_card.dart';
 import 'package:rumble/components/ptt_button.dart';
 import 'package:rumble/components/add_server_dialog.dart';
-import 'package:rumble/components/auto_connect_dialog.dart';
 import 'package:rumble/components/settings/settings_dialog.dart';
 import 'package:rumble/components/permission_banner.dart';
 import 'package:rumble/components/hotkey_recorder.dart';
@@ -292,7 +291,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkLastServer();
+    // Wrap the initial server check in addPostFrameCallback to avoid the markNeedsBuild()
+    // error during build. This ensures it runs after the first frame has finished.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLastServer();
+    });
 
     // Listen for PTT errors/warnings globally in the Home Screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -339,24 +342,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final lastServer = MumbleServer.fromJson(serverMap);
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
 
-      Timer(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          showShadDialog(
-            context: context,
-            builder: (context) => AutoConnectDialog(
-              server: lastServer,
-              onCancel: () {
-                // User cancelled auto-connect
-              },
-              onConnect: () {
-                _connectToServer(mumbleService, lastServer);
-              },
-            ),
-          );
-        }
-      });
+      _connectToServer(mumbleService, lastServer);
     }
   }
+
 
   void _showAddServerDialog(
     BuildContext context, {
@@ -471,7 +460,13 @@ class _HomeScreenState extends State<HomeScreen> {
     debugPrint(
       '[DEBUG] _connectToServer to: ${server.name} @ ${server.host}:${server.port}',
     );
-    if (mounted) setState(() => _connectingServerId = server.id);
+    // Using addPostFrameCallback here ensures the state change doesn't interfere
+    // with any ongoing build processes.
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _connectingServerId = server.id);
+      });
+    }
     try {
       // Request microphone permission on mobile platforms
       debugPrint(
@@ -503,6 +498,14 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       );
       debugPrint('[DEBUG] Accessed CertificateService');
+      
+      // We must wait for certificates to load from disk if they haven't finished yet,
+      // otherwise autoconnect won't find the correct certificate during startup.
+      if (!certService.isInitialized) {
+        debugPrint('[DEBUG] Waiting for certificates to load...');
+        await certService.loadCertificates();
+      }
+      
       final defaultCertId = certService.defaultCertificateId;
       final certificate = defaultCertId != null
           ? certService.getCertificateById(defaultCertId)

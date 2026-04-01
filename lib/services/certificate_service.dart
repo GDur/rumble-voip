@@ -34,15 +34,7 @@ class CertificateService extends ChangeNotifier {
     }
   }
 
-  CertificateService() {
-    _init();
-  }
-
-  Future<void> _init() async {
-    await loadCertificates();
-    _isInitialized = true;
-    notifyListeners();
-  }
+  CertificateService();
 
   Future<void> loadCertificates() async {
     try {
@@ -61,6 +53,8 @@ class CertificateService extends ChangeNotifier {
 
       // If no certificates but we need one, we might want to auto-generate one later
       // But for now, we leave it to the user or initial setup.
+      _isInitialized = true;
+      notifyListeners();
     } catch (e) {
       debugPrint('Error loading certificates: $e');
     }

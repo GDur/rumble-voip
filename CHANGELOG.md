@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.13.3] - 2026-04-01
+- fix: resolve markNeedsBuild build-phase error and ensure certs are loaded before autoconnect
+
 ## [0.13.2] - 2026-03-31
 - docs: add screenshots to README and emphasize open source and free model
 
