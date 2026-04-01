@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.14.0] - 2026-04-01
+- feature: easier build commands
+
 ## [0.13.3] - 2026-04-01
 - fix: resolve markNeedsBuild build-phase error and ensure certs are loaded before autoconnect
 

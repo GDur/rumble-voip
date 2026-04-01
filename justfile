@@ -61,10 +61,8 @@ release-all:
     just release-macos
     just release-ios
     just release-android
-#    just release-web
+    # just release-web
     # experimental
     just release-linux
     # experimental
     just release-windows
-
-
