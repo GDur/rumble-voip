@@ -184,7 +184,7 @@ class _ChatViewState extends State<ChatView> {
     final theme = ShadTheme.of(context);
     final mumbleService = context.watch<MumbleService>();
     final messages = mumbleService.messages;
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isSlim = MediaQuery.of(context).size.width < 350;
 
     return Stack(
       children: [
@@ -484,7 +484,7 @@ class _ChatViewState extends State<ChatView> {
             ),
           ],
         ),
-        if (isMobile && mumbleService.isConnected)
+        if (isSlim && mumbleService.isConnected)
           Positioned(
             left: 0,
             right: 0,

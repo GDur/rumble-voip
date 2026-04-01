@@ -246,39 +246,39 @@ class _LoadingPageState extends State<LoadingPage> {
 
   Future<void> _initializeApp() async {
     // Give window manager a moment to settle position/size before showing
-    if (!kIsWeb && 
-        (defaultTargetPlatform == TargetPlatform.windows || 
-         defaultTargetPlatform == TargetPlatform.linux || 
-         defaultTargetPlatform == TargetPlatform.macOS)) {
-      
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       // Wait for sizes/position to be applied
       await Future.delayed(const Duration(milliseconds: 150));
-      
+
       // Show window (still at 0.0 opacity)
       await windowManager.show();
       await windowManager.focus();
-      
+
       // Fade in smoothly
       double opacity = 0.0;
       const duration = Duration(milliseconds: 300);
       const steps = 15;
       final stepDelay = duration.inMilliseconds ~/ steps;
-      
+
       for (int i = 1; i <= steps; i++) {
         await Future.delayed(Duration(milliseconds: stepDelay));
         opacity = i / steps;
         await windowManager.setOpacity(opacity);
       }
-      
+
       // Ensure final opacity is 1.0
       await windowManager.setOpacity(1.0);
     }
-    
+
     // Transition to HomeScreen smoothly
     if (mounted) {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const HomeScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
@@ -450,7 +450,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-
   void _showAddServerDialog(
     BuildContext context, {
     MumbleServer? server,
@@ -602,14 +601,14 @@ class _HomeScreenState extends State<HomeScreen> {
         listen: false,
       );
       debugPrint('[DEBUG] Accessed CertificateService');
-      
+
       // We must wait for certificates to load from disk if they haven't finished yet,
       // otherwise autoconnect won't find the correct certificate during startup.
       if (!certService.isInitialized) {
         debugPrint('[DEBUG] Waiting for certificates to load...');
         await certService.loadCertificates();
       }
-      
+
       final defaultCertId = certService.defaultCertificateId;
       final certificate = defaultCertId != null
           ? certService.getCertificateById(defaultCertId)
@@ -702,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final mumbleService = Provider.of<MumbleService>(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
-    final isSlim = MediaQuery.of(context).size.width < 600;
+    final isSlim = MediaQuery.of(context).size.width < 350;
 
     return SafeArea(
       child: Scaffold(
@@ -790,7 +789,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
             ),
-            if (mumbleService.isConnected) _buildBottomBar(mumbleService),
+            if (mumbleService.isConnected)
+              _buildBottomBar(mumbleService, isSlim),
           ],
         ),
       ),
@@ -814,28 +814,30 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Image.asset('assets/icon.png', height: 32, width: 32),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Rumble',
-                style: theme.textTheme.large.copyWith(
-                  fontWeight: FontWeight.bold,
-                  height: 1.1,
+          if (!isSlim) ...[
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Rumble',
+                  style: theme.textTheme.large.copyWith(
+                    fontWeight: FontWeight.bold,
+                    height: 1.1,
+                  ),
                 ),
-              ),
-              Text(
-                'Mumble Reloaded',
-                style: theme.textTheme.muted.copyWith(
-                  fontSize: 10,
-                  height: 1.0,
-                  color: theme.colorScheme.primary,
+                Text(
+                  'Mumble Reloaded',
+                  style: theme.textTheme.muted.copyWith(
+                    fontSize: 10,
+                    height: 1.0,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
           const Spacer(),
           _buildVolumeControl(mumbleService),
           if (showChatToggle)
@@ -1054,10 +1056,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBottomBar(MumbleService service) {
+  Widget _buildBottomBar(MumbleService service, bool isSlim) {
     final theme = ShadTheme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: isSlim ? 12 : 20, vertical: 16),
       decoration: BoxDecoration(
         color: theme.colorScheme.background,
         border: Border(
@@ -1077,10 +1079,18 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           _buildMicStatus(service),
-          const SizedBox(width: 16),
-          _buildPTTButton(service),
+          SizedBox(width: isSlim ? 8 : 16),
+          _buildPTTButton(service, isSlim),
         ],
       ),
+    );
+  }
+
+  Widget _buildPTTButton(MumbleService service, bool isSlim) {
+    return PushToTalkButton(
+      service: service,
+      compact: isSlim,
+      width: isSlim ? 110 : 180,
     );
   }
 
@@ -1193,10 +1203,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  Widget _buildPTTButton(MumbleService service) {
-    return PushToTalkButton(service: service);
   }
 }
 

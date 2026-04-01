@@ -38,20 +38,15 @@ class PushToTalkButton extends StatelessWidget {
                 defaultTargetPlatform == TargetPlatform.linux ||
                 defaultTargetPlatform == TargetPlatform.macOS);
 
-        String label = 'HOLD TO TALK';
+        String label = compact ? 'PTT' : 'HOLD TO TALK';
         if (isSuppressed) {
-          label = 'SUPPRESSED';
+          label = compact ? 'SUPPR' : 'SUPPRESSED';
         } else if (isMuted) {
           label = 'MUTED';
         } else if (isTalking) {
           label = 'TALKING...';
         } else if (!compact && isDesktop && settings.pttKey != PttKey.none) {
           label = 'HOLD [${settings.pttKey.name.toUpperCase()}]';
-        } else if (compact) {
-          // If compact requested, shorten the default "HOLD TO TALK" but keep other info
-          if (!isSuppressed && !isMuted && !isTalking) {
-             label = 'PTT';
-          }
         }
 
         return Listener(
