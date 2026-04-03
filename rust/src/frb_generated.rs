@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1890590988;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1518870290;
 
 // Section: executor
 
@@ -426,6 +426,61 @@ fn wire__crate__api__client__RustAudioEngine_set_config_impl(
                         crate::api::client::RustAudioEngine::set_config(
                             &*api_that_guard,
                             api_config,
+                        );
+                    })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__client__RustAudioEngine_set_echo_cancellation_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustAudioEngine_set_echo_cancellation",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustAudioEngine>,
+            >>::sse_decode(&mut deserializer);
+            let api_enabled = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::client::RustAudioEngine::set_echo_cancellation(
+                            &*api_that_guard,
+                            api_enabled,
                         );
                     })?;
                     Ok(output_ok)
@@ -1028,6 +1083,7 @@ impl SseDecode for crate::mumble::config::MumbleConfig {
         let mut var_captureHwBufferSize =
             <crate::mumble::hardware::audio::AudioBufferSize>::sse_decode(deserializer);
         let mut var_captureDeviceId = <Option<String>>::sse_decode(deserializer);
+        let mut var_echoCancellation = <bool>::sse_decode(deserializer);
         return crate::mumble::config::MumbleConfig {
             outgoing_audio_bitrate: var_outgoingAudioBitrate,
             outgoing_audio_ms_per_packet: var_outgoingAudioMsPerPacket,
@@ -1036,6 +1092,7 @@ impl SseDecode for crate::mumble::config::MumbleConfig {
             playback_hw_buffer_size: var_playbackHwBufferSize,
             capture_hw_buffer_size: var_captureHwBufferSize,
             capture_device_id: var_captureDeviceId,
+            echo_cancellation: var_echoCancellation,
         };
     }
 }
@@ -1164,47 +1221,53 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__client__RustAudioEngine_set_input_gain_impl(
+        8 => wire__crate__api__client__RustAudioEngine_set_echo_cancellation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__client__RustAudioEngine_set_output_volume_impl(
+        9 => wire__crate__api__client__RustAudioEngine_set_input_gain_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__client__RustAudioEngine_set_ptt_impl(
+        10 => wire__crate__api__client__RustAudioEngine_set_output_volume_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__client__RustAudioEngine_set_user_volume_impl(
+        11 => wire__crate__api__client__RustAudioEngine_set_ptt_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__client__init_app_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__client__list_audio_input_devices_impl(
+        12 => wire__crate__api__client__RustAudioEngine_set_user_volume_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__client__list_audio_output_devices_impl(
+        13 => wire__crate__api__client__init_app_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__client__list_audio_input_devices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => {
+        15 => wire__crate__api__client__list_audio_output_devices_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        16 => {
             wire__crate__api__client__mumble_channel_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        16 => wire__crate__api__client__mumble_user_default_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__client__mumble_user_default_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1356,6 +1419,7 @@ impl flutter_rust_bridge::IntoDart for crate::mumble::config::MumbleConfig {
             self.playback_hw_buffer_size.into_into_dart().into_dart(),
             self.capture_hw_buffer_size.into_into_dart().into_dart(),
             self.capture_device_id.into_into_dart().into_dart(),
+            self.echo_cancellation.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1576,6 +1640,7 @@ impl SseEncode for crate::mumble::config::MumbleConfig {
             serializer,
         );
         <Option<String>>::sse_encode(self.capture_device_id, serializer);
+        <bool>::sse_encode(self.echo_cancellation, serializer);
     }
 }
 

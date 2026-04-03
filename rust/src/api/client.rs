@@ -217,6 +217,8 @@ impl RustAudioEngine {
 
         let debug_record_tx = self.debug_record_tx.clone();
 
+        let (aec_tx, aec_rx) = crossbeam_channel::bounded::<[f32; crate::mumble::dsp::INTERNAL_FRAME_SIZE]>(32);
+
         crate::mumble::dsp::spawn_encode_thread(
             cons_in,
             in_notify_rx,
@@ -225,6 +227,7 @@ impl RustAudioEngine {
             input_rate,
             self.config.clone(),
             inj_rx,
+            aec_rx,
         );
 
         crate::mumble::dsp::spawn_decode_thread(
@@ -237,6 +240,7 @@ impl RustAudioEngine {
             global_volume,
             vol_cmd_rx,
             debug_record_tx,
+            aec_tx,
         );
 
         let mut guard = self._active_audio.lock().await;
@@ -275,6 +279,12 @@ impl RustAudioEngine {
 
     pub fn set_user_volume(&self, session_id: u32, volume: f32) {
         let _ = self.vol_cmd_tx.send((session_id, volume));
+    }
+
+    pub fn set_echo_cancellation(&self, enabled: bool) {
+        if let Ok(mut cfg) = self.config.lock() {
+            cfg.echo_cancellation = enabled;
+        }
     }
 }
 

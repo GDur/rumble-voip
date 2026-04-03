@@ -30,6 +30,9 @@ class MumbleConfig {
   /// The ID of the audio input device to use. If None, the default device is used.
   final String? captureDeviceId;
 
+  /// Enable Acoustic Echo Cancellation (AEC)
+  final bool echoCancellation;
+
   const MumbleConfig({
     required this.outgoingAudioBitrate,
     required this.outgoingAudioMsPerPacket,
@@ -38,6 +41,7 @@ class MumbleConfig {
     required this.playbackHwBufferSize,
     required this.captureHwBufferSize,
     this.captureDeviceId,
+    required this.echoCancellation,
   });
 
   @override
@@ -48,7 +52,8 @@ class MumbleConfig {
       playbackDeviceId.hashCode ^
       playbackHwBufferSize.hashCode ^
       captureHwBufferSize.hashCode ^
-      captureDeviceId.hashCode;
+      captureDeviceId.hashCode ^
+      echoCancellation.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -61,5 +66,6 @@ class MumbleConfig {
           playbackDeviceId == other.playbackDeviceId &&
           playbackHwBufferSize == other.playbackHwBufferSize &&
           captureHwBufferSize == other.captureHwBufferSize &&
-          captureDeviceId == other.captureDeviceId;
+          captureDeviceId == other.captureDeviceId &&
+          echoCancellation == other.echoCancellation;
 }

@@ -79,11 +79,13 @@ pub fn spawn_encode_thread(
     input_rate: u32,
     config_arc: Arc<std::sync::Mutex<MumbleConfig>>,
     mut debug_inject_rx: tokio::sync::mpsc::Receiver<Vec<f32>>,
+    aec_rx: Receiver<[f32; INTERNAL_FRAME_SIZE]>,
 ) {
     std::thread::spawn(move || {
         let initial_config = config_arc.lock().unwrap().clone();
         let mut pipeline = CapturePipeline::new(input_rate, &initial_config);
         let mut was_ptt = false;
+        let mut last_aec = initial_config.echo_cancellation;
 
         loop {
             if input_notify.recv().is_err() {
@@ -94,6 +96,18 @@ pub fn spawn_encode_thread(
             while cons_in.occupied_len() > 0 {
                 let popped = cons_in.pop_slice(&mut tmp);
                 pipeline.push_pcm(&tmp[..popped]);
+            }
+
+            // Read any pending AEC reference frames
+            while let Ok(aec_frame) = aec_rx.try_recv() {
+                pipeline.process_reverse(&aec_frame);
+            }
+
+            // Sync AEC configuration
+            let current_aec = config_arc.lock().unwrap().echo_cancellation;
+            if current_aec != last_aec {
+                pipeline.set_echo_cancellation(current_aec);
+                last_aec = current_aec;
             }
             
             // Also process injected debug samples
@@ -130,6 +144,7 @@ pub fn spawn_decode_thread(
     global_volume: Arc<AtomicU32>,
     vol_cmd_rx: Receiver<(u32, f32)>, // (session_id, volume)
     debug_record_tx: Arc<tokio::sync::Mutex<Option<tokio::sync::mpsc::Sender<Vec<f32>>>>>,
+    aec_tx: crossbeam_channel::Sender<[f32; INTERNAL_FRAME_SIZE]>,
 ) {
     std::thread::spawn(move || {
         let initial_config = config_arc.lock().unwrap().clone();
@@ -188,7 +203,10 @@ pub fn spawn_decode_thread(
 
                     // Fill the output ring buffer until target latency is reached.
                     while prod_out.occupied_len() < target_latency_samples {
-                        let frame = mixer.mix_frame(&event_sink);
+                        let (frame, aec_frame) = mixer.mix_frame_with_aec(&event_sink);
+                        
+                        // Send reference frame to AEC
+                        let _ = aec_tx.try_send(aec_frame);
                         
                         // Debug recording: send a copy of the frame to the sink
                         if let Ok(guard) = debug_record_tx.try_lock() {

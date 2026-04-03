@@ -25,6 +25,9 @@ pub struct MumbleConfig {
     pub capture_hw_buffer_size: AudioBufferSize,
     /// The ID of the audio input device to use. If None, the default device is used.
     pub capture_device_id: Option<String>,
+    
+    /// Enable Acoustic Echo Cancellation (AEC)
+    pub echo_cancellation: bool,
 }
 
 impl Default for MumbleConfig {
@@ -37,6 +40,7 @@ impl Default for MumbleConfig {
             capture_hw_buffer_size: super::hardware::audio::AudioBufferSize::Default,
             capture_device_id: None,
             playback_device_id: None,
+            echo_cancellation: false,
         }
     }
 }

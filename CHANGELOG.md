@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.15.0] - 2026-04-03
+- feat: integrate acoustic echo cancellation into audio pipeline
+
+- Implement WebRTC's AEC3 via sonora library in the Rust audio engine.
+- Synchronize playback reference frames with the capture pipeline.
+- Expose AEC toggle control in mumble_service and main UI.
+- Update Flutter-Rust Bridge generated bindings.
+
 ## [0.14.1] - 2026-04-01
 - fix: resolve case-sensitive Justfile vs justfile collision in index
 

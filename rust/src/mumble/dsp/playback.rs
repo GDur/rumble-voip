@@ -86,8 +86,8 @@ impl PlaybackMixer {
     }
 
     /// Mixes one frame of audio from all active users.
-    /// Returns a slice of PCM samples at the output sample rate.
-    pub fn mix_frame(&mut self, event_sink: &crate::frb_generated::StreamSink<AudioEvent>) -> &[f32] {
+    /// Returns a tuple of (PCM samples at output rate, PCM samples at 48kHz for AEC reference).
+    pub fn mix_frame_with_aec(&mut self, event_sink: &crate::frb_generated::StreamSink<AudioEvent>) -> (&[f32], [f32; INTERNAL_FRAME_SIZE]) {
         // Remove users that have been inactive for too long.
         self.users.retain(|sid, user| {
             if user.is_talking() && user.time_since_last_packet().as_millis() > 500 {
@@ -114,7 +114,9 @@ impl PlaybackMixer {
 
         // Return silence if no users are contributing audio.
         if active_users == 0 {
-            return &SILENCE[..self.output_samples_per_frame];
+            let mut aec_ref = [0.0f32; INTERNAL_FRAME_SIZE];
+            // Since we're silence, the processed_pcm_48k should also just be considered empty
+            return (&SILENCE[..self.output_samples_per_frame], aec_ref);
         }
 
         // Apply master gain to the mixed signal.
@@ -130,6 +132,9 @@ impl PlaybackMixer {
             .process_render_f32(&[&mixed_pcm_48k], &mut [&mut self.processed_pcm_48k])
             .expect("APM render processing failed");
 
+        let mut aec_ref = [0.0f32; INTERNAL_FRAME_SIZE];
+        aec_ref.copy_from_slice(&self.processed_pcm_48k);
+
         // Resample the processed signal if needed.
         if let Some(res) = &mut self.resampler {
             self.output_pcm_buffer.clear();
@@ -139,10 +144,10 @@ impl PlaybackMixer {
                 .expect("Output buffer resize failed");
 
             res.resample(&self.processed_pcm_48k, &mut self.output_pcm_buffer);
-            &self.output_pcm_buffer
+            (&self.output_pcm_buffer, aec_ref)
         } else {
             // If rates match, we can return the processed buffer directly.
-            &self.processed_pcm_48k
+            (&self.processed_pcm_48k, aec_ref)
         }
     }
 }

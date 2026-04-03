@@ -275,6 +275,11 @@ class _LoadingPageState extends State<LoadingPage> {
 
     // Transition to HomeScreen smoothly
     if (mounted) {
+      // Ensure we don't navigate while the navigator is locked (e.g., during initState)
+      // On desktop, we've already awaited for window management. On mobile, we need a small delay or post-frame callback.
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+      
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
@@ -440,6 +445,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkLastServer() async {
+    // Wait a moment to ensure the push transition from LoadingPage is completed
+    // to avoid navigator locking issues (especially on mobile).
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    
     final settings = Provider.of<SettingsService>(context, listen: false);
     if (settings.reconnectToLastServer && settings.lastServerJson != null) {
       final serverMap = jsonDecode(settings.lastServerJson!);
@@ -1076,15 +1086,72 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildMicStatus(service),
-          SizedBox(width: isSlim ? 8 : 16),
-          _buildPTTButton(service, isSlim),
+          _buildAecToggle(service),
+          Row(
+            children: [
+              _buildMicStatus(service),
+              SizedBox(width: isSlim ? 8 : 16),
+              _buildPTTButton(service, isSlim),
+            ],
+          ),
         ],
       ),
     );
   }
+
+  Widget _buildAecToggle(MumbleService service) {
+    final theme = ShadTheme.of(context);
+    final isEnabled = service.echoCancellationEnabled;
+
+    return RumbleTooltip(
+      message: isEnabled ? 'Echo Cancellation: ON' : 'Echo Cancellation: OFF',
+      child: GestureDetector(
+        onTap: () => service.setEchoCancellation(!isEnabled),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: isEnabled
+                ? kBrandGreen.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isEnabled
+                  ? kBrandGreen.withValues(alpha: 0.5)
+                  : theme.colorScheme.border.withValues(alpha: 0.4),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.audioWaveform,
+                size: 16,
+                color: isEnabled
+                    ? kBrandGreen
+                    : theme.colorScheme.mutedForeground,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'AEC',
+                style: theme.textTheme.small.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isEnabled
+                      ? kBrandGreen
+                      : theme.colorScheme.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   Widget _buildPTTButton(MumbleService service, bool isSlim) {
     return PushToTalkButton(
