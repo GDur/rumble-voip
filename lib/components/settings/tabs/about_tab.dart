@@ -33,7 +33,7 @@ class AboutTab extends StatelessWidget {
             const SizedBox(height: 16),
             ShadButton.outline(
               size: ShadButtonSize.sm,
-              leading: const Icon(LucideIcons.github, size: 16),
+              leading: const Icon(LucideIcons.externalLink, size: 16),
               onPressed: () => launchUrl(Uri.parse('https://github.com/GDur/rumble-voip/')),
               child: const Text('View on GitHub'),
             ),

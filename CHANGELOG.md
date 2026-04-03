@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.15.1] - 2026-04-03
+- fix: test
+
 ## [0.15.0] - 2026-04-03
 - feat: integrate acoustic echo cancellation into audio pipeline
 
