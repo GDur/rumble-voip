@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.15.0] - 2026-04-03
+- feat: wip . started docker
+
 ## [0.14.1] - 2026-04-01
 - fix: resolve case-sensitive Justfile vs justfile collision in index
 

@@ -1,0 +1,16 @@
+.git
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+build/
+rust/target/
+rust_builder/.dart_tool/
+ios/Pods/
+macos/Pods/
+*.log
+*.pcm
+.env
+.idea
+.vscode

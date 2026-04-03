@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  builder:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: rumble-builder
+    image: rumble:latest
+    volumes:
+      # Map the source code
+      - .:/app
+      # Cache volumes (these will be stored where Docker's data root is)
+      # If Docker data root is on the external drive, these will use that space.
+      - flutter-cache:/root/.pub-cache
+      - cargo-cache:/opt/cargo/registry/cache
+      - target-cache:/app/rust/target
+      - build-cache:/app/build
+    environment:
+      - CHROME_EXECUTABLE=/usr/bin/google-chrome # for web-related tests
+    # Interactive mode for debugging
+    stdin_open: true
+    tty: true
+
+volumes:
+  flutter-cache:
+  cargo-cache:
+  target-cache:
+  build-cache:

@@ -60,9 +60,51 @@ release-windows:
 release-all:
     just release-macos
     just release-ios
-    just release-android
-    # just release-web
-    # experimental
-    just release-linux
-    # experimental
-    just release-windows
+# --- Full Project Orchestration ---
+
+# Build everything (Host, Docker/Colima, and VM/Quickemu) - THE HOLY GRAIL
+build-all:
+    @echo "🚀 Starting Full Project Build for ALL platforms..."
+    @echo "📦 [1/4] Building macOS release..."
+    just release-macos
+    @echo "🐳 [2/4] Building Android & Linux in Docker (Colima)..."
+    just docker-release apk
+    just docker-release linux
+    @echo "🪟 [3/4] Triggering Windows VM build (if running)..."
+    @echo "Note: Windows build requires the VM to be running and SSH enabled."
+    # just windows-vm-build
+    @echo "✅ Build complete! Check 'build/' on both Host and VMs."
+
+# --- VM Management ---
+
+# Start all build environments
+vms-up:
+    colima start --cpu 4 --memory 8 --vm-type vz --vz-rosetta
+    cd "/Volumes/Raid 1 4TB/vms/windows" && quickemu --vm windows-11-arm64.conf --display none &
+
+# Stop all build environments
+vms-down:
+    colima stop
+    # killall qemu-system-aarch64 # or manage quickemu properly
+
+# --- Docker Commands ---
+
+# Build the Docker image (ensure Docker storage is on external drive!)
+docker-build:
+    docker-compose build
+
+# Start the Docker builder container
+docker-up:
+    docker-compose up -d
+
+# Stop the Docker builder container
+docker-down:
+    docker-compose down
+
+# Open a shell in the builder container
+docker-shell:
+    docker-compose exec builder bash
+
+# Build a release platform inside Docker (supported: android, linux, web)
+docker-release platform:
+    docker-compose exec builder flutter build {{ platform }} --release
