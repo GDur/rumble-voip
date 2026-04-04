@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -697,18 +698,10 @@ class _ChannelTreeState extends State<ChannelTree> {
                   ),
                 ),
                 if (u.avatar != null)
-                  ClipOval(
-                    child: Image.memory(
-                      u.avatar!,
-                      width: 22,
-                      height: 22,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        LucideIcons.user,
-                        size: 14,
-                        color: theme.colorScheme.mutedForeground,
-                      ),
-                    ),
+                  ZoomableAvatar(
+                    avatar: u.avatar!,
+                    size: 22,
+                    statusColor: statusColor,
                   ),
               ],
             ),
@@ -1088,4 +1081,128 @@ class _ArrowIntent extends Intent {
 
 class _EnterIntent extends Intent {
   const _EnterIntent();
+}
+
+class ZoomableAvatar extends StatefulWidget {
+  final Uint8List avatar;
+  final double size;
+  final Color statusColor;
+
+  const ZoomableAvatar({
+    super.key,
+    required this.avatar,
+    required this.size,
+    required this.statusColor,
+  });
+
+  @override
+  State<ZoomableAvatar> createState() => _ZoomableAvatarState();
+}
+
+class _ZoomableAvatarState extends State<ZoomableAvatar>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  OverlayEntry? _overlayEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+  }
+
+  void _showOverlay() {
+    if (_overlayEntry != null) return;
+
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final Offset position = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            Positioned(
+              left: position.dx - (size.width * 2) / 2,
+              top: position.dy - (size.height * 2) / 2,
+              child: IgnorePointer(
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Container(
+                      width: size.width * 3,
+                      height: size.height * 3,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: widget.statusColor,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 16,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                        image: DecorationImage(
+                          image: MemoryImage(widget.avatar),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+    _controller.forward();
+  }
+
+  void _hideOverlay() {
+    if (_overlayEntry == null) return;
+    _controller.reverse().then((_) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    });
+  }
+
+  @override
+  void dispose() {
+    _hideOverlay();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => _showOverlay(),
+      onExit: (_) => _hideOverlay(),
+      child: Container(
+        width: widget.size,
+        height: widget.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: MemoryImage(widget.avatar),
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
 }

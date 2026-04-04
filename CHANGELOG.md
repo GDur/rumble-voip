@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0] - 2026-04-04
+- feat: implement animated avatar zoom on hover in channel tree
+
+- Add ZoomableAvatar widget with Overlay zoom transition
+- Show avatar 3x bigger when hovered with easing effect
+- Sync status color border with zoomed version
+
 ## [0.18.0] - 2026-04-04
 - feat: per-server certificate management and user registration flow
 
