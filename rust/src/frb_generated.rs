@@ -1108,6 +1108,7 @@ impl SseDecode for crate::api::client::MumbleUser {
         let mut var_isDeafened = <bool>::sse_decode(deserializer);
         let mut var_isSuppressed = <bool>::sse_decode(deserializer);
         let mut var_comment = <Option<String>>::sse_decode(deserializer);
+        let mut var_avatar = <Option<Vec<u8>>>::sse_decode(deserializer);
         return crate::api::client::MumbleUser {
             session: var_session,
             name: var_name,
@@ -1117,6 +1118,7 @@ impl SseDecode for crate::api::client::MumbleUser {
             is_deafened: var_isDeafened,
             is_suppressed: var_isSuppressed,
             comment: var_comment,
+            avatar: var_avatar,
         };
     }
 }
@@ -1137,6 +1139,17 @@ impl SseDecode for Option<u32> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<u32>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<Vec<u8>>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -1447,6 +1460,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::client::MumbleUser {
             self.is_deafened.into_into_dart().into_dart(),
             self.is_suppressed.into_into_dart().into_dart(),
             self.comment.into_into_dart().into_dart(),
+            self.avatar.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1655,6 +1669,7 @@ impl SseEncode for crate::api::client::MumbleUser {
         <bool>::sse_encode(self.is_deafened, serializer);
         <bool>::sse_encode(self.is_suppressed, serializer);
         <Option<String>>::sse_encode(self.comment, serializer);
+        <Option<Vec<u8>>>::sse_encode(self.avatar, serializer);
     }
 }
 
@@ -1674,6 +1689,16 @@ impl SseEncode for Option<u32> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <u32>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<Vec<u8>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <Vec<u8>>::sse_encode(value, serializer);
         }
     }
 }

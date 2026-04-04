@@ -115,6 +115,7 @@ class MumbleUser {
   final bool isDeafened;
   final bool isSuppressed;
   final String? comment;
+  final Uint8List? avatar;
 
   const MumbleUser({
     required this.session,
@@ -125,6 +126,7 @@ class MumbleUser {
     required this.isDeafened,
     required this.isSuppressed,
     this.comment,
+    this.avatar,
   });
 
   static Future<MumbleUser> default_() =>
@@ -139,7 +141,8 @@ class MumbleUser {
       isMuted.hashCode ^
       isDeafened.hashCode ^
       isSuppressed.hashCode ^
-      comment.hashCode;
+      comment.hashCode ^
+      avatar.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -153,5 +156,6 @@ class MumbleUser {
           isMuted == other.isMuted &&
           isDeafened == other.isDeafened &&
           isSuppressed == other.isSuppressed &&
-          comment == other.comment;
+          comment == other.comment &&
+          avatar == other.avatar;
 }

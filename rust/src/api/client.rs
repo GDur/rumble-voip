@@ -39,6 +39,7 @@ pub struct MumbleUser {
     pub is_deafened: bool,
     pub is_suppressed: bool,
     pub comment: Option<String>,
+    pub avatar: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]

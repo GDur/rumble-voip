@@ -969,8 +969,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MumbleUser dco_decode_mumble_user(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return MumbleUser(
       session: dco_decode_u_32(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -980,6 +980,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isDeafened: dco_decode_bool(arr[5]),
       isSuppressed: dco_decode_bool(arr[6]),
       comment: dco_decode_opt_String(arr[7]),
+      avatar: dco_decode_opt_list_prim_u_8_strict(arr[8]),
     );
   }
 
@@ -993,6 +994,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  Uint8List? dco_decode_opt_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_prim_u_8_strict(raw);
   }
 
   @protected
@@ -1261,6 +1268,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_isDeafened = sse_decode_bool(deserializer);
     var var_isSuppressed = sse_decode_bool(deserializer);
     var var_comment = sse_decode_opt_String(deserializer);
+    var var_avatar = sse_decode_opt_list_prim_u_8_strict(deserializer);
     return MumbleUser(
       session: var_session,
       name: var_name,
@@ -1270,6 +1278,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isDeafened: var_isDeafened,
       isSuppressed: var_isSuppressed,
       comment: var_comment,
+      avatar: var_avatar,
     );
   }
 
@@ -1290,6 +1299,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Uint8List? sse_decode_opt_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_prim_u_8_strict(deserializer));
     } else {
       return null;
     }
@@ -1575,6 +1595,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.isDeafened, serializer);
     sse_encode_bool(self.isSuppressed, serializer);
     sse_encode_opt_String(self.comment, serializer);
+    sse_encode_opt_list_prim_u_8_strict(self.avatar, serializer);
   }
 
   @protected
@@ -1594,6 +1615,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_prim_u_8_strict(
+    Uint8List? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_prim_u_8_strict(self, serializer);
     }
   }
 
