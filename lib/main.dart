@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:rumble/utils/layout_constants.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:rumble/services/background_service.dart';
@@ -279,7 +280,7 @@ class _LoadingPageState extends State<LoadingPage> {
       // On desktop, we've already awaited for window management. On mobile, we need a small delay or post-frame callback.
       await Future.delayed(Duration.zero);
       if (!mounted) return;
-      
+
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
@@ -449,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // to avoid navigator locking issues (especially on mobile).
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    
+
     final settings = Provider.of<SettingsService>(context, listen: false);
     if (settings.reconnectToLastServer && settings.lastServerJson != null) {
       final serverMap = jsonDecode(settings.lastServerJson!);
@@ -541,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.zero,
                   scrollable: false,
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    maxWidth: MediaQuery.of(context).size.width * (LayoutConstants.isSlim(context) ? 1.0 : 0.9),
                   ),
                   radius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
@@ -712,7 +713,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final mumbleService = Provider.of<MumbleService>(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final theme = ShadTheme.of(context);
-    final isSlim = MediaQuery.of(context).size.width < 350;
+    final isSlim = LayoutConstants.isSlim(context);
 
     return SafeArea(
       child: Scaffold(
@@ -1152,7 +1153,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 
   Widget _buildPTTButton(MumbleService service, bool isSlim) {
     return PushToTalkButton(

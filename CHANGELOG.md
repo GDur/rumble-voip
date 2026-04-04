@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.19.1] - 2026-04-04
+- refactor: consolidate isSlim layout logic into shared constant
+
 ## [0.19.0] - 2026-04-04
 - feat: implement animated avatar zoom on hover in channel tree
 

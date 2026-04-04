@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rumble/utils/layout_constants.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -73,7 +74,7 @@ class _ChatViewState extends State<ChatView> {
     if (!mounted) return;
     final mumbleService = context.read<MumbleService>();
     final newCount = mumbleService.messages.length;
-    
+
     // Only act if messages were actually added
     if (newCount > _lastMessageCount) {
       _lastMessageCount = newCount;
@@ -107,8 +108,8 @@ class _ChatViewState extends State<ChatView> {
             curve: Curves.easeOut,
           )
           .then((_) {
-        if (mounted) _isAutoScrolling = false;
-      });
+            if (mounted) _isAutoScrolling = false;
+          });
     }
 
     // First scroll attempt
@@ -127,7 +128,7 @@ class _ChatViewState extends State<ChatView> {
   void _copyMessage(String content) {
     final markdown = HtmlUtils.htmlToMarkdown(content);
     Clipboard.setData(ClipboardData(text: markdown));
-    
+
     if (mounted) {
       ShadToaster.of(context).show(
         ShadToast(
@@ -158,8 +159,9 @@ class _ChatViewState extends State<ChatView> {
     if (event is KeyDownEvent) {
       // Check for Cmd+V or Ctrl+V
       final bool isV = event.logicalKey == LogicalKeyboardKey.keyV;
-      final bool modifierPressed = HardwareKeyboard.instance.isMetaPressed || 
-                                   HardwareKeyboard.instance.isControlPressed;
+      final bool modifierPressed =
+          HardwareKeyboard.instance.isMetaPressed ||
+          HardwareKeyboard.instance.isControlPressed;
 
       if (isV && modifierPressed) {
         _handlePaste();
@@ -167,8 +169,9 @@ class _ChatViewState extends State<ChatView> {
       }
 
       // Handle Enter to send, Shift+Enter for new line
-      final bool isEnter = event.logicalKey == LogicalKeyboardKey.enter || 
-                           event.logicalKey == LogicalKeyboardKey.numpadEnter;
+      final bool isEnter =
+          event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.numpadEnter;
       final bool isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
 
       if (isEnter && !isShiftPressed) {
@@ -184,7 +187,7 @@ class _ChatViewState extends State<ChatView> {
     final theme = ShadTheme.of(context);
     final mumbleService = context.watch<MumbleService>();
     final messages = mumbleService.messages;
-    final isSlim = MediaQuery.of(context).size.width < 350;
+    final isSlim = LayoutConstants.isSlim(context);
 
     return Stack(
       children: [
@@ -255,12 +258,25 @@ class _ChatViewState extends State<ChatView> {
                                         fontStyle: FontStyle.italic,
                                       ),
                                       onTapImage: (imageData) {
-                                        final currentMessages = context.read<MumbleService>().messages;
+                                        final currentMessages = context
+                                            .read<MumbleService>()
+                                            .messages;
                                         final allImages = currentMessages
-                                            .expand((m) => HtmlUtils.extractImageSources(m.content))
+                                            .expand(
+                                              (m) =>
+                                                  HtmlUtils.extractImageSources(
+                                                    m.content,
+                                                  ),
+                                            )
                                             .toList();
-                                        final index = allImages.indexOf(imageData.sources.first.url);
-                                        ImageGalleryDialog.show(context, allImages, index >= 0 ? index : 0);
+                                        final index = allImages.indexOf(
+                                          imageData.sources.first.url,
+                                        );
+                                        ImageGalleryDialog.show(
+                                          context,
+                                          allImages,
+                                          index >= 0 ? index : 0,
+                                        );
                                       },
                                       onTapUrl: (url) async {
                                         final uri = Uri.parse(url);
@@ -296,7 +312,9 @@ class _ChatViewState extends State<ChatView> {
                                     const SizedBox(width: 8),
                                     Text(
                                       DateFormat('HH:mm').format(msg.timestamp),
-                                      style: theme.textTheme.muted.copyWith(fontSize: 10),
+                                      style: theme.textTheme.muted.copyWith(
+                                        fontSize: 10,
+                                      ),
                                     ),
                                     if (msg.isSelf)
                                       Padding(
@@ -305,7 +323,9 @@ class _ChatViewState extends State<ChatView> {
                                           msg.senderName,
                                           style: theme.textTheme.small.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.mutedForeground,
+                                            color: theme
+                                                .colorScheme
+                                                .mutedForeground,
                                           ),
                                         ),
                                       ),
@@ -319,14 +339,17 @@ class _ChatViewState extends State<ChatView> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: msg.isSelf
-                                        ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                                        : theme.colorScheme.muted.withValues(alpha: 0.2),
+                                        ? theme.colorScheme.primary.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : theme.colorScheme.muted.withValues(
+                                            alpha: 0.2,
+                                          ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: msg.isSelf
-                                          ? theme.colorScheme.primary.withValues(
-                                              alpha: 0.2,
-                                            )
+                                          ? theme.colorScheme.primary
+                                                .withValues(alpha: 0.2)
                                           : theme.colorScheme.border.withValues(
                                               alpha: 0.5,
                                             ),
@@ -335,7 +358,9 @@ class _ChatViewState extends State<ChatView> {
                                   child: Stack(
                                     children: [
                                       Padding(
-                                        padding: const EdgeInsets.only(right: 24),
+                                        padding: const EdgeInsets.only(
+                                          right: 24,
+                                        ),
                                         child: HtmlWidget(
                                           msg.content,
                                           enableCaching: true,
@@ -345,9 +370,16 @@ class _ChatViewState extends State<ChatView> {
                                           ),
                                           onTapImage: (imageData) {
                                             // Extract LATEST unique images from mumbleService.messages
-                                            final currentMessages = context.read<MumbleService>().messages;
+                                            final currentMessages = context
+                                                .read<MumbleService>()
+                                                .messages;
                                             final allImages = currentMessages
-                                                .expand((m) => HtmlUtils.extractImageSources(m.content))
+                                                .expand(
+                                                  (m) =>
+                                                      HtmlUtils.extractImageSources(
+                                                        m.content,
+                                                      ),
+                                                )
                                                 .toList();
                                             // Handle duplicates by getting unique list while preserving order
                                             final uniqueImages = <String>[];
@@ -356,10 +388,13 @@ class _ChatViewState extends State<ChatView> {
                                                 uniqueImages.add(img);
                                               }
                                             }
-                                            
-                                            final currentUrl = imageData.sources.first.url;
-                                            final index = uniqueImages.indexOf(currentUrl);
-                                            
+
+                                            final currentUrl =
+                                                imageData.sources.first.url;
+                                            final index = uniqueImages.indexOf(
+                                              currentUrl,
+                                            );
+
                                             ImageGalleryDialog.show(
                                               context,
                                               uniqueImages,
@@ -383,12 +418,16 @@ class _ChatViewState extends State<ChatView> {
                                                 'border-radius': '8px',
                                               };
                                             }
-                                            if (element.localName == 'ul' || element.localName == 'ol') {
+                                            if (element.localName == 'ul' ||
+                                                element.localName == 'ol') {
                                               return {
                                                 'padding-left': '12px',
                                                 'margin-top': '4px',
                                                 'margin-bottom': '4px',
-                                                'list-style-type': element.localName == 'ul' ? 'disc' : 'decimal',
+                                                'list-style-type':
+                                                    element.localName == 'ul'
+                                                    ? 'disc'
+                                                    : 'decimal',
                                               };
                                             }
                                             if (element.localName == 'li') {
@@ -410,12 +449,16 @@ class _ChatViewState extends State<ChatView> {
                                             icon: Icon(
                                               LucideIcons.copy,
                                               size: 14,
-                                              color: theme.colorScheme.mutedForeground.withValues(alpha: 0.5),
+                                              color: theme
+                                                  .colorScheme
+                                                  .mutedForeground
+                                                  .withValues(alpha: 0.5),
                                             ),
                                             width: 32,
                                             height: 32,
                                             padding: EdgeInsets.zero,
-                                            onPressed: () => _copyMessage(msg.content),
+                                            onPressed: () =>
+                                                _copyMessage(msg.content),
                                           ),
                                         ),
                                       ),
