@@ -10,6 +10,7 @@ class MumbleServer {
   final int port;
   final String username;
   final String password;
+  final String? certificateId;
   final bool isArchived;
   final int? lastChannelId;
   // Transient data for server list
@@ -24,6 +25,7 @@ class MumbleServer {
     required this.port,
     required this.username,
     this.password = '',
+    this.certificateId,
     this.isArchived = false,
     this.lastChannelId,
     this.ping,
@@ -38,6 +40,7 @@ class MumbleServer {
     'port': port,
     'username': username,
     'password': password,
+    'certificateId': certificateId,
     'isArchived': isArchived,
     'lastChannelId': lastChannelId,
     if (ping != null) 'ping': ping,
@@ -52,6 +55,7 @@ class MumbleServer {
     port: json['port'],
     username: json['username'],
     password: json['password'] ?? '',
+    certificateId: json['certificateId'],
     isArchived: json['isArchived'] ?? false,
     lastChannelId: json['lastChannelId'],
     ping: json['ping'],
@@ -65,6 +69,7 @@ class MumbleServer {
     int? port,
     String? username,
     String? password,
+    String? certificateId,
     bool? isArchived,
     int? lastChannelId,
     int? ping,
@@ -77,6 +82,7 @@ class MumbleServer {
     port: port ?? this.port,
     username: username ?? this.username,
     password: password ?? this.password,
+    certificateId: certificateId ?? this.certificateId,
     isArchived: isArchived ?? this.isArchived,
     lastChannelId: lastChannelId ?? this.lastChannelId,
     ping: ping ?? this.ping,

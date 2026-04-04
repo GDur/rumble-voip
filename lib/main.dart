@@ -619,11 +619,12 @@ class _HomeScreenState extends State<HomeScreen> {
         await certService.loadCertificates();
       }
 
-      final defaultCertId = certService.defaultCertificateId;
-      final certificate = defaultCertId != null
-          ? certService.getCertificateById(defaultCertId)
+      // Prioritize server-specific certificate, then global default
+      final certId = server.certificateId ?? certService.defaultCertificateId;
+      final certificate = certId != null
+          ? certService.getCertificateById(certId)
           : null;
-      debugPrint('[DEBUG] Certificate resolved: $certificate');
+      debugPrint('[DEBUG] Certificate resolved ($certId): $certificate');
 
       // Set update callback for persisting last joined channel
       service.onServerUpdated = (updatedServer) {

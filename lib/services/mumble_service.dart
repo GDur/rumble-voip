@@ -382,6 +382,10 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   @override
   void onUserListReceived(List<dumble.RegisteredUser> users) {}
 
+  void registerSelf() {
+    _dumbleClient?.self.registerUser();
+  }
+
   // --- End Listener implementation ---
 
   void _syncChannels() {
@@ -481,6 +485,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       isMuted: (u.mute == true) || (u.selfMute == true),
       isDeafened: (u.deaf == true) || (u.selfDeaf == true),
       isSuppressed: u.suppress == true,
+      isRegistered: u.userId != null,
+      userId: u.userId,
       comment: u.comment,
       avatar: u.texture,
     );

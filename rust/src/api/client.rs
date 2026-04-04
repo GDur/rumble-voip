@@ -38,6 +38,8 @@ pub struct MumbleUser {
     pub is_muted: bool,
     pub is_deafened: bool,
     pub is_suppressed: bool,
+    pub is_registered: bool,
+    pub user_id: Option<u32>,
     pub comment: Option<String>,
     pub avatar: Option<Vec<u8>>,
 }

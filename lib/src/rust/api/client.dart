@@ -114,6 +114,8 @@ class MumbleUser {
   final bool isMuted;
   final bool isDeafened;
   final bool isSuppressed;
+  final bool isRegistered;
+  final int? userId;
   final String? comment;
   final Uint8List? avatar;
 
@@ -125,6 +127,8 @@ class MumbleUser {
     required this.isMuted,
     required this.isDeafened,
     required this.isSuppressed,
+    required this.isRegistered,
+    this.userId,
     this.comment,
     this.avatar,
   });
@@ -141,6 +145,8 @@ class MumbleUser {
       isMuted.hashCode ^
       isDeafened.hashCode ^
       isSuppressed.hashCode ^
+      isRegistered.hashCode ^
+      userId.hashCode ^
       comment.hashCode ^
       avatar.hashCode;
 
@@ -156,6 +162,8 @@ class MumbleUser {
           isMuted == other.isMuted &&
           isDeafened == other.isDeafened &&
           isSuppressed == other.isSuppressed &&
+          isRegistered == other.isRegistered &&
+          userId == other.userId &&
           comment == other.comment &&
           avatar == other.avatar;
 }

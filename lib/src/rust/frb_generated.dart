@@ -969,8 +969,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   MumbleUser dco_decode_mumble_user(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return MumbleUser(
       session: dco_decode_u_32(arr[0]),
       name: dco_decode_String(arr[1]),
@@ -979,8 +979,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isMuted: dco_decode_bool(arr[4]),
       isDeafened: dco_decode_bool(arr[5]),
       isSuppressed: dco_decode_bool(arr[6]),
-      comment: dco_decode_opt_String(arr[7]),
-      avatar: dco_decode_opt_list_prim_u_8_strict(arr[8]),
+      isRegistered: dco_decode_bool(arr[7]),
+      userId: dco_decode_opt_box_autoadd_u_32(arr[8]),
+      comment: dco_decode_opt_String(arr[9]),
+      avatar: dco_decode_opt_list_prim_u_8_strict(arr[10]),
     );
   }
 
@@ -1267,6 +1269,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_isMuted = sse_decode_bool(deserializer);
     var var_isDeafened = sse_decode_bool(deserializer);
     var var_isSuppressed = sse_decode_bool(deserializer);
+    var var_isRegistered = sse_decode_bool(deserializer);
+    var var_userId = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_comment = sse_decode_opt_String(deserializer);
     var var_avatar = sse_decode_opt_list_prim_u_8_strict(deserializer);
     return MumbleUser(
@@ -1277,6 +1281,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       isMuted: var_isMuted,
       isDeafened: var_isDeafened,
       isSuppressed: var_isSuppressed,
+      isRegistered: var_isRegistered,
+      userId: var_userId,
       comment: var_comment,
       avatar: var_avatar,
     );
@@ -1594,6 +1600,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.isMuted, serializer);
     sse_encode_bool(self.isDeafened, serializer);
     sse_encode_bool(self.isSuppressed, serializer);
+    sse_encode_bool(self.isRegistered, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.userId, serializer);
     sse_encode_opt_String(self.comment, serializer);
     sse_encode_opt_list_prim_u_8_strict(self.avatar, serializer);
   }

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -734,6 +733,17 @@ class _ChannelTreeState extends State<ChannelTree> {
               ),
             ),
           ),
+          if (u.isRegistered) ...[
+            const SizedBox(width: 4),
+            const RumbleTooltip(
+              message: 'Registered User',
+              child: Icon(
+                LucideIcons.shieldCheck,
+                size: 14,
+                color: Color(0xFFE6C681),
+              ),
+            ),
+          ],
           if (isMe) ...[
             const SizedBox(width: 8),
             Text(
@@ -817,6 +827,16 @@ class _ChannelTreeState extends State<ChannelTree> {
           leading: const Icon(LucideIcons.filePenLine, size: 16),
           child: const Text('Set Self Notice'),
         ),
+        if (!u.isRegistered)
+          ShadContextMenuItem(
+            onPressed: () => _showRegisterDialog(context),
+            leading: const Icon(
+              LucideIcons.badgeCheck,
+              size: 16,
+              color: Color(0xFFE6C681),
+            ),
+            child: const Text('Register to Server'),
+          ),
         ShadContextMenuItem(
           onPressed: () => _changeAvatar(context),
           leading: const Icon(LucideIcons.image, size: 16),
@@ -875,6 +895,42 @@ class _ChannelTreeState extends State<ChannelTree> {
         onEnter: (_) => setState(() => _hoveredUserSession = u.session),
         onExit: (_) => setState(() => _hoveredUserSession = null),
         child: content,
+      ),
+    );
+  }
+
+  void _showRegisterDialog(BuildContext context) {
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    final self = mumbleService.self;
+    if (self == null) return;
+
+    showShadDialog(
+      context: context,
+      builder: (context) => ShadDialog(
+        title: const Text('Register to Server'),
+        description: Text(
+          'Do you want to permanently register your current name "${self.name}" on this server? '
+          'This will link your current certificate with this username.',
+        ),
+        actions: [
+          ShadButton.outline(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          ShadButton(
+            child: const Text('Register'),
+            onPressed: () {
+              mumbleService.registerSelf();
+              Navigator.of(context).pop();
+              ShadToaster.of(context).show(
+                const ShadToast(
+                  title: Text('Registration Request Sent'),
+                  description: Text('The server will process your registration.'),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

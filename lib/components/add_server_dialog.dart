@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/models/server.dart';
+import 'package:rumble/services/certificate_service.dart';
 import 'package:rumble/services/server_provider.dart';
 import 'package:rumble/components/rumble_tooltip.dart';
 
@@ -24,6 +25,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
   late final TextEditingController _passwordController;
   bool _isAutoName = true;
   bool _passwordObscure = true;
+  String? _selectedCertificateId;
   final _formKey = GlobalKey<ShadFormState>();
 
   @override
@@ -39,6 +41,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
       text: server?.username ?? 'Rumble - Mumble Reloaded',
     );
     _passwordController = TextEditingController(text: server?.password ?? '');
+    _selectedCertificateId = server?.certificateId;
     if (server != null) {
       _isAutoName = false;
       // selection for host field if editing
@@ -63,6 +66,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
     final isMobile = MediaQuery.of(context).size.width < 600;
     return ShadDialog(
       radius: const BorderRadius.all(Radius.circular(16)),
@@ -88,6 +92,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                 port: int.tryParse(_portController.text) ?? 64738,
                 username: username,
                 password: _passwordController.text,
+                certificateId: _selectedCertificateId,
                 lastChannelId: widget.server?.lastChannelId,
               );
 
@@ -211,7 +216,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                           id: 'username',
                           label: _buildLabelWithTooltip(
                             'Username',
-                            'Public display name on server.',
+                            'Public display name on server. If using a specific certificate, your username must match what the server expects.',
                           ),
                           placeholder: const Text('Your Nickname'),
                           controller: _usernameController,
@@ -232,6 +237,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     ),
                   ],
                 ),
+                if (_selectedCertificateId != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4),
+                    child: Text(
+                      'Registered users? Please use your assigned nick.',
+                      style: theme.textTheme.muted.copyWith(fontSize: 12),
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 400),
@@ -269,11 +282,82 @@ class _AddServerDialogState extends State<AddServerDialog> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                _buildCertificateSelection(context),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCertificateSelection(BuildContext context) {
+    return Consumer<CertificateService>(
+      builder: (context, certService, _) {
+        final certs = certService.certificates;
+        if (certs.isEmpty) {
+          return ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: const ShadAlert(
+              icon: Icon(LucideIcons.info, size: 16),
+              title: Text('No Certificates Found'),
+              description: Text(
+                'You can generate or import certificates in the global Settings.',
+              ),
+            ),
+          );
+        }
+
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildLabelWithTooltip(
+                'Certificate (Optional)',
+                'Identify yourself for registration or server permissions.',
+              ),
+              const SizedBox(height: 1),
+              ShadSelect<String?>(
+                placeholder: const Text('Use Global Default'),
+                initialValue: _selectedCertificateId,
+                onChanged: (val) => setState(() => _selectedCertificateId = val),
+                options: [
+                  const ShadOption<String?>(
+                    value: null,
+                    child: Text('Global Default'),
+                  ),
+                  ...certs.map(
+                    (c) => ShadOption<String?>(value: c.id, child: Text(c.name)),
+                  ),
+                ],
+                selectedOptionBuilder: (context, value) {
+                  if (value == null) return const Text('Global Default');
+                  final cert = certService.getCertificateById(value);
+                  return Text(cert?.name ?? 'Unknown Certificate');
+                },
+              ),
+              if (_selectedCertificateId != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4),
+                  child: Text(
+                    'Selected certificate will be used instead of the global default.',
+                    style: ShadTheme.of(context).textTheme.muted.copyWith(fontSize: 12),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4),
+                  child: Text(
+                    'Currently using the global default certificate (if any).',
+                    style: ShadTheme.of(context).textTheme.muted.copyWith(fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

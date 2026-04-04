@@ -1107,6 +1107,8 @@ impl SseDecode for crate::api::client::MumbleUser {
         let mut var_isMuted = <bool>::sse_decode(deserializer);
         let mut var_isDeafened = <bool>::sse_decode(deserializer);
         let mut var_isSuppressed = <bool>::sse_decode(deserializer);
+        let mut var_isRegistered = <bool>::sse_decode(deserializer);
+        let mut var_userId = <Option<u32>>::sse_decode(deserializer);
         let mut var_comment = <Option<String>>::sse_decode(deserializer);
         let mut var_avatar = <Option<Vec<u8>>>::sse_decode(deserializer);
         return crate::api::client::MumbleUser {
@@ -1117,6 +1119,8 @@ impl SseDecode for crate::api::client::MumbleUser {
             is_muted: var_isMuted,
             is_deafened: var_isDeafened,
             is_suppressed: var_isSuppressed,
+            is_registered: var_isRegistered,
+            user_id: var_userId,
             comment: var_comment,
             avatar: var_avatar,
         };
@@ -1459,6 +1463,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::client::MumbleUser {
             self.is_muted.into_into_dart().into_dart(),
             self.is_deafened.into_into_dart().into_dart(),
             self.is_suppressed.into_into_dart().into_dart(),
+            self.is_registered.into_into_dart().into_dart(),
+            self.user_id.into_into_dart().into_dart(),
             self.comment.into_into_dart().into_dart(),
             self.avatar.into_into_dart().into_dart(),
         ]
@@ -1668,6 +1674,8 @@ impl SseEncode for crate::api::client::MumbleUser {
         <bool>::sse_encode(self.is_muted, serializer);
         <bool>::sse_encode(self.is_deafened, serializer);
         <bool>::sse_encode(self.is_suppressed, serializer);
+        <bool>::sse_encode(self.is_registered, serializer);
+        <Option<u32>>::sse_encode(self.user_id, serializer);
         <Option<String>>::sse_encode(self.comment, serializer);
         <Option<Vec<u8>>>::sse_encode(self.avatar, serializer);
     }

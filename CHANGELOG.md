@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.18.0] - 2026-04-04
+- feat: per-server certificate management and user registration flow
+
+- Added certificateId to MumbleServer model
+- Added certificate selection to server dialog
+- Updated connection logic to prioritize server-specific certificates
+- Implemented golden shield indicator for registered users in ChannelTree
+- Added 'Register to Server' action with confirmation in context menu
+- Extended Rust API with registration status fields and regenerated bridge
+
+## [0.17.0] - 2026-04-04
+- feat: per-server certificate management and user registration flow
+
+- Added certificateId to MumbleServer model
+- Added certificate selection to server dialog
+- Updated connection logic to prioritize server-specific certificates
+- Implemented golden shield indicator for registered users in ChannelTree
+- Added 'Register to Server' action with confirmation in context menu
+- Extended Rust API with registration status fields and regenerated bridge
+
 ## [0.16.0] - 2026-04-04
 - feat: add 'set/change avatar' to user context menu
 
