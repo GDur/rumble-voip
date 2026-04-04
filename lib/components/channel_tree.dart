@@ -679,7 +679,7 @@ class _ChannelTreeState extends State<ChannelTree> {
               alignment: Alignment.center,
               children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: const Duration(milliseconds: 350),
                   width: u.avatar != null ? 28 : 10,
                   height: u.avatar != null ? 28 : 10,
                   decoration: BoxDecoration(
@@ -1110,7 +1110,7 @@ class _ZoomableAvatarState extends State<ZoomableAvatar>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 350),
     );
     _scaleAnimation = CurvedAnimation(
       parent: _controller,

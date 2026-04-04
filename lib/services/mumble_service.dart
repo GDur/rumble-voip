@@ -453,6 +453,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     if (!_trackedUserListeners.contains(selfFromMap.session)) {
       selfFromMap.add(_GenericUserListener(this));
       _trackedUserListeners.add(selfFromMap.session);
+      selfFromMap.requestUserTexture();
     }
     _users[selfFromMap.session] = _mapUser(selfFromMap);
     
