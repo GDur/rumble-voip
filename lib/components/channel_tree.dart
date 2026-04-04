@@ -1114,7 +1114,7 @@ class _ZoomableAvatarState extends State<ZoomableAvatar>
     );
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutCubic,
+      curve: Curves.easeInOutCubic,
     );
   }
 
