@@ -292,11 +292,15 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
        user.add(_GenericUserListener(this));
        _trackedUserListeners.add(user.session);
      }
-     if (user.comment == null && user.commentHash != null) {
-       debugPrint('Mumble: Requesting comment for ${user.name}');
-       user.requestUserComment();
-     }
-     _syncUsers();
+    if (user.comment == null && user.commentHash != null) {
+      debugPrint('Mumble: Requesting comment for ${user.name}');
+      user.requestUserComment();
+    }
+    if (user.texture == null && user.textureHash != null) {
+      debugPrint('Mumble: Requesting texture (avatar) for ${user.name}');
+      user.requestUserTexture();
+    }
+    _syncUsers();
   }
 
   @override
@@ -427,9 +431,12 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         _trackedUserListeners.add(u.session);
       }
       
-      // Auto-request comment if missing but hash exists
+      // Auto-request comment/texture if missing but hash exists
       if (u.comment == null && u.commentHash != null) {
         u.requestUserComment();
+      }
+      if (u.texture == null && u.textureHash != null) {
+        u.requestUserTexture();
       }
       
       _users[u.session] = _mapUser(u);
@@ -475,6 +482,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       isDeafened: (u.deaf == true) || (u.selfDeaf == true),
       isSuppressed: u.suppress == true,
       comment: u.comment,
+      avatar: u.texture,
     );
   }
 
@@ -595,6 +603,12 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     _syncUsers(); // Immediate local sync
   }
 
+  void setAvatar(Uint8List? bytes) {
+    if (_dumbleClient == null) return;
+    _dumbleClient!.self.setTexture(texture: bytes);
+    _syncUsers(); // Immediate local sync
+  }
+
   double getUserVolume(MumbleUser user) {
     return _settings.getUserVolume(user.name);
   }
@@ -697,9 +711,12 @@ class _GenericUserListener with dumble.UserListener {
 
   @override
   void onUserChanged(dumble.User user, dumble.User? actor, dumble.UserChanges changes) {
-    debugPrint('Mumble: onUserChanged for ${user.name} (comment: ${changes.comment}, hash: ${changes.commentHash})');
+    debugPrint('Mumble: onUserChanged for ${user.name} (comment: ${changes.comment}, hash: ${changes.commentHash}, texture: ${changes.texture}, textureHash: ${changes.textureHash})');
     if (changes.commentHash && user.comment == null) {
       user.requestUserComment();
+    }
+    if (changes.textureHash && user.texture == null) {
+      user.requestUserTexture();
     }
     service._syncUsers();
   }

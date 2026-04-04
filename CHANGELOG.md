@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.16.0] - 2026-04-04
+- feat: add 'set/change avatar' to user context menu
+
 ## [0.15.1] - 2026-04-03
 - fix: test
 

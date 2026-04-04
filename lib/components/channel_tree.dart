@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/services/mumble_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/src/rust/api/client.dart';
@@ -204,6 +208,53 @@ class _ChannelTreeState extends State<ChannelTree> {
         },
       ),
     );
+  }
+
+  Future<void> _changeAvatar(BuildContext context) async {
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.single.path != null) {
+      try {
+        final file = File(result.files.single.path!);
+        final bytes = await file.readAsBytes();
+
+        final image = img.decodeImage(bytes);
+        if (image == null) {
+          if (context.mounted) {
+            ShadToaster.of(context).show(
+              const ShadToast(
+                title: Text('Error'),
+                description: Text('Could not decode the image.'),
+              ),
+            );
+          }
+          return;
+        }
+
+        final resized = img.copyResize(image, width: 320, height: 320);
+        final encoded = img.encodePng(resized);
+
+        mumbleService.setAvatar(Uint8List.fromList(encoded));
+      } catch (e) {
+        if (context.mounted) {
+          ShadToaster.of(context).show(
+            ShadToast(
+              title: const Text('Error'),
+              description: Text('Failed to set avatar: $e'),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _clearAvatar(BuildContext context) {
+    Provider.of<MumbleService>(context, listen: false).setAvatar(null);
   }
 
   @override
@@ -621,19 +672,45 @@ class _ChannelTreeState extends State<ChannelTree> {
       ),
       child: Row(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: statusColor.withValues(alpha: 0.4),
-                  blurRadius: isTalking ? 8 : 4,
-                  spreadRadius: isTalking ? 2 : 1,
+          SizedBox(
+            width: u.avatar != null ? 28 : 10,
+            height: u.avatar != null ? 28 : 10,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: u.avatar != null ? 28 : 10,
+                  height: u.avatar != null ? 28 : 10,
+                  decoration: BoxDecoration(
+                    color: u.avatar != null ? Colors.transparent : statusColor,
+                    shape: BoxShape.circle,
+                    border: u.avatar != null
+                        ? Border.all(color: statusColor, width: 2)
+                        : null,
+                    boxShadow: [
+                      BoxShadow(
+                        color: statusColor.withValues(alpha: 0.4),
+                        blurRadius: isTalking ? 8 : 4,
+                        spreadRadius: isTalking ? 2 : 1,
+                      ),
+                    ],
+                  ),
                 ),
+                if (u.avatar != null)
+                  ClipOval(
+                    child: Image.memory(
+                      u.avatar!,
+                      width: 22,
+                      height: 22,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        LucideIcons.user,
+                        size: 14,
+                        color: theme.colorScheme.mutedForeground,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -740,6 +817,17 @@ class _ChannelTreeState extends State<ChannelTree> {
           leading: const Icon(LucideIcons.filePenLine, size: 16),
           child: const Text('Set Self Notice'),
         ),
+        ShadContextMenuItem(
+          onPressed: () => _changeAvatar(context),
+          leading: const Icon(LucideIcons.image, size: 16),
+          child: const Text('Set/Change Avatar'),
+        ),
+        if (u.avatar != null)
+          ShadContextMenuItem(
+            onPressed: () => _clearAvatar(context),
+            leading: const Icon(LucideIcons.imageOff, size: 16),
+            child: const Text('Clear Avatar'),
+          ),
         const Divider(height: 1),
         ShadContextMenuItem(
           onPressed: () => mumbleService.toggleMute(),
