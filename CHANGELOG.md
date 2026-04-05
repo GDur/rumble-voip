@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.22.0] - 2026-04-05
+- windows auto update test via sparkle, fix openssl
+
 ## [0.21.0] - 2026-04-05
 - windows auto update test via sparkle
 
