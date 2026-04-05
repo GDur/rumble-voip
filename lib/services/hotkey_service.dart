@@ -17,6 +17,8 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   );
   final ValueNotifier<String?> appPath = ValueNotifier<String?>(null);
 
+  final Map<int, Set<HotkeyAction>> _windowsVkToActions = {};
+
   static HotkeyService of(BuildContext context, {bool listen = false}) {
     return Provider.of<HotkeyService>(context, listen: listen);
   }
@@ -41,63 +43,65 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (defaultTargetPlatform == TargetPlatform.windows) {
-      await _updateWindowsPttSettings();
+      await _updateWindowsNativeHotkeys();
     }
 
     _updateHotKey();
     _settingsService.addListener(_updateHotKey);
 
     if (defaultTargetPlatform == TargetPlatform.windows) {
-      _settingsService.addListener(_updateWindowsPttSettings);
+      _settingsService.addListener(_updateWindowsNativeHotkeys);
     }
   }
 
-  Future<void> _updateWindowsPttSettings() async {
+  Future<void> _updateWindowsNativeHotkeys() async {
     if (defaultTargetPlatform != TargetPlatform.windows) return;
 
     final settings = _settingsService;
-
     final pttKeys = <Map<String, dynamic>>[];
+    _windowsVkToActions.clear();
     
+    // Add PTT Preset keys (mapping generic VKs like 0x11 to specific ones like 0xA2, 0xA3)
     if (settings.pttKey != PttKey.none) {
-      int vkCode = 0;
-      switch (settings.pttKey) {
-        case PttKey.control:
-          vkCode = 0x11;
-          break;
-        case PttKey.shift:
-          vkCode = 0x10;
-          break;
-        case PttKey.alt:
-          vkCode = 0x12;
-          break;
-        case PttKey.command:
-          vkCode = 0x5B;
-          break;
-        case PttKey.capsLock:
-          vkCode = 0x14;
-          break;
-        default:
-          break;
-      }
-      if (vkCode != 0) {
+      final vks = _getSpecificWindowsVkCodes(settings.pttKey);
+      for (final vk in vks) {
         pttKeys.add({
-          'vkCode': vkCode,
+          'vkCode': vk,
           'suppress': settings.pttSuppress,
         });
+        _windowsVkToActions.putIfAbsent(vk, () => {}).add(HotkeyAction.pushToTalk);
       }
     }
     
-    // Add all PTT bindings from the new list
+    // Add all recorded hotkey bindings that are standalone modifiers OR specified via VK code
     for (final binding in settings.hotkeyBindings) {
-      if (binding['action'] == 'pushToTalk' && binding['vkCode'] != null) {
-        final vk = int.tryParse(binding['vkCode'].toString()) ?? 0;
-        if (vk != 0) {
-          pttKeys.add({
-            'vkCode': vk,
-            'suppress': binding['suppress'] ?? true,
-          });
+      final actionName = binding['action'] ?? 'pushToTalk';
+      final action = HotkeyAction.fromName(actionName);
+      final suppress = binding['suppress'] ?? true;
+      
+      int? vk;
+      if (binding['vkCode'] != null) {
+        vk = int.tryParse(binding['vkCode'].toString());
+      } else {
+        final usbUsage = int.tryParse((binding['usbHidUsage'] ?? binding['physical_id'] ?? '').toString()) ?? 0;
+        final modsRaw = binding['modifiers'];
+        final List<String> modsList = modsRaw is List 
+            ? modsRaw.map((e) => e.toString()).toList()
+            : (modsRaw is String && modsRaw.isNotEmpty ? [modsRaw] : []);
+        
+        // We handle standalone modifiers via the native hook on Windows
+        final key = _findPhysicalKeyByUsbHidUsage(usbUsage);
+        if (key != null && modsList.isEmpty && _isModifierKey(key)) {
+          vk = _getWindowsVkCode(usbUsage);
         }
+      }
+
+      if (vk != null && vk != 0) {
+        pttKeys.add({
+          'vkCode': vk,
+          'suppress': suppress,
+        });
+        _windowsVkToActions.putIfAbsent(vk, () => {}).add(action);
       }
     }
 
@@ -106,18 +110,82 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
         'keys': pttKeys,
       });
     } catch (e) {
-      debugPrint('HotkeyService: Failed to set Windows PTT VK Codes: $e');
+      debugPrint('HotkeyService: Failed to set Windows Native Hotkeys: $e');
     }
   }
 
   void _handleWindowsNativeKey(dynamic arguments) {
     if (arguments is! Map) return;
     final event = arguments['event'];
-    if (event == 'down') {
-      _mumbleService.startPushToTalk();
-    } else if (event == 'up') {
-      _mumbleService.stopPushToTalk();
+    final vkCode = arguments['vkCode'] as int?;
+    if (vkCode == null) return;
+
+    final actions = _windowsVkToActions[vkCode];
+    if (actions == null || actions.isEmpty) return;
+
+    final isDown = event == 'down';
+    for (final action in actions) {
+      _handleAction(action, isDown);
     }
+  }
+
+  List<int> _getSpecificWindowsVkCodes(PttKey key) {
+    switch (key) {
+      case PttKey.control:
+        return [0xA2, 0xA3]; // VK_LCONTROL, VK_RCONTROL
+      case PttKey.shift:
+        return [0xA0, 0xA1]; // VK_LSHIFT, VK_RSHIFT
+      case PttKey.alt:
+        return [0xA4, 0xA5]; // VK_LMENU, VK_RMENU
+      case PttKey.command:
+        return [0x5B, 0x5C]; // VK_LWIN, VK_RWIN
+      case PttKey.capsLock:
+        return [0x14]; // VK_CAPITAL
+      default:
+        return [];
+    }
+  }
+
+  int? _getWindowsVkCode(int usbHidUsage) {
+    // HID Keyboard page (0x07) to Windows VK mapping
+    if (usbHidUsage >= 0x00070004 && usbHidUsage <= 0x0007001d) {
+      return 0x41 + (usbHidUsage - 0x00070004); // A-Z
+    }
+    if (usbHidUsage >= 0x0007001e && usbHidUsage <= 0x00070026) {
+      return 0x31 + (usbHidUsage - 0x0007001e); // 1-9
+    }
+    if (usbHidUsage == 0x00070027) return 0x30; // 0
+    if (usbHidUsage == 0x00070028) return 0x0D; // Return/Enter
+    if (usbHidUsage == 0x00070029) return 0x1B; // Escape
+    if (usbHidUsage == 0x0007002a) return 0x08; // Backspace
+    if (usbHidUsage == 0x0007002b) return 0x09; // Tab
+    if (usbHidUsage == 0x0007002c) return 0x20; // Spacebar
+    if (usbHidUsage >= 0x0007003a && usbHidUsage <= 0x00070045) {
+      return 0x70 + (usbHidUsage - 0x0007003a); // F1-F12
+    }
+    if (usbHidUsage == 0x00070049) return 0x2D; // Insert
+    if (usbHidUsage == 0x0007004a) return 0x24; // Home
+    if (usbHidUsage == 0x0007004b) return 0x21; // PageUp
+    if (usbHidUsage == 0x0007004c) return 0x2E; // Delete
+    if (usbHidUsage == 0x0007004d) return 0x23; // End
+    if (usbHidUsage == 0x0007004e) return 0x22; // PageDown
+    if (usbHidUsage == 0x0007004f) return 0x27; // Right
+    if (usbHidUsage == 0x00070050) return 0x25; // Left
+    if (usbHidUsage == 0x00070051) return 0x28; // Down
+    if (usbHidUsage == 0x00070052) return 0x26; // Up
+    
+    // Modifiers
+    if (usbHidUsage == 0x000700e0) return 0xA2; // LControl
+    if (usbHidUsage == 0x000700e1) return 0xA0; // LShift
+    if (usbHidUsage == 0x000700e2) return 0xA4; // LAlt
+    if (usbHidUsage == 0x000700e3) return 0x5B; // LWin
+    if (usbHidUsage == 0x000700e4) return 0xA3; // RControl
+    if (usbHidUsage == 0x000700e5) return 0xA1; // RShift
+    if (usbHidUsage == 0x000700e6) return 0xA5; // RAlt
+    if (usbHidUsage == 0x000700e7) return 0x5C; // RWin
+    if (usbHidUsage == 0x00070039) return 0x14; // CapsLock
+    
+    return null;
   }
 
   Future<void> _updateHotKey() async {
@@ -209,7 +277,7 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (defaultTargetPlatform == TargetPlatform.windows) {
-      _updateWindowsPttSettings();
+      _updateWindowsNativeHotkeys();
     }
   }
 
@@ -515,7 +583,7 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   void dispose() {
     _settingsService.removeListener(_updateHotKey);
     if (defaultTargetPlatform == TargetPlatform.windows) {
-      _settingsService.removeListener(_updateWindowsPttSettings);
+      _settingsService.removeListener(_updateWindowsNativeHotkeys);
     }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
