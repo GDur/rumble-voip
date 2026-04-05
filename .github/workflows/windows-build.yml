@@ -53,7 +53,7 @@ jobs:
         working-directory: B:\
 
       - name: Build Windows
-        run: flutter build windows --release
+        run: flutter build windows --release -v
         working-directory: B:\
 
       - name: Upload Artifact
