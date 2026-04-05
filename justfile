@@ -28,6 +28,9 @@ fmt:
 lint:
     cd rust && cargo clippy --fix --allow-dirty
 
+upgrade-deps:
+    cd rust && cargo upgrade --incompatible
+
 # Build for a specific platform or all platforms (e.g., just release macos)
 release platform:
     {{ if platform == "all" { "just release-all" } else { "just release-" + platform } }}
