@@ -85,7 +85,11 @@ impl CapturePipeline {
             .expect("PCM buffer overflow in CapturePipeline");
     }
 
-    pub fn process(&mut self) -> heapless::Vec<AudioPacket, 16> {
+    pub fn process(
+        &mut self,
+        send_voice: bool,
+        aec_rx: &crossbeam_channel::Receiver<[f32; INTERNAL_FRAME_SIZE]>,
+    ) -> heapless::Vec<AudioPacket, 16> {
         let mut packets = heapless::Vec::new();
 
         // outgoing_packet_sample_count is always a multiple of INTERNAL_FRAME_SIZE
@@ -98,6 +102,12 @@ impl CapturePipeline {
             let mut packet_data = heapless::Vec::<f32, MAX_PACKET_SAMPLES>::new();
 
             for _ in 0..frames_per_packet {
+                // 1. Interleave reference frame processing for AEC.
+                // We try to consume at least one reference frame for each capture frame to keep them in sync.
+                if let Ok(aec_frame) = aec_rx.try_recv() {
+                    self.process_reverse(&aec_frame);
+                }
+
                 let input_frame = &self.incoming_pcm_buffer[..self.input_samples_per_10ms];
                 let mut frame_48k = [0.0f32; INTERNAL_FRAME_SIZE];
 
@@ -108,16 +118,19 @@ impl CapturePipeline {
                     frame_48k.copy_from_slice(input_frame);
                 }
 
-                // Process 10ms frame
+                // Process 10ms frame through APM (AEC, NS, AGC, etc.)
+                // This must ALWAYS run to keep the processing state synchronized and adapted.
                 let mut processed_frame = [0.0f32; INTERNAL_FRAME_SIZE];
                 self.apm
                     .process_capture_f32(&[&frame_48k], &mut [&mut processed_frame])
                     .expect("APM capture processing failed");
 
-                // Add to packet data
-                packet_data
-                    .extend_from_slice(&processed_frame)
-                    .expect("Packet data overflow");
+                // Add to packet data if we are sending voice
+                if send_voice {
+                    packet_data
+                        .extend_from_slice(&processed_frame)
+                        .expect("Packet data overflow");
+                }
 
                 // Remove frame from buffer
                 self.incoming_pcm_buffer
@@ -126,23 +139,29 @@ impl CapturePipeline {
                     .truncate(self.incoming_pcm_buffer.len() - self.input_samples_per_10ms);
             }
 
-            // Encode packet
-            if let Ok(len) = self.encoder.encode(
-                &packet_data,
-                self.outgoing_packet_sample_count,
-                &mut self.opus_buf,
-            ) {
-                let mut payload = heapless::Vec::new();
-                payload
-                    .extend_from_slice(&self.opus_buf[..len.min(MAX_OPUS_PACKET_SIZE)])
-                    .expect("Opus payload buffer overflow");
-                packets
-                    .push(AudioPacket::new(payload, false))
-                    .expect("Too many packets generated");
+            // Encode packet only if we are sending voice
+            if send_voice {
+                if let Ok(len) = self.encoder.encode(
+                    &packet_data,
+                    self.outgoing_packet_sample_count,
+                    &mut self.opus_buf,
+                ) {
+                    let mut payload = heapless::Vec::new();
+                    payload
+                        .extend_from_slice(&self.opus_buf[..len.min(MAX_OPUS_PACKET_SIZE)])
+                        .expect("Opus payload buffer overflow");
+                    packets
+                        .push(AudioPacket::new(payload, false))
+                        .expect("Too many packets generated");
+                }
             }
         }
 
         packets
+    }
+
+    pub fn reset_encoder(&mut self) {
+        self.encoder.reset_state();
     }
 
     pub fn clear(&mut self) {
@@ -153,7 +172,7 @@ impl CapturePipeline {
             let mut zero_out = [0.0f32; INTERNAL_FRAME_SIZE];
             res.resample(&zero_in[..self.input_samples_per_10ms], &mut zero_out);
         }
-        self.encoder.reset_state();
+        self.reset_encoder();
     }
 
     pub fn set_echo_cancellation(&mut self, enabled: bool) {

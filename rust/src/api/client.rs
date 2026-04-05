@@ -231,7 +231,7 @@ impl RustAudioEngine {
         let debug_record_tx = self.debug_record_tx.clone();
 
         let (aec_tx, aec_rx) =
-            crossbeam_channel::bounded::<[f32; crate::mumble::dsp::INTERNAL_FRAME_SIZE]>(32);
+            crossbeam_channel::bounded::<[f32; crate::mumble::dsp::INTERNAL_FRAME_SIZE]>(64);
 
         crate::mumble::dsp::spawn_encode_thread(
             cons_in,
