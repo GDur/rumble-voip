@@ -3,6 +3,7 @@ pub mod config;
 pub mod dsp;
 pub mod hardware;
 pub mod net;
+pub mod protocol;
 
 use crate::mumble::config::MumbleConfig;
 
