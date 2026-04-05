@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.20.3] - 2026-04-05
+- windows hotkey fix test with more graceful error detection etc
+
 ## [0.20.2] - 2026-04-05
 - release: 0.20.2
 
