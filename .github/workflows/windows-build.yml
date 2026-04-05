@@ -13,6 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable Long Paths
+        # This is required because MSVC and Rust build paths often exceed the 260-character Windows limit (MAX_PATH).
+        run: |
+          git config --global core.longpaths true
+          reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
+
+      - name: Setup Virtual Drive for Short Path
+        # Mapping the workspace to a drive letter (B:\) "resets" the path length to 3 characters,
+        # saving ~30-50 characters per file and preventing FTK1011 errors.
+        run: |
+          subst B: "${{ github.workspace }}"
+          echo "B:\"
+          ls B:\
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -24,17 +38,26 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
 
-      - name: Install Windows Dependencies
-        run: choco install protoc
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust"
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch Flutter dependencies
         run: flutter pub get
+        working-directory: B:\
 
       - name: Build Windows
         run: flutter build windows --release
+        working-directory: B:\
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Rumble-Windows-Release
-          path: build/windows/x64/runner/Release/
+          path: B:\build\windows\x64\runner\Release\
