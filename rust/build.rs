@@ -1,6 +1,7 @@
 use std::env;
+use std::io::Result;
 
-fn main() {
+fn main() -> Result<()> {
     let target = env::var("TARGET").unwrap_or_default();
 
     if target.contains("apple") {
@@ -18,4 +19,11 @@ fn main() {
     if target.contains("android") {
         println!("cargo:rustc-link-lib=aaudio");
     }
+
+    prost_build::compile_protos(
+        &["protos/Mumble.proto", "protos/MumbleUDP.proto"],
+        &["protos/"],
+    )?;
+
+    Ok(())
 }

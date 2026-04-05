@@ -8,26 +8,44 @@ build = "build.rs"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
+# Flutter-Rust Bridge
 flutter_rust_bridge = "=2.11.1"
-tokio = { version = "1.50", features = ["full"] }
+
+# Async Runtime
+tokio = { version = "1.51", features = ["full"] }
 tokio-util = { version = "0.7.18", features = ["codec", "net"] }
 futures-util = "0.3.32"
-tokio-openssl = "0.6.5"
-openssl = { version = "0.10.76", features = ["vendored"] }
-anyhow = "1.0.102"
+
+# Networking & TLS
+tokio-rustls = "0.26.4"
+rustls = "0.23.37"
+webpki-roots = "1.0.6"
+
+# Audio Processing
 cpal = "0.17.3"
-bytes = "1.11.1"
-ringbuf = "0.4.8"
 sonora = "0.1"
 sonora-common-audio = "0.1.0"
 opus-head-sys = "0.1.0"
-mumble-protocol-2x = "0.6"
+ringbuf = "0.4.8"
+
+# Protocol & Serialization
+prost = "0.14"
+aes = "0.8"
+byteorder = "1.5"
+rand = "0.10"
+
+# Utils
+anyhow = "1.0.102"
+bytes = "1.11.1"
 crossbeam-channel = "0.5.15"
-heapless = "0.8.0"
+heapless = "0.9.2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.22.4"
 ndk-context = "0.1.1"
+
+[build-dependencies]
+prost-build = "0.14"
 
 [profile.dev]
 opt-level = 3

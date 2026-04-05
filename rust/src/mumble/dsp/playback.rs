@@ -1,7 +1,7 @@
+use crate::api::client::AudioEvent;
 use crate::mumble::config::MumbleConfig;
 use crate::mumble::dsp::user_stream::UserVoiceStream;
 use crate::mumble::dsp::{INTERNAL_FRAME_MS, INTERNAL_FRAME_SIZE, INTERNAL_SAMPLE_RATE};
-use crate::api::client::AudioEvent;
 use sonora::config::GainController2;
 use sonora::{AudioProcessing, Config, StreamConfig};
 use sonora_common_audio::push_sinc_resampler::PushSincResampler;
@@ -87,7 +87,10 @@ impl PlaybackMixer {
 
     /// Mixes one frame of audio from all active users.
     /// Returns a tuple of (PCM samples at output rate, PCM samples at 48kHz for AEC reference).
-    pub fn mix_frame_with_aec(&mut self, event_sink: &crate::frb_generated::StreamSink<AudioEvent>) -> (&[f32], [f32; INTERNAL_FRAME_SIZE]) {
+    pub fn mix_frame_with_aec(
+        &mut self,
+        event_sink: &crate::frb_generated::StreamSink<AudioEvent>,
+    ) -> (&[f32], [f32; INTERNAL_FRAME_SIZE]) {
         // Remove users that have been inactive for too long.
         self.users.retain(|sid, user| {
             if user.is_talking() && user.time_since_last_packet().as_millis() > 500 {
@@ -114,7 +117,7 @@ impl PlaybackMixer {
 
         // Return silence if no users are contributing audio.
         if active_users == 0 {
-            let mut aec_ref = [0.0f32; INTERNAL_FRAME_SIZE];
+            let aec_ref = [0.0f32; INTERNAL_FRAME_SIZE];
             // Since we're silence, the processed_pcm_48k should also just be considered empty
             return (&SILENCE[..self.output_samples_per_frame], aec_ref);
         }

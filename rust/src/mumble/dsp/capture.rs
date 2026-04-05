@@ -5,7 +5,9 @@ use crate::mumble::dsp::{
     MAX_OPUS_PACKET_SIZE, MAX_PACKET_SAMPLES,
 };
 use opus_head_sys::*;
-use sonora::config::{AdaptiveDigital, FixedDigital, GainController2, HighPassFilter, NoiseSuppression, EchoCanceller};
+use sonora::config::{
+    AdaptiveDigital, EchoCanceller, FixedDigital, GainController2, HighPassFilter, NoiseSuppression,
+};
 use sonora::{AudioProcessing, Config, StreamConfig};
 use sonora_common_audio::push_sinc_resampler::PushSincResampler;
 
@@ -160,12 +162,18 @@ impl CapturePipeline {
 
     pub fn process_reverse(&mut self, frame: &[f32; INTERNAL_FRAME_SIZE]) {
         let mut dummy_out = [0.0f32; INTERNAL_FRAME_SIZE];
-        self.apm.process_render_f32(&[frame], &mut [&mut dummy_out]).expect("AEC reverse processing failed");
+        self.apm
+            .process_render_f32(&[frame], &mut [&mut dummy_out])
+            .expect("AEC reverse processing failed");
     }
 
     fn build_apm_config(echo_cancellation: bool) -> Config {
         Config {
-            echo_canceller: if echo_cancellation { Some(EchoCanceller::default()) } else { None },
+            echo_canceller: if echo_cancellation {
+                Some(EchoCanceller::default())
+            } else {
+                None
+            },
             noise_suppression: Some(NoiseSuppression::default()),
             gain_controller2: Some(GainController2 {
                 fixed_digital: FixedDigital { gain_db: 12.0 },

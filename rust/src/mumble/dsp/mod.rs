@@ -2,10 +2,10 @@ pub mod capture;
 pub mod playback;
 pub mod user_stream;
 
+use crate::api::client::AudioEvent;
 use crate::mumble::config::{MumbleConfig, RbConsumer, RbProducer};
 use crate::mumble::dsp::capture::CapturePipeline;
 use crate::mumble::dsp::playback::PlaybackMixer;
-use crate::api::client::AudioEvent;
 use crossbeam_channel::{select, Receiver};
 use ringbuf::traits::{Consumer, Observer, Producer};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -109,7 +109,7 @@ pub fn spawn_encode_thread(
                 pipeline.set_echo_cancellation(current_aec);
                 last_aec = current_aec;
             }
-            
+
             // Also process injected debug samples
             while let Ok(samples) = debug_inject_rx.try_recv() {
                 pipeline.push_pcm(&samples);
@@ -149,7 +149,7 @@ pub fn spawn_decode_thread(
     std::thread::spawn(move || {
         let initial_config = config_arc.lock().unwrap().clone();
         let mut mixer = PlaybackMixer::new(output_rate, &initial_config, global_volume);
-        
+
         let _runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -196,7 +196,7 @@ pub fn spawn_decode_thread(
                 }
                 recv(output_notify) -> msg => {
                     if msg.is_err() { break; }
-                    
+
                     let jitter_ms = config_arc.lock().unwrap().incoming_jitter_buffer_ms;
                     let target_latency_samples =
                         (output_rate as f32 * (jitter_ms as f32 / 1000.0)) as usize;
@@ -204,10 +204,10 @@ pub fn spawn_decode_thread(
                     // Fill the output ring buffer until target latency is reached.
                     while prod_out.occupied_len() < target_latency_samples {
                         let (frame, aec_frame) = mixer.mix_frame_with_aec(&event_sink);
-                        
+
                         // Send reference frame to AEC
                         let _ = aec_tx.try_send(aec_frame);
-                        
+
                         // Debug recording: send a copy of the frame to the sink
                         if let Ok(guard) = debug_record_tx.try_lock() {
                             if let Some(tx) = guard.as_ref() {

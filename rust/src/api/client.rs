@@ -1,11 +1,12 @@
 use crate::frb_generated::StreamSink;
 use crate::mumble::hardware::audio::{self, AudioDevice};
+use crate::mumble::protocol::crypt::CryptState;
+use crossbeam_channel::unbounded;
 use flutter_rust_bridge::frb;
+use ringbuf::traits::Split;
+use ringbuf::HeapRb;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use ringbuf::traits::{Producer, Split};
-use ringbuf::HeapRb;
-use crossbeam_channel::unbounded;
 
 #[frb(init)]
 pub fn init_app() {
@@ -54,7 +55,8 @@ pub struct RustAudioEngine {
     runtime: tokio::runtime::Runtime,
     config: Arc<std::sync::Mutex<crate::mumble::config::MumbleConfig>>,
     event_sink: Arc<std::sync::Mutex<Option<StreamSink<AudioEvent>>>>,
-    voice_cmd_tx: Arc<Mutex<Option<tokio::sync::mpsc::Sender<crate::mumble::net::voice::VoiceCommand>>>>,
+    voice_cmd_tx:
+        Arc<Mutex<Option<tokio::sync::mpsc::Sender<crate::mumble::net::voice::VoiceCommand>>>>,
     ptt_active: Arc<std::sync::atomic::AtomicBool>,
     current_rms: Arc<std::sync::atomic::AtomicU32>,
     global_volume: Arc<std::sync::atomic::AtomicU32>,
@@ -108,10 +110,10 @@ impl RustAudioEngine {
             let mut guard = self.debug_record_tx.lock().await;
             *guard = Some(tx);
         }
-        
+
         self.runtime.spawn(async move {
             while let Some(samples) = rx.recv().await {
-                if let Err(_) = sink.add(samples) {
+                if sink.add(samples).is_err() {
                     break;
                 }
             }
@@ -121,7 +123,7 @@ impl RustAudioEngine {
     pub fn get_event_stream(&self, sink: StreamSink<AudioEvent>) {
         let mut event_sink = self.event_sink.lock().unwrap();
         *event_sink = Some(sink);
-        
+
         let sink_clone = self.event_sink.clone();
         let rms = self.current_rms.clone();
         self.runtime.spawn(async move {
@@ -150,13 +152,15 @@ impl RustAudioEngine {
         let mut key_arr = [0u8; 16];
         let mut enc_nonce_arr = [0u8; 16];
         let mut dec_nonce_arr = [0u8; 16];
-        
-        key_arr[..key.len().min(16)].copy_from_slice(&key[..key.len().min(16)]);
-        enc_nonce_arr[..encrypt_nonce.len().min(16)].copy_from_slice(&encrypt_nonce[..encrypt_nonce.len().min(16)]);
-        dec_nonce_arr[..decrypt_nonce.len().min(16)].copy_from_slice(&decrypt_nonce[..decrypt_nonce.len().min(16)]);
 
-        let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(key_arr, enc_nonce_arr, dec_nonce_arr);
-        
+        key_arr[..key.len().min(16)].copy_from_slice(&key[..key.len().min(16)]);
+        enc_nonce_arr[..encrypt_nonce.len().min(16)]
+            .copy_from_slice(&encrypt_nonce[..encrypt_nonce.len().min(16)]);
+        dec_nonce_arr[..decrypt_nonce.len().min(16)]
+            .copy_from_slice(&decrypt_nonce[..decrypt_nonce.len().min(16)]);
+
+        let crypt_state = CryptState::new(key_arr, enc_nonce_arr, dec_nonce_arr);
+
         let (v_tx, v_rx) = tokio::sync::mpsc::channel(32);
         let (network_tx, network_rx) = tokio::sync::mpsc::channel(100);
         let (udp_tx, udp_rx) = crossbeam_channel::bounded(100);
@@ -168,7 +172,7 @@ impl RustAudioEngine {
 
         let host_clone = host.clone();
         let port_clone = port;
-        
+
         self.runtime.spawn(async move {
             if let Err(e) = crate::mumble::net::voice::VoiceChannel::run(
                 format!("{}:{}", host_clone, port_clone),
@@ -189,7 +193,12 @@ impl RustAudioEngine {
         let input_gain = self.input_gain.clone();
         let global_volume = self.global_volume.clone();
         let vol_cmd_rx = self.vol_cmd_rx.clone();
-        let event_sink = self.event_sink.lock().unwrap().clone().ok_or("Event sink not set".to_string())?;
+        let event_sink = self
+            .event_sink
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or("Event sink not set".to_string())?;
 
         let rb_in = HeapRb::<f32>::new(8192);
         let rb_out = HeapRb::<f32>::new(32768);
@@ -200,19 +209,20 @@ impl RustAudioEngine {
         let (out_notify_tx, out_notify_rx) = crossbeam_channel::bounded(64);
 
         let audio_backend = crate::mumble::hardware::audio::setup_audio(
-                prod_in,
-                cons_out,
-                in_notify_tx,
-                out_notify_tx,
-                current_rms,
-                input_gain,
-                &config,
-            ).map_err(|e| e.to_string())?;
+            prod_in,
+            cons_out,
+            in_notify_tx,
+            out_notify_tx,
+            current_rms,
+            input_gain,
+            &config,
+        )
+        .map_err(|e| e.to_string())?;
 
         let input_rate = audio_backend.input_rate();
         let output_rate = audio_backend.output_rate();
 
-        let (inj_tx, mut inj_rx) = tokio::sync::mpsc::channel(100);
+        let (inj_tx, inj_rx) = tokio::sync::mpsc::channel(100);
         {
             let mut guard = self.debug_inject_tx.lock().await;
             *guard = Some(inj_tx);
@@ -220,7 +230,8 @@ impl RustAudioEngine {
 
         let debug_record_tx = self.debug_record_tx.clone();
 
-        let (aec_tx, aec_rx) = crossbeam_channel::bounded::<[f32; crate::mumble::dsp::INTERNAL_FRAME_SIZE]>(32);
+        let (aec_tx, aec_rx) =
+            crossbeam_channel::bounded::<[f32; crate::mumble::dsp::INTERNAL_FRAME_SIZE]>(32);
 
         crate::mumble::dsp::spawn_encode_thread(
             cons_in,
@@ -257,7 +268,9 @@ impl RustAudioEngine {
         self.runtime.spawn(async move {
             let mut v_guard = v_tx_arc.lock().await;
             if let Some(tx) = v_guard.take() {
-                let _ = tx.send(crate::mumble::net::voice::VoiceCommand::Disconnect).await;
+                let _ = tx
+                    .send(crate::mumble::net::voice::VoiceCommand::Disconnect)
+                    .await;
             }
         });
     }
@@ -269,15 +282,18 @@ impl RustAudioEngine {
     }
 
     pub fn set_ptt(&self, active: bool) {
-        self.ptt_active.store(active, std::sync::atomic::Ordering::Relaxed);
+        self.ptt_active
+            .store(active, std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn set_input_gain(&self, gain: f32) {
-        self.input_gain.store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
+        self.input_gain
+            .store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn set_output_volume(&self, volume: f32) {
-        self.global_volume.store(volume.to_bits(), std::sync::atomic::Ordering::Relaxed);
+        self.global_volume
+            .store(volume.to_bits(), std::sync::atomic::Ordering::Relaxed);
     }
 
     pub fn set_user_volume(&self, session_id: u32, volume: f32) {

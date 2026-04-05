@@ -5,20 +5,18 @@ use crate::mumble::dsp::{spawn_decode_thread, spawn_encode_thread, AudioPacket, 
 use crate::mumble::hardware::audio::{setup_audio, AudioBackend};
 use crate::mumble::net::voice::{VoiceChannel, VoiceCommand};
 use crate::mumble::MumbleCommand;
-use futures_util::{SinkExt, StreamExt};
-use mumble_protocol_2x::control::msgs;
-use mumble_protocol_2x::control::ControlCodec;
-use mumble_protocol_2x::control::ControlPacket;
-use mumble_protocol_2x::voice::{Clientbound, Serverbound};
-use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+use crate::mumble::protocol::control::ControlPacket;
+use crate::mumble::protocol::msgs;
+use crate::mumble::protocol::crypt::CryptState;
 use std::collections::HashMap;
-use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
-use tokio_openssl::SslStream;
-use tokio_util::codec::Framed;
+use tokio_rustls::rustls::{ClientConfig, RootCertStore, pki_types::ServerName};
+use tokio_rustls::TlsConnector;
+use tokio_rustls::client::TlsStream;
+use std::io::BufReader;
 
 struct MumbleSession {
     channels: HashMap<u32, MumbleChannel>,
@@ -139,39 +137,39 @@ impl MumbleSession {
 
     async fn handle_packet(
         &mut self,
-        packet: ControlPacket<Clientbound>,
-        framed: &mut Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+        packet: ControlPacket,
+        tls_write: &mut (impl tokio::io::AsyncWrite + Unpin),
     ) -> anyhow::Result<()> {
         match packet {
             ControlPacket::ServerSync(ss) => {
-                self.session_id = ss.session();
+                self.session_id = ss.session.unwrap_or(0);
                 let _ = self.event_sink.add(MumbleEvent::Connected(self.session_id));
             }
             ControlPacket::Reject(rj) => {
-                let reason = rj.reason().to_string();
+                let reason = rj.reason.clone();
                 let _ = self
                     .event_sink
-                    .add(MumbleEvent::Disconnected(reason.clone()));
-                return Err(anyhow::anyhow!("Handshake rejected: {}", reason));
+                    .add(MumbleEvent::Disconnected(reason));
+                return Err(anyhow::anyhow!("Handshake rejected"));
             }
             ControlPacket::ChannelState(cs) => {
-                let id = cs.channel_id();
+                let id = cs.channel_id.unwrap_or(0);
                 let channel = self.channels.entry(id).or_insert_with(|| MumbleChannel {
                     id,
                     ..Default::default()
                 });
 
-                if cs.has_name() {
-                    channel.name = cs.name().to_string();
+                if let Some(name) = cs.name {
+                    channel.name = name;
                 }
-                if cs.has_parent() {
-                    channel.parent_id = Some(cs.parent());
+                if let Some(parent) = cs.parent {
+                    channel.parent_id = Some(parent);
                 }
-                if cs.has_position() {
-                    channel.position = cs.position();
+                if let Some(position) = cs.position {
+                    channel.position = position;
                 }
-                if cs.has_description() {
-                    channel.description = Some(cs.description().to_string());
+                if let Some(description) = cs.description {
+                    channel.description = Some(description);
                 }
 
                 let channel_clone = channel.clone();
@@ -180,29 +178,29 @@ impl MumbleSession {
                     .add(MumbleEvent::ChannelUpdate(channel_clone));
             }
             ControlPacket::UserState(us) => {
-                let session = us.session();
+                let session = us.session.unwrap_or(0);
                 let user = self.users.entry(session).or_insert_with(|| MumbleUser {
                     session,
                     ..Default::default()
                 });
 
-                if us.has_name() {
-                    user.name = us.name().to_string();
+                if let Some(name) = us.name {
+                    user.name = name;
                 }
-                if us.has_channel_id() {
-                    user.channel_id = us.channel_id();
+                if let Some(channel_id) = us.channel_id {
+                    user.channel_id = channel_id;
                 }
-                if us.has_self_mute() || us.has_mute() {
-                    user.is_muted = us.self_mute() || us.mute();
+                if us.self_mute.is_some() || us.mute.is_some() {
+                    user.is_muted = us.self_mute.unwrap_or(false) || us.mute.unwrap_or(false);
                 }
-                if us.has_self_deaf() || us.has_deaf() {
-                    user.is_deafened = us.self_deaf() || us.deaf();
+                if us.self_deaf.is_some() || us.deaf.is_some() {
+                    user.is_deafened = us.self_deaf.unwrap_or(false) || us.deaf.unwrap_or(false);
                 }
-                if us.has_suppress() {
-                    user.is_suppressed = us.suppress();
+                if let Some(suppress) = us.suppress {
+                    user.is_suppressed = suppress;
                 }
-                if us.has_comment() {
-                    user.comment = Some(us.comment().to_string());
+                if let Some(comment) = us.comment {
+                    user.comment = Some(comment);
                 }
 
                 if session == self.session_id {
@@ -213,23 +211,25 @@ impl MumbleSession {
                 let _ = self.event_sink.add(MumbleEvent::UserUpdate(user_clone));
             }
             ControlPacket::UserRemove(ur) => {
-                self.users.remove(&ur.session());
-                let _ = self.event_sink.add(MumbleEvent::UserRemoved(ur.session()));
+                self.users.remove(&ur.session);
+                let _ = self.event_sink.add(MumbleEvent::UserRemoved(ur.session));
             }
             ControlPacket::Ping(ping) => {
-                let _ = framed.send(ControlPacket::Ping(ping)).await;
+                let mut buf = Vec::new();
+                ControlPacket::Ping(ping).encode(&mut buf)?;
+                tokio::io::AsyncWriteExt::write_all(tls_write, &buf).await?;
             }
             ControlPacket::TextMessage(tm) => {
                 let sender_name = self
                     .users
-                    .get(&tm.actor())
+                    .get(&tm.actor.unwrap_or(0))
                     .map(|u| u.name.clone())
                     .unwrap_or_else(|| "Unknown".to_string());
                 let _ = self
                     .event_sink
                     .add(MumbleEvent::TextMessage(MumbleTextMessage {
                         sender_name,
-                        message: tm.message().to_string(),
+                        message: tm.message.clone(),
                     }));
             }
             ControlPacket::CryptSetup(cs) => {
@@ -264,7 +264,7 @@ impl MumbleSession {
 
                     let host_clone = self.host.clone();
                     let port_clone = self.port;
-                    let crypt_state = mumble_protocol_2x::crypt::CryptState::new_from(
+                    let crypt_state = CryptState::new(
                         key,
                         encrypt_nonce,
                         decrypt_nonce,
@@ -305,47 +305,51 @@ impl MumbleSession {
     async fn handle_command(
         &mut self,
         cmd: MumbleCommand,
-        framed: &mut Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+        tls_write: &mut (impl tokio::io::AsyncWrite + Unpin),
     ) {
-        match cmd {
+        let packet = match cmd {
             MumbleCommand::JoinChannel(id) => {
-                let mut us = msgs::UserState::new();
-                us.set_channel_id(id);
-                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+                let mut us = msgs::UserState::default();
+                us.channel_id = Some(id);
+                Some(ControlPacket::UserState(us))
             }
             MumbleCommand::SendTextMessage(msg) => {
-                let mut tm = msgs::TextMessage::new();
-                tm.set_message(msg);
+                let mut tm = msgs::TextMessage::default();
+                tm.message = msg;
                 tm.channel_id.push(self.my_channel_id);
-                let _ = framed.send(ControlPacket::TextMessage(Box::new(tm))).await;
+                Some(ControlPacket::TextMessage(tm))
             }
             MumbleCommand::SetMute(mute) => {
-                let mut us = msgs::UserState::new();
-                us.set_self_mute(mute);
-                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+                let mut us = msgs::UserState::default();
+                us.self_mute = Some(mute);
+                Some(ControlPacket::UserState(us))
             }
             MumbleCommand::SetDeafen(deafen) => {
-                let mut us = msgs::UserState::new();
-                us.set_self_deaf(deafen);
+                let mut us = msgs::UserState::default();
+                us.self_deaf = Some(deafen);
                 if deafen {
-                    us.set_self_mute(true);
+                    us.self_mute = Some(true);
                 }
-                let _ = framed.send(ControlPacket::UserState(Box::new(us))).await;
+                Some(ControlPacket::UserState(us))
             }
             MumbleCommand::SetPtt(active) => {
                 self.ptt_active
                     .store(active, std::sync::atomic::Ordering::Relaxed);
+                None
             }
             MumbleCommand::SetUserVolume(sid, vol) => {
                 let _ = self.vol_cmd_tx.send((sid, vol));
+                None
             }
             MumbleCommand::SetOutputVolume(vol) => {
                 self.global_volume
                     .store(vol.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                None
             }
             MumbleCommand::SetInputGain(gain) => {
                 self.input_gain
                     .store(gain.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                None
             }
             MumbleCommand::UpdateConfig(new_config) => {
                 self.config = new_config.clone();
@@ -353,8 +357,16 @@ impl MumbleSession {
                 if self._active_audio.is_some() {
                     self.init_audio_pipeline();
                 }
+                None
             }
-            MumbleCommand::Disconnect => {} // Handled by loop breaker
+            MumbleCommand::Disconnect => None,
+        };
+
+        if let Some(p) = packet {
+            let mut buf = Vec::new();
+            if let Ok(_) = p.encode(&mut buf) {
+                let _ = tokio::io::AsyncWriteExt::write_all(tls_write, &buf).await;
+            }
         }
     }
 }
@@ -365,84 +377,102 @@ pub async fn connect(
     username: String,
     password: Option<String>,
 ) -> anyhow::Result<(
-    Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
-    Vec<ControlPacket<Clientbound>>,
+    TlsStream<TcpStream>,
+    Vec<ControlPacket>,
 )> {
-    // Setup TLS with OpenSSL
-    let mut builder = SslConnector::builder(SslMethod::tls())?;
-    builder.set_verify(SslVerifyMode::NONE);
+    let mut root_store = RootCertStore::empty();
+    root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
 
-    let connector = builder.build();
+    let config = ClientConfig::builder()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+
+    let connector = TlsConnector::from(Arc::new(config));
     let tcp_stream = TcpStream::connect(format!("{}:{}", host, port)).await?;
+    let domain = ServerName::try_from(host)
+        .map_err(|_| anyhow::anyhow!("Invalid DNS name"))?
+        .to_owned();
 
-    let ssl = connector.configure()?.into_ssl(host)?;
-    let mut tls_stream = SslStream::new(ssl, tcp_stream)?;
-
-    Pin::new(&mut tls_stream)
-        .connect()
-        .await
-        .map_err(|e| anyhow::anyhow!("TLS connection failed: {}", e))?;
-
-    let mut framed = Framed::new(tls_stream, ControlCodec::<Serverbound, Clientbound>::new());
+    let mut tls_stream = connector.connect(domain, tcp_stream).await?;
 
     // Handshake
-    let mut version = msgs::Version::new();
-    version.set_version_v1(0x00010400);
-    version.set_release("Rumble".to_string());
-    version.set_os("macOS".to_string());
-    version.set_os_version("14.0.0".to_string());
-    framed
-        .send(ControlPacket::Version(Box::new(version)))
-        .await?;
+    let mut version = msgs::Version::default();
+    version.version_v1 = Some(0x00010400);
+    version.release = Some("Rumble".to_string());
+    version.os = Some("macOS".to_string());
+    version.os_version = Some("14.0.0".to_string());
+    
+    let mut buf = Vec::new();
+    ControlPacket::Version(version).encode(&mut buf)?;
+    tokio::io::AsyncWriteExt::write_all(&mut tls_stream, &buf).await?;
 
-    let mut auth = msgs::Authenticate::new();
-    auth.set_username(username);
-    if let Some(p) = password {
-        auth.set_password(p);
-    }
-    auth.set_opus(true);
-    framed
-        .send(ControlPacket::Authenticate(Box::new(auth)))
-        .await?;
+    let mut auth = msgs::Authenticate::default();
+    auth.username = Some(username);
+    auth.password = password;
+    auth.opus = Some(true);
+    
+    buf.clear();
+    ControlPacket::Authenticate(auth).encode(&mut buf)?;
+    tokio::io::AsyncWriteExt::write_all(&mut tls_stream, &buf).await?;
 
     // Buffered Handshake: collect packets until ServerSync or Reject
     let mut initial_packets = Vec::new();
     loop {
-        match framed.next().await {
-            Some(Ok(packet)) => match &packet {
-                ControlPacket::ServerSync(_) => {
-                    initial_packets.push(packet);
-                    return Ok((framed, initial_packets));
-                }
-                ControlPacket::Reject(rj) => {
-                    return Err(anyhow::anyhow!("Handshake rejected: {}", rj.reason()));
-                }
-                _ => {
-                    initial_packets.push(packet);
-                }
-            },
-            Some(Err(e)) => return Err(anyhow::anyhow!("Protocol error during handshake: {}", e)),
-            None => return Err(anyhow::anyhow!("Server closed connection during handshake")),
+        // We need to read from tls_stream. 
+        // For simplicity during handshake, we'll use a wrapper or just manual read.
+        // Since we don't have Framed anymore, we'll use a simple sync-like read for the handshake.
+        let packet = {
+            // This is a bit tricky because we want to use the async stream.
+            // We can wrap it in a BufReader to use with ControlPacket::decode but that needs std::io::Read.
+            // We'll use a small helper or just read the header first.
+            let mut header = [0u8; 6];
+            tokio::io::AsyncReadExt::read_exact(&mut tls_stream, &mut header).await?;
+            let mut reader = BufReader::new(&header[..]);
+            let id = byteorder::ReadBytesExt::read_u16::<byteorder::BigEndian>(&mut reader)?;
+            let len = byteorder::ReadBytesExt::read_u32::<byteorder::BigEndian>(&mut reader)? as usize;
+            
+            let mut payload = vec![0u8; len];
+            tokio::io::AsyncReadExt::read_exact(&mut tls_stream, &mut payload).await?;
+            
+            // Now decode from the full packet
+            let mut full_packet = Vec::with_capacity(6 + len);
+            full_packet.extend_from_slice(&header);
+            full_packet.extend_from_slice(&payload);
+            ControlPacket::decode(&mut &full_packet[..])?
+        };
+
+        match &packet {
+            ControlPacket::ServerSync(_) => {
+                initial_packets.push(packet);
+                return Ok((tls_stream, initial_packets));
+            }
+            ControlPacket::Reject(rj) => {
+                return Err(anyhow::anyhow!("Handshake rejected: {}", rj.reason));
+            }
+            _ => {
+                initial_packets.push(packet);
+            }
         }
     }
 }
 
 pub async fn run_loop(
-    mut framed: Framed<SslStream<TcpStream>, ControlCodec<Serverbound, Clientbound>>,
+    tls_stream: TlsStream<TcpStream>,
     host: String,
     port: u16,
     mut cmd_rx: mpsc::Receiver<MumbleCommand>,
     event_sink: StreamSink<MumbleEvent>,
     config: MumbleConfig,
-    initial_packets: Vec<ControlPacket<Clientbound>>,
+    initial_packets: Vec<ControlPacket>,
 ) -> anyhow::Result<()> {
     let (vol_cmd_tx, vol_cmd_rx) = crossbeam_channel::unbounded();
 
     let mut session = MumbleSession::new(event_sink, config, vol_cmd_tx, vol_cmd_rx, host, port);
+    let (mut tls_read, mut tls_write) = tokio::io::split(tls_stream);
 
     // Process buffered handshake packets
     for packet in initial_packets {
-        session.handle_packet(packet, &mut framed).await?;
+        session.handle_packet(packet, &mut tls_write).await?;
     }
 
     let mut ping_interval = tokio::time::interval(std::time::Duration::from_secs(15));
@@ -451,29 +481,38 @@ pub async fn run_loop(
     loop {
         tokio::select! {
             _ = ping_interval.tick() => {
-                let mut ping = msgs::Ping::new();
+                let mut ping = msgs::Ping::default();
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_millis() as u64;
-                ping.set_timestamp(timestamp);
-                let _ = framed.send(ControlPacket::Ping(Box::new(ping))).await;
+                ping.timestamp = Some(timestamp);
+                let mut buf = Vec::new();
+                if let Ok(_) = ControlPacket::Ping(ping).encode(&mut buf) {
+                    let _ = tokio::io::AsyncWriteExt::write_all(&mut tls_write, &buf).await;
+                }
             }
             _ = volume_interval.tick() => {
                 let rms = f32::from_bits(session.current_rms.load(std::sync::atomic::Ordering::Relaxed));
                 let _ = session.event_sink.add(MumbleEvent::AudioVolume(rms));
             }
-            packet = framed.next() => {
-                match packet {
-                    Some(Ok(packet)) => {
-                        session.handle_packet(packet, &mut framed).await?
+            res = async {
+                let mut header = [0u8; 6];
+                tokio::io::AsyncReadExt::read_exact(&mut tls_read, &mut header).await?;
+                let len = byteorder::ReadBytesExt::read_u32::<byteorder::BigEndian>(&mut &header[2..])? as usize;
+                let mut payload = vec![0u8; len];
+                tokio::io::AsyncReadExt::read_exact(&mut tls_read, &mut payload).await?;
+                let mut full = Vec::with_capacity(6 + len);
+                full.extend_from_slice(&header);
+                full.extend_from_slice(&payload);
+                ControlPacket::decode(&mut &full[..])
+            } => {
+                match res {
+                    Ok(packet) => {
+                        session.handle_packet(packet, &mut tls_write).await?
                     }
-                    Some(Err(e)) => {
+                    Err(e) => {
                         let _ = session.event_sink.add(MumbleEvent::Disconnected(format!("Protocol error: {}", e)));
-                        break;
-                    }
-                    None => {
-                        let _ = session.event_sink.add(MumbleEvent::Disconnected("Server closed connection".to_string()));
                         break;
                     }
                 }
@@ -481,7 +520,7 @@ pub async fn run_loop(
             cmd = cmd_rx.recv() => {
                 match cmd {
                     Some(MumbleCommand::Disconnect) | None => break,
-                    Some(cmd) => session.handle_command(cmd, &mut framed).await,
+                    Some(cmd) => session.handle_command(cmd, &mut tls_write).await,
                 }
             }
         }
