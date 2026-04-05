@@ -31,6 +31,18 @@ lint:
 upgrade-deps:
     cd rust && cargo upgrade --incompatible
 
+# Release a new patch version (increments Z in X.Y.Z)
+release-patch message="":
+    @VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}' | cut -d'+' -f1); \
+    NEW_VERSION=$(echo $VERSION | awk -F. '{printf("%d.%d.%d", $1, $2, $3+1)}'); \
+    just release $NEW_VERSION {{ quote(message) }}
+
+# Release a new minor version (increments Y in X.Y.Z and resets Z to 0)
+release-minor message="":
+    @VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}' | cut -d'+' -f1); \
+    NEW_VERSION=$(echo $VERSION | awk -F. '{printf("%d.%d.%d", $1, $2+1, 0)}'); \
+    just release $NEW_VERSION {{ quote(message) }}
+
 # Release a new version (e.g., just release 0.20.0 "Changelog message")
 release version message="":
     ./scripts/version-management.sh {{ version }} {{ quote(message) }}
