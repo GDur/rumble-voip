@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:rumble/services/update_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -37,6 +40,16 @@ class AboutTab extends StatelessWidget {
               onPressed: () => launchUrl(Uri.parse('https://github.com/GDur/rumble-voip/')),
               child: const Text('View on GitHub'),
             ),
+            if (!kIsWeb && (Platform.isWindows || Platform.isMacOS))
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: ShadButton.outline(
+                  size: ShadButtonSize.sm,
+                  leading: const Icon(LucideIcons.refreshCcw, size: 16),
+                  onPressed: () => UpdateService.instance.checkForUpdates(),
+                  child: const Text('Check for Updates'),
+                ),
+              ),
             const SizedBox(height: 40),
             const Text(
               'Created by Rumble Team',

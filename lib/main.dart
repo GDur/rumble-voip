@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/services/certificate_service.dart';
 import 'package:rumble/services/hotkey_service.dart';
+import 'package:rumble/services/update_service.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:hotkey_manager/hotkey_manager.dart';
 import 'package:rumble/components/server_card.dart';
@@ -93,6 +94,9 @@ void main() async {
           (defaultTargetPlatform == TargetPlatform.windows ||
               defaultTargetPlatform == TargetPlatform.linux ||
               defaultTargetPlatform == TargetPlatform.macOS)) {
+        // Initialize auto-updates (currently supports WinSparkle and Sparkle)
+        UpdateService.instance.initialize();
+        
         await windowManager.ensureInitialized();
         await hotKeyManager.unregisterAll();
 

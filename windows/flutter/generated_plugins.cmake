@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  auto_updater_windows
   connectivity_plus
   hotkey_manager_windows
   pasteboard

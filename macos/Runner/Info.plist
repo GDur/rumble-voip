@@ -30,6 +30,8 @@
 	<string>NSApplication</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Rumble needs microphone access to let you talk in Mumble channels.</string>
+	<key>SUPublicEDKey</key>
+	<string>YPD11ujhNTjKZeWEF/R5xMUREch3ivtsqZyP7x43yFA=</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>http</string>

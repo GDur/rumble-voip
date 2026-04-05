@@ -82,11 +82,58 @@ jobs:
           Compress-Archive -Path "$buildPath\*" -DestinationPath $zipPath
           echo "ZIP_PATH=$zipPath" >> $env:GITHUB_ENV
 
+      - name: Generate Sparkle Appcast (appcast.xml)
+        shell: pwsh
+        run: |
+          $version = "${{ env.APP_VERSION }}"
+          $tagName = "${{ env.TAG_NAME }}"
+          $date = Get-Date -Format "ddd, dd MMM yyyy HH:mm:ss K"
+          $zipPath = "${{ env.ZIP_PATH }}"
+          $zipUrl = "https://github.com/GDur/rumble-voip/releases/download/$tagName/rumble-windows-x64.zip"
+          
+          # Handle signing if private key is available
+          $dsaSignature = ""
+          $privateKey = "${{ secrets.WIN_SPARKLE_PRIVATE_KEY }}"
+          
+          if ($privateKey) {
+              $tempKeyPath = "dsa_priv.pem"
+              $privateKey | Out-File -FilePath $tempKeyPath -Encoding ascii
+              # Sign the zip file using OpenSSL
+              # WinSparkle expects a base64 encoded signature of the SHA1 hash of the file
+              $sigBase64 = (openssl dgst -sha1 -binary "$zipPath" | openssl dgst -dss1 -sign "$tempKeyPath" | openssl enc -base64)
+              $dsaSignature = "sparkle:dsaSignature=""$sigBase64"""
+              Remove-Item $tempKeyPath
+              echo "Signed release with DSA key."
+          } else {
+              echo "Warning: WIN_SPARKLE_PRIVATE_KEY not found. Release will be unsigned."
+          }
+
+          $xml = @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Rumble</title>
+              <item>
+                <title>Rumble $tagName</title>
+                <pubDate>$date</pubDate>
+                <sparkle:releaseNotesLink>https://github.com/GDur/rumble-voip/releases/tag/$tagName</sparkle:releaseNotesLink>
+                <enclosure url="$zipUrl" sparkle:version="$version" sparkle:shortVersionString="$version" length="0" type="application/octet-stream" $dsaSignature />
+              </item>
+            </channel>
+          </rss>
+          "@
+          
+          $appcastPath = "${{ env.WORKSPACE_ROOT }}\appcast.xml"
+          Set-Content -Path $appcastPath -Value $xml
+          echo "APPCAST_PATH=$appcastPath" >> $env:GITHUB_ENV
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ env.ZIP_PATH }}
+          files: |
+            ${{ env.ZIP_PATH }}
+            ${{ env.APPCAST_PATH }}
           name: Rumble ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
