@@ -20,12 +20,14 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
 
       - name: Setup Virtual Drive for Short Path
-        # Mapping the workspace to a drive letter (B:\) "resets" the path length to 3 characters,
-        # saving ~30-50 characters per file and preventing FTK1011 errors.
+        # Mapping the workspace to a drive letter (P:\) and using a subfolder avoids
+        # issues where Flutter tools fail when the project is at the drive root.
         run: |
-          subst B: "${{ github.workspace }}"
-          echo "B:\"
-          ls B:\
+          $repoPath = "${{ github.workspace }}"
+          $parentPath = Split-Path -Parent $repoPath
+          $repoDirName = Split-Path -Leaf $repoPath
+          subst P: "$parentPath"
+          echo "WORKSPACE_ROOT=P:\$repoDirName" >> $env:GITHUB_ENV
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -50,14 +52,14 @@ jobs:
 
       - name: Fetch Flutter dependencies
         run: flutter pub get
-        working-directory: B:\
+        working-directory: ${{ env.WORKSPACE_ROOT }}
 
       - name: Build Windows
         run: flutter build windows --release -v
-        working-directory: B:\
+        working-directory: ${{ env.WORKSPACE_ROOT }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Rumble-Windows-Release
-          path: B:\build\windows\x64\runner\Release\
+          path: ${{ env.WORKSPACE_ROOT }}\build\windows\x64\runner\Release\
