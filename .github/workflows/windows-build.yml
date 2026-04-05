@@ -50,6 +50,12 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create .env file
+        # The .env file is a required asset in pubspec.yaml but is ignored by git.
+        # We create an empty one to satisfy the Flutter asset requirement.
+        run: New-Item -Path .env -ItemType File
+        working-directory: ${{ env.WORKSPACE_ROOT }}
+
       - name: Fetch Flutter dependencies
         run: flutter pub get
         working-directory: ${{ env.WORKSPACE_ROOT }}
