@@ -412,12 +412,16 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
       mumbleService.addListener(_handlePttWarning);
+      
+      final hotkeyService = Provider.of<HotkeyService>(context, listen: false);
+      hotkeyService.addListener(_handleHotkeyError);
     });
   }
 
   @override
   void dispose() {
     _removePttListener();
+    _removeHotkeyListener();
     super.dispose();
   }
 
@@ -425,6 +429,13 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final mumbleService = Provider.of<MumbleService>(context, listen: false);
       mumbleService.removeListener(_handlePttWarning);
+    } catch (_) {}
+  }
+
+  void _removeHotkeyListener() {
+    try {
+      final hotkeyService = Provider.of<HotkeyService>(context, listen: false);
+      hotkeyService.removeListener(_handleHotkeyError);
     } catch (_) {}
   }
 
@@ -439,7 +450,24 @@ class _HomeScreenState extends State<HomeScreen> {
         ShadToast.destructive(
           title: const Text('Cannot Talk'),
           description: Text(message),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _handleHotkeyError() {
+    if (!mounted) return;
+    final hotkeyService = Provider.of<HotkeyService>(context, listen: false);
+    if (hotkeyService.registrationError != null) {
+      final message = hotkeyService.registrationError!;
+      hotkeyService.clearRegistrationError();
+
+      ShadSonner.of(context).show(
+        ShadToast.destructive(
+          title: const Text('Hotkey Error'),
+          description: Text(message),
+          duration: const Duration(seconds: 5),
         ),
       );
     }

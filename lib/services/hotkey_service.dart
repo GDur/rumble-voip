@@ -12,6 +12,13 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
   final SettingsService _settingsService;
   final _permissionsChannel = const MethodChannel('com.rumble.app/permissions');
 
+  String? _registrationError;
+  String? get registrationError => _registrationError;
+
+  void clearRegistrationError() {
+    _registrationError = null;
+  }
+
   final ValueNotifier<bool> hasAccessibilityPermission = ValueNotifier<bool>(
     true,
   );
@@ -138,7 +145,9 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
       case PttKey.alt:
         return [0xA4, 0xA5]; // VK_LMENU, VK_RMENU
       case PttKey.command:
-        return [0x5B, 0x5C]; // VK_LWIN, VK_RWIN
+        // On Windows, meta (Win key) is often reserved or blocked.
+        // We abstract 'command' to 'control' for cross-platform parity.
+        return [0xA2, 0xA3]; // VK_LCONTROL, VK_RCONTROL
       case PttKey.capsLock:
         return [0x14]; // VK_CAPITAL
       default:
@@ -198,6 +207,8 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
+    _registrationError = null;
+
     await hotKeyManager.unregisterAll();
 
     if (settings.pttKey != PttKey.none) {
@@ -210,11 +221,16 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
         final key = _mapPttKeyToPhysicalKey(settings.pttKey);
         if (key != null) {
           final hotKey = HotKey(key: key, scope: HotKeyScope.system);
-          await hotKeyManager.register(
-            hotKey,
-            keyDownHandler: (_) => mumbleService.startPushToTalk(),
-            keyUpHandler: (_) => mumbleService.stopPushToTalk(),
-          );
+          try {
+            await hotKeyManager.register(
+              hotKey,
+              keyDownHandler: (_) => mumbleService.startPushToTalk(),
+              keyUpHandler: (_) => mumbleService.stopPushToTalk(),
+            );
+          } catch (e) {
+            _registrationError = 'Could not register PTT key: $e';
+            debugPrint('HotkeyService: Error registering preset hotkey: $e');
+          }
         }
       }
     }
@@ -255,7 +271,15 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
           modifiers.add(HotKeyModifier.alt);
         }
         if (modsList.contains('meta')) {
-          modifiers.add(HotKeyModifier.meta);
+          // Abstract meta (Command) to Control on Windows for better compatibility
+          // as Win+Key is often blocked or reserved by the OS.
+          if (defaultTargetPlatform == TargetPlatform.windows) {
+            if (!modifiers.contains(HotKeyModifier.control)) {
+              modifiers.add(HotKeyModifier.control);
+            }
+          } else {
+            modifiers.add(HotKeyModifier.meta);
+          }
         }
 
         final hotKey = HotKey(
@@ -271,6 +295,7 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
             keyUpHandler: (_) => _handleAction(action, false),
           );
         } catch (e) {
+          _registrationError = 'Some hotkeys failed to register. They might be in use by another app.';
           debugPrint('HotkeyService: Error registering hotkey for $actionName: $e');
         }
       }
@@ -279,6 +304,8 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
     if (defaultTargetPlatform == TargetPlatform.windows) {
       _updateWindowsNativeHotkeys();
     }
+
+    if (_registrationError != null) notifyListeners();
   }
 
   void _handleAction(HotkeyAction action, bool isDown) {
@@ -522,7 +549,10 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
       case PttKey.alt:
         return PhysicalKeyboardKey.altLeft;
       case PttKey.command:
-        return PhysicalKeyboardKey.metaLeft;
+        // Abstracted to Ctrl on Windows; Meta on macOS
+        return defaultTargetPlatform == TargetPlatform.windows 
+            ? PhysicalKeyboardKey.controlLeft 
+            : PhysicalKeyboardKey.metaLeft;
       case PttKey.capsLock:
         return PhysicalKeyboardKey.capsLock;
       default:
@@ -581,6 +611,10 @@ class HotkeyService extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    hotKeyManager.unregisterAll();
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      _permissionsChannel.invokeMethod('setPttKeys', {'keys': []});
+    }
     _settingsService.removeListener(_updateHotKey);
     if (defaultTargetPlatform == TargetPlatform.windows) {
       _settingsService.removeListener(_updateWindowsNativeHotkeys);
