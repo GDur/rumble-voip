@@ -28,6 +28,18 @@ The Rust component is the performance-critical core of Rumble, responsible for h
    - **Opus Only**: Strictly support the Opus codec at 48kHz.
    - **Resampling**: Use `PushSincResampler` for hardware interfaces requiring sample rates other than the internal 48kHz processing rate.
 
+## Build and Safety Mandates
+
+1. **Android Binary Size Constraint**
+   - Debug builds of the Rust library must be monitored. If the .so file exceeds 100MB, it may cause "invalid shdr offset" errors on certain high-end Android devices.
+   - Use Profile or Release builds for testing on hardware if this occurs, or ensure `android:extractNativeLibs="true"` is set in the AndroidManifest.xml.
+
+2. **Memory Safety and Unsafe Code**
+   - Minimize the use of `unsafe`. Where `unsafe` is required (e.g., for `Send`/`Sync` implementations of `cpal` types), it must be accompanied by a safety comment explaining why the invariant is upheld.
+
+3. **Error Handling**
+   - Use `anyhow` for top-level application logic to provide rich context.
+
 ## Project Structure
 
 - `src/api/`: Flutter-Rust Bridge (FRB) API definitions. Changes here require running `just gen` from the project root.

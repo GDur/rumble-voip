@@ -21,6 +21,19 @@ Rumble is a high-performance Mumble client utilizing a Flutter-based user interf
   - `opus`: High-quality, low-latency audio codec (strictly Opus only).
   - `ringbuf` & `crossbeam-channel`: Lock-free communication between hardware and processing threads.
 
+## Development Standards
+
+### Flutter/Dart Conventions
+
+- **Syntax**: Avoid semicolons unless syntactically mandatory.
+- **Documentation**: Place all code comments on the line immediately ABOVE the target code.
+- **Icons**: Utilize the `LucideIcons` package for all UI elements.
+- **State Management**: Adhere to the Service pattern. Core logic resides in `MumbleService` (connection/audio), `SettingsService` (persistence), and `CertificateService` (identity).
+
+### Security
+
+- **Credentials**: Never log or commit user certificates (.p12) or private keys. Rigorously protect the `CertificateService` implementation and any sensitive memory in the Rust core.
+
 ## Workflow Automation (Justfile)
 
 Common development tasks are managed via the `just` command, as defined in `justfile`:
