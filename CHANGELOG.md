@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.21.0] - 2026-04-05
+- windows auto update test via sparkle
+
 ## [0.20.3] - 2026-04-05
 - windows hotkey fix test with more graceful error detection etc
 
