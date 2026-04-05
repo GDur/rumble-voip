@@ -31,41 +31,42 @@ lint:
 upgrade-deps:
     cd rust && cargo upgrade --incompatible
 
-# Build for a specific platform or all platforms (e.g., just release macos)
-release platform:
-    {{ if platform == "all" { "just release-all" } else { "just release-" + platform } }}
+# Create a new version tag and push to trigger CI/CD (e.g., just release 0.20.1)
+release version:
+    git tag v{{version}}
+    git push origin v{{version}}
+
+# Build for a specific platform or all platforms (e.g., just build macos)
+build platform:
+    {{ if platform == "all" { "just build-all" } else { "just build-" + platform } }}
 
 # Build for macOS
-release-macos:
+build-macos:
     flutter build macos --release
 
 # Build for iOS
-release-ios:
+build-ios:
     flutter build ios --release
 
 # Build for Android
-release-android:
+build-android:
     flutter build apk --release
 
-# Build for Web - technically not possible to have mumble in the web
-# release-web:
-#     flutter build web --release
-
 # Build for Linux - experimental
-release-linux:
+build-linux:
     flutter build linux --release
 
 # Build for Windows - experimental
-release-windows:
+build-windows:
     flutter build windows --release
 
 # Build all platforms
-release-all:
-    just release-macos
-    just release-ios
-    just release-android
-    # just release-web
+build-all:
+    just build-macos
+    just build-ios
+    just build-android
+    # just build-web
     # experimental
-    just release-linux
+    just build-linux
     # experimental
-    just release-windows
+    build-windows

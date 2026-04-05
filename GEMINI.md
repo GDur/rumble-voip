@@ -36,7 +36,7 @@ Rumble is a high-performance Mumble client utilizing a Flutter-based user interf
 
 ## Workflow Automation (Justfile)
 
-Common development tasks are managed via the `just` command, as defined in `justfile`:
+Common development tasks are managed via the `just` command, as defined in `Justfile`:
 
 - `just gen`: Regenerate the Flutter-Rust bridge bindings (required after modifying Rust API).
 - `just go`: Clean workspace and fetch all dependencies.

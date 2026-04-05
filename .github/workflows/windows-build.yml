@@ -2,9 +2,8 @@ name: Windows Build
 
 on:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]**'
 
 jobs:
   build:
@@ -60,12 +59,35 @@ jobs:
         run: flutter pub get
         working-directory: ${{ env.WORKSPACE_ROOT }}
 
+      - name: Get version from tag
+        shell: bash
+        run: |
+          # Extract version from tag (e.g., v0.1.123 -> 0.1.123)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG_NAME#v}
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
       - name: Build Windows
-        run: flutter build windows --release -v
+        run: flutter build windows --release --build-name=${{ env.APP_VERSION }} -v
         working-directory: ${{ env.WORKSPACE_ROOT }}
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Package Windows Build (Zip)
+        shell: pwsh
+        run: |
+          $buildPath = "${{ env.WORKSPACE_ROOT }}\build\windows\x64\runner\Release\"
+          $zipPath = "${{ env.WORKSPACE_ROOT }}\rumble-windows-x64.zip"
+          Compress-Archive -Path "$buildPath\*" -DestinationPath $zipPath
+          echo "ZIP_PATH=$zipPath" >> $env:GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: Rumble-Windows-Release
-          path: ${{ env.WORKSPACE_ROOT }}\build\windows\x64\runner\Release\
+          files: ${{ env.ZIP_PATH }}
+          name: Rumble ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
