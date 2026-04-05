@@ -99,8 +99,9 @@ jobs:
               $tempKeyPath = "dsa_priv.pem"
               $privateKey | Out-File -FilePath $tempKeyPath -Encoding ascii
               # Sign the zip file using OpenSSL
-              # WinSparkle expects a base64 encoded signature of the SHA1 hash of the file
-              $sigBase64 = (openssl dgst -sha1 -binary "$zipPath" | openssl dgst -dss1 -sign "$tempKeyPath" | openssl enc -base64)
+              # WinSparkle expects a base64 encoded signature of the zip's hash.
+              # We use -sha1 -sign which handles both hashing and signing.
+              $sigBase64 = (openssl dgst -sha1 -sign "$tempKeyPath" -binary "$zipPath" | openssl enc -base64)
               $dsaSignature = "sparkle:dsaSignature=""$sigBase64"""
               Remove-Item $tempKeyPath
               echo "Signed release with DSA key."
