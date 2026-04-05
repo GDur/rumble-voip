@@ -2,9 +2,9 @@ name: Windows Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: "stable"
           cache: true
 
       - name: Setup Rust
@@ -25,19 +25,10 @@ jobs:
           targets: x86_64-pc-windows-msvc
 
       - name: Install Windows Dependencies
-        run: |
-          choco install nasm strawberryperl just
-          # Ensure NASM is in PATH for the current session
-          echo "C:\Program Files\NASM" >> $GITHUB_PATH
-
-      - name: Install Flutter-Rust Bridge CLI
-        run: cargo install flutter_rust_bridge_codegen --version 2.11.1
+        run: choco install protoc
 
       - name: Fetch Flutter dependencies
         run: flutter pub get
-
-      - name: Generate Flutter-Rust Bridge Bindings
-        run: just gen
 
       - name: Build Windows
         run: flutter build windows --release
