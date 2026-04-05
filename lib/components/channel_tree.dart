@@ -213,7 +213,7 @@ class _ChannelTreeState extends State<ChannelTree> {
   Future<void> _changeAvatar(BuildContext context) async {
     final mumbleService = Provider.of<MumbleService>(context, listen: false);
 
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
     );

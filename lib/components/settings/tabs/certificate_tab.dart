@@ -44,7 +44,7 @@ class CertificateTab extends StatelessWidget {
                       child: ShadButton.outline(
                         size: ShadButtonSize.sm,
                         onPressed: () async {
-                        final result = await FilePicker.platform.pickFiles(
+                        final result = await FilePicker.pickFiles(
                           type: FileType.custom,
                           allowedExtensions: ['p12', 'pfx'],
                         );
@@ -207,7 +207,7 @@ class CertificateTab extends StatelessWidget {
                     child: ShadButton.ghost(
                       size: ShadButtonSize.sm,
                       onPressed: () async {
-                        final path = await FilePicker.platform.saveFile(
+                        final path = await FilePicker.saveFile(
                           fileName: '${cert.name}.p12',
                           type: FileType.custom,
                           allowedExtensions: ['p12'],
