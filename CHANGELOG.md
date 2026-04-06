@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.0] - 2026-04-06
+- feature: Implement shared automatic versioning system via githooks.
+
 ## [0.22.0] - 2026-04-05
 - windows auto update test via sparkle, fix openssl
 

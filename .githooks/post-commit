@@ -1,0 +1,50 @@
+#!/bin/bash
+# .githooks/post-commit
+# Automatically bumps version and updates CHANGELOG based on commit message
+
+# Prevent recursion
+if [ "$GIT_VERSION_BUMP_ACTIVE" == "1" ]; then
+    exit 0
+fi
+
+# Get the last commit message
+COMMIT_MSG=$(git log -1 --pretty=%B)
+
+# Determine bump type
+BUMP_TYPE=""
+case "$COMMIT_MSG" in
+    feat:*|feature:*)
+        BUMP_TYPE="minor"
+        ;;
+    fix:*|performance:*|doc:*|docs:*|refactor:*|typo:*)
+        BUMP_TYPE="patch"
+        ;;
+esac
+
+if [ -n "$BUMP_TYPE" ]; then
+    export GIT_VERSION_BUMP_ACTIVE=1
+    
+    # Get current version (X.Y.Z) from pubspec.yaml
+    VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+    
+    # Calculate NEW_VERSION
+    if [ "$BUMP_TYPE" == "minor" ]; then
+        # Reset patch to 0 for minor bump
+        NEW_VERSION=$(echo "$VERSION" | awk -F. '{printf("%d.%d.%d", $1, $2+1, 0)}')
+    else
+        # Increment patch for patch bump
+        NEW_VERSION=$(echo "$VERSION" | awk -F. '{printf("%d.%d.%d", $1, $2, $3+1)}')
+    fi
+    
+    # Run version management script update (Skip its git commit/tag/push)
+    export SKIP_GIT_OPS=1
+    ./scripts/version-management.sh "$NEW_VERSION" "$COMMIT_MSG"
+    
+    # Stage changes and amend the user's original commit
+    git add pubspec.yaml CHANGELOG.md
+    git commit --amend --no-edit --no-verify
+    
+    # Get the new full version for confirmation
+    NEW_FULL_VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}')
+    echo "Auto-bumped version to $NEW_FULL_VERSION and updated CHANGELOG.md"
+fi

@@ -83,10 +83,12 @@ else
 fi
 
 # 8. Git Ops
-git add "$PUBSPEC" "$CHANGELOG"
-git commit -m "chore: bump version to $NEW_FULL_VERSION"
-git tag "v$TARGET_VERSION"
-git push origin main
-git push origin "v$TARGET_VERSION"
-
-echo "Successfully released $NEW_FULL_VERSION and pushed tag v$TARGET_VERSION."
+if [ "${SKIP_GIT_OPS:-0}" != "1" ]; then
+    git add "$PUBSPEC" "$CHANGELOG"
+    git commit -m "chore: bump version to $NEW_FULL_VERSION"
+    git tag "v$TARGET_VERSION"
+    # shellcheck disable=SC2154
+    git push origin main
+    git push origin "v$TARGET_VERSION"
+    echo "Successfully released $NEW_FULL_VERSION and pushed tag v$TARGET_VERSION."
+fi
