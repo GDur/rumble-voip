@@ -73,9 +73,14 @@ class CertificateTab extends StatelessWidget {
                     ]),
                     _bulletPoint(context, [
                       const TextSpan(text: '• '),
-                      const TextSpan(text: 'Server-side '),
+                      TextSpan(text: 'Server-side '),
                       TextSpan(text: 'Volume Settings', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
                       const TextSpan(text: ' (others don\'t have to re-adjust you).'),
+                    ]),
+                    _bulletPoint(context, [
+                      const TextSpan(text: '• '),
+                      TextSpan(text: 'Multi-Server Identity', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: '—use one certificate for all your favorite servers.'),
                     ]),
                   ],
                 ),

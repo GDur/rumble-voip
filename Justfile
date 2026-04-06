@@ -4,9 +4,15 @@
 default:
     @just --list
 
+# Configure local git hooks to use the shared ones in .githooks
+hooks:
+    @git config core.hooksPath .githooks
+    @echo "Git hooks configured to .githooks"
+
 go:
     just clean
     flutter pub get
+    just hooks
 
 # Regenerate the Flutter-Rust bridge code
 gen:
