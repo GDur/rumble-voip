@@ -17,7 +17,7 @@ pub struct CapturePipeline {
     encoder: OpusEncoder,
     // Captured PCM with in `input_bitrate`.
     // Buffer size of 8192 accommodates maximum 120ms frames at 48kHz (5760 samples) safely.
-    incoming_pcm_buffer: Box<heapless::Vec<f32, 8192>>,
+    incoming_pcm_buffer: Vec<f32>,
     // Reusable buffer to compute a single outgoing packet.
     opus_buf: Box<heapless::Vec<u8, MAX_OPUS_PACKET_SIZE>>,
     // Number of samples per outgoing opus packet.
@@ -68,11 +68,14 @@ impl CapturePipeline {
         let outgoing_packet_sample_count =
             (INTERNAL_SAMPLE_RATE * config.outgoing_audio_ms_per_packet / 1000) as usize;
 
+        // Pre-allocate 16384 samples (~340ms at 48kHz) to handle initial jitter without reallocation
+        let mut incoming_pcm_buffer = Vec::with_capacity(16384);
+
         Self {
             resampler,
             apm,
             encoder,
-            incoming_pcm_buffer: Box::new(heapless::Vec::new()),
+            incoming_pcm_buffer,
             opus_buf,
             outgoing_packet_sample_count,
             input_samples_per_10ms: input_samples_per_frame,
@@ -80,9 +83,7 @@ impl CapturePipeline {
     }
 
     pub fn push_pcm(&mut self, data: &[f32]) {
-        self.incoming_pcm_buffer
-            .extend_from_slice(data)
-            .expect("PCM buffer overflow in CapturePipeline");
+        self.incoming_pcm_buffer.extend_from_slice(data);
     }
 
     pub fn process(
