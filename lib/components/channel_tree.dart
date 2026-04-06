@@ -648,7 +648,7 @@ class _ChannelTreeState extends State<ChannelTree> {
        * And the next ones then + 1 * 16 , + 2 * 16 etc 
        */
       margin: EdgeInsets.only(
-        left: 38.0 + ((depth) * 16.0),
+        left: 29.0 + ((depth) * 16.0),
         right: 16,
         top: 1,
         bottom: 1,
@@ -673,8 +673,8 @@ class _ChannelTreeState extends State<ChannelTree> {
       child: Row(
         children: [
           SizedBox(
-            width: u.avatar != null ? 28 : 10,
-            height: u.avatar != null ? 28 : 10,
+            width: 28,
+            height: 28,
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -1127,43 +1127,47 @@ class _ZoomableAvatarState extends State<ZoomableAvatar>
 
     _overlayEntry = OverlayEntry(
       builder: (context) {
-        return Stack(
-          children: [
-            Positioned(
-              left: position.dx - (size.width * 2) / 2,
-              top: position.dy - (size.height * 2) / 2,
-              child: IgnorePointer(
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Container(
-                      width: size.width * 3,
-                      height: size.height * 3,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: widget.statusColor,
-                          width: 4,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 16,
-                            spreadRadius: 4,
+        return GestureDetector(
+          onTap: _hideOverlay,
+          behavior: HitTestBehavior.translucent,
+          child: Stack(
+            children: [
+              Positioned(
+                left: position.dx - (size.width * 2) / 2,
+                top: position.dy - (size.height * 2) / 2,
+                child: IgnorePointer(
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Container(
+                        width: size.width * 3,
+                        height: size.height * 3,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: widget.statusColor,
+                            width: 4,
                           ),
-                        ],
-                        image: DecorationImage(
-                          image: MemoryImage(widget.avatar),
-                          fit: BoxFit.cover,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              blurRadius: 16,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                          image: DecorationImage(
+                            image: MemoryImage(widget.avatar),
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -1189,17 +1193,31 @@ class _ZoomableAvatarState extends State<ZoomableAvatar>
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => _showOverlay(),
-      onExit: (_) => _hideOverlay(),
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          image: DecorationImage(
-            image: MemoryImage(widget.avatar),
-            fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        if (_overlayEntry == null) {
+          _showOverlay();
+        } else {
+          _hideOverlay();
+        }
+      },
+      onLongPress: () {
+        if (_overlayEntry == null) {
+          _showOverlay();
+        }
+      },
+      child: MouseRegion(
+        onEnter: (_) => _showOverlay(),
+        onExit: (_) => _hideOverlay(),
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            image: DecorationImage(
+              image: MemoryImage(widget.avatar),
+              fit: BoxFit.cover,
+            ),
           ),
         ),
       ),
