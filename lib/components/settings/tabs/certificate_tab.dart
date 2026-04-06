@@ -23,6 +23,67 @@ class CertificateTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.muted.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.colorScheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(LucideIcons.shieldCheck, size: 18, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Why use Identity Certificates?',
+                    style: theme.textTheme.small.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text.rich(
+                TextSpan(
+                  style: theme.textTheme.muted.copyWith(fontSize: 13, height: 1.5),
+                  children: [
+                    const TextSpan(text: 'Certificates act as your digital passport. They allow servers to recognize you across sessions, enabling:\n\n'),
+                    _bulletPoint(context, [
+                      const TextSpan(text: '• '),
+                      TextSpan(text: 'Permanent Registration', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: ' on servers without passwords.'),
+                    ]),
+                    _bulletPoint(context, [
+                      const TextSpan(text: '• '),
+                      const TextSpan(text: 'Retaining your '),
+                      TextSpan(text: 'Avatar', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: ' and '),
+                      TextSpan(text: 'User Comment', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: ' automatically.'),
+                    ]),
+                    _bulletPoint(context, [
+                      const TextSpan(text: '• '),
+                      const TextSpan(text: 'Persistent '),
+                      TextSpan(text: 'Administrative Permissions', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: ' and channel access.'),
+                    ]),
+                    _bulletPoint(context, [
+                      const TextSpan(text: '• '),
+                      const TextSpan(text: 'Server-side '),
+                      TextSpan(text: 'Volume Settings', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                      const TextSpan(text: ' (others don\'t have to re-adjust you).'),
+                    ]),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
         LayoutBuilder(
           builder: (context, constraints) {
             return Wrap(
@@ -169,9 +230,27 @@ class CertificateTab extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      cert.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 2.0),
+                      child: IntrinsicWidth(
+                        child: ShadInput(
+                          initialValue: cert.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          padding: EdgeInsets.zero,
+                          decoration: const ShadDecoration(
+                            border: ShadBorder.none,
+                          ),
+                          onSubmitted: (val) {
+                            if (val.trim().isNotEmpty && val != cert.name) {
+                              certService.renameCertificate(cert.id, val.trim());
+                              onUpdate(() {});
+                            }
+                          },
+                        ),
+                      ),
                     ),
                     Text(
                       'Created: ${cert.createdAt.toString().split('.')[0]}',
@@ -262,6 +341,15 @@ class CertificateTab extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  TextSpan _bulletPoint(BuildContext context, List<InlineSpan> children) {
+    return TextSpan(
+      children: [
+        ...children,
+        const TextSpan(text: '\n'),
+      ],
     );
   }
 }

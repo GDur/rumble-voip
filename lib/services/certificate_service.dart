@@ -144,6 +144,15 @@ class CertificateService extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> renameCertificate(String id, String newName) async {
+    final index = _certificates.indexWhere((c) => c.id == id);
+    if (index != -1) {
+      _certificates[index] = _certificates[index].copyWith(name: newName);
+      await _save();
+      notifyListeners();
+    }
+  }
+
   Future<MumbleCertificate?> importFromP12(
     Uint8List data,
     String? password,

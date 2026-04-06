@@ -29,4 +29,17 @@ class MumbleCertificate {
         privateKeyPem: json['privateKeyPem'],
         createdAt: DateTime.parse(json['createdAt']),
       );
+
+  MumbleCertificate copyWith({
+    String? name,
+    String? certificatePem,
+    String? privateKeyPem,
+  }) =>
+      MumbleCertificate(
+        id: id,
+        name: name ?? this.name,
+        certificatePem: certificatePem ?? this.certificatePem,
+        privateKeyPem: privateKeyPem ?? this.privateKeyPem,
+        createdAt: createdAt,
+      );
 }
