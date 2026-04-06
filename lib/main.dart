@@ -35,6 +35,7 @@ import 'package:rumble/services/connectivity_service.dart';
 import 'package:rumble/src/rust/frb_generated.dart';
 import 'package:rumble/utils/logger.dart';
 import 'package:rumble/components/loading_screen.dart';
+import 'package:media_kit/media_kit.dart';
 
 // Brand Colors
 const kBrandGreen = Color(0xFF64FFDA);
@@ -45,6 +46,12 @@ void main() async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      try {
+        MediaKit.ensureInitialized();
+        debugPrint('[DEBUG] MediaKit initialized successfully');
+      } catch (e) {
+        debugPrint('[DEBUG] MediaKit initialization failed: $e');
+      }
       await BackgroundService.initialize();
 
       // Request microphone permission immediately at startup on mobile

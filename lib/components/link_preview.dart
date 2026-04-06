@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:any_link_preview/any_link_preview.dart';
@@ -8,9 +9,8 @@ import 'package:rumble/components/rumble_tooltip.dart';
 import 'package:rumble/components/image_gallery.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/utils/html_utils.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
-import 'package:audioplayers/audioplayers.dart' as ap;
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 class LinkPreview extends StatelessWidget {
   final String url;
@@ -228,57 +228,186 @@ class VideoPreview extends StatefulWidget {
 }
 
 class _VideoPreviewState extends State<VideoPreview> {
-  late VideoPlayerController _videoController;
-  ChewieController? _chewieController;
+  Player? _player;
+  VideoController? _controller;
+  bool _isInitializing = false;
+  bool _isInitialized = false;
   bool _hasError = false;
   String? _errorMessage;
+  Metadata? _metadata;
 
   @override
   void initState() {
     super.initState();
-    _videoController = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    _videoController.initialize().then((_) {
-      if (!mounted) return;
-      setState(() {
-        _chewieController = ChewieController(
-          videoPlayerController: _videoController,
-          aspectRatio: _videoController.value.aspectRatio,
-          autoPlay: false,
-          looping: false,
-          errorBuilder: (context, errorMessage) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  errorMessage,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          },
-        );
-      });
-    }).catchError((error) {
+    _fetchMetadata();
+  }
+
+  Future<void> _fetchMetadata() async {
+    try {
+      final metadata = await AnyLinkPreview.getMetadata(link: widget.url);
       if (mounted) {
         setState(() {
+          _metadata = metadata;
+        });
+      }
+    } catch (_) {
+      // Ignore metadata fetch errors
+    }
+  }
+
+  Future<void> _initializePlayer() async {
+    if (_isInitialized || _isInitializing) return;
+
+    setState(() {
+      _isInitializing = true;
+    });
+
+    try {
+      final player = Player(
+        configuration: const PlayerConfiguration(
+          logLevel: MPVLogLevel.debug,
+        ),
+      );
+      
+      final controller = VideoController(player);
+
+      player.stream.log.listen((event) {
+        debugPrint('[mpv-video] ${event.prefix}: ${event.text}');
+      });
+
+      if (mounted) {
+        setState(() {
+          _player = player;
+          _controller = controller;
+          _isInitialized = true;
+          _isInitializing = false;
+        });
+      }
+
+      // Start loading and playing the media 
+      // (play is true here because this only runs after the user explicitly taps 'Tap to load')
+      final cleanUrl = Uri.decodeFull(widget.url);
+      debugPrint('[DEBUG] VideoPreview: Opening media $cleanUrl (original: ${widget.url})');
+      _player!.open(
+        Media(
+          cleanUrl,
+          httpHeaders: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ),
+        play: true,
+      ).then((_) {
+        debugPrint('[DEBUG] VideoPreview: Media opened successfully');
+      }).catchError((e) {
+        debugPrint('[DEBUG] VideoPreview: Error opening media: $e');
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = e.toString();
+          });
+        }
+      });
+
+      _player!.stream.error.listen((error) {
+        debugPrint('[DEBUG] VideoPreview Player Stream Error: $error');
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = error;
+          });
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
           _hasError = true;
           _errorMessage = error.toString();
         });
       }
-    });
+    }
   }
 
   @override
   void dispose() {
-    _videoController.dispose();
-    _chewieController?.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
+
+    if (!_isInitialized) {
+      return GestureDetector(
+        onTap: _initializePlayer,
+        child: Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.muted.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            image: _metadata?.image != null 
+              ? DecorationImage(
+                  image: NetworkImage(_metadata!.image!),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.4),
+                    BlendMode.darken,
+                  ),
+                )
+              : null,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              if (_isInitializing)
+                const CircularProgressIndicator()
+              else
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(LucideIcons.play, size: 48, color: theme.colorScheme.primary),
+                    const SizedBox(height: 12),
+                    Text('Tap to load video', style: theme.textTheme.small.copyWith(color: Colors.white)),
+                  ],
+                ),
+              Positioned(
+                bottom: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    widget.url.split('.').last.split('?').first.toUpperCase(),
+                    style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              if (_metadata?.title != null && !_isInitializing)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  right: 48,
+                  child: Text(
+                    _metadata!.title!,
+                    style: theme.textTheme.small.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      shadows: [const Shadow(blurRadius: 4, color: Colors.black)],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (_hasError) {
       return Container(
@@ -320,31 +449,13 @@ class _VideoPreviewState extends State<VideoPreview> {
       );
     }
 
-    if (_chewieController != null && _chewieController!.videoPlayerController.value.isInitialized) {
-      return Container(
-        color: Colors.black,
-        child: AspectRatio(
-          aspectRatio: _videoController.value.aspectRatio,
-          child: Chewie(controller: _chewieController!),
-        ),
-      );
-    }
-
     return Container(
-      height: 200,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.muted.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('Loading video...', style: TextStyle(fontSize: 12, color: Colors.white54)),
-          ],
+      color: Colors.black,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Video(
+          controller: _controller!,
+          controls: (state) => MaterialDesktopVideoControls(state),
         ),
       ),
     );
@@ -360,38 +471,115 @@ class AudioPreview extends StatefulWidget {
 }
 
 class _AudioPreviewState extends State<AudioPreview> {
-  final _audioPlayer = ap.AudioPlayer();
+  late Player _player;
   bool _isPlaying = false;
+  bool _hasError = false;
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
+  final List<StreamSubscription> _subscriptions = [];
 
   @override
   void initState() {
     super.initState();
-    _audioPlayer.onDurationChanged.listen((d) {
+    _player = Player(
+      configuration: const PlayerConfiguration(
+        logLevel: MPVLogLevel.debug,
+      ),
+    );
+    
+    _player.stream.log.listen((event) {
+      debugPrint('[mpv-audio] ${event.prefix}: ${event.text}');
+    });
+    _subscriptions.add(_player.stream.playing.listen((playing) {
+      if (mounted) setState(() => _isPlaying = playing);
+    }));
+    
+    _subscriptions.add(_player.stream.duration.listen((d) {
       if (mounted) setState(() => _duration = d);
-    });
-    _audioPlayer.onPositionChanged.listen((p) {
+    }));
+    
+    _subscriptions.add(_player.stream.position.listen((p) {
       if (mounted) setState(() => _position = p);
-    });
-    _audioPlayer.onPlayerStateChanged.listen((state) {
+    }));
+
+    _subscriptions.add(_player.stream.error.listen((error) {
+      debugPrint('[DEBUG] AudioPreview Player Stream Error: $error');
       if (mounted) {
-        setState(() => _isPlaying = state == ap.PlayerState.playing);
+        setState(() {
+          _hasError = true;
+        });
+        ShadToaster.of(context).show(
+          ShadToast.destructive(
+            title: const Text('Audio Playback Error'),
+            description: Text(error),
+          ),
+        );
       }
+    }));
+
+    final cleanUrl = Uri.decodeFull(widget.url);
+    debugPrint('[DEBUG] AudioPreview: Opening media $cleanUrl (original: ${widget.url})');
+    _player.open(
+      Media(
+        cleanUrl,
+        httpHeaders: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      ),
+      play: false,
+    ).catchError((e) {
+      debugPrint('[DEBUG] AudioPreview: Error opening media: $e');
     });
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    for (final s in _subscriptions) {
+      s.cancel();
+    }
+    _player.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
+    
+    // Check for errors in the player state
+    if (_hasError) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.muted.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.circleAlert, size: 16, color: Colors.red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Audio playback failed',
+                style: theme.textTheme.small,
+              ),
+            ),
+            ShadButton.outline(
+              size: ShadButtonSize.sm,
+              onPressed: () async {
+                final uri = Uri.parse(widget.url);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                }
+              },
+              child: const Icon(LucideIcons.externalLink, size: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 48, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.muted.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
@@ -400,13 +588,7 @@ class _AudioPreviewState extends State<AudioPreview> {
         children: [
           ShadIconButton.secondary(
             icon: Icon(_isPlaying ? LucideIcons.pause : LucideIcons.play),
-            onPressed: () {
-              if (_isPlaying) {
-                _audioPlayer.pause();
-              } else {
-                _audioPlayer.play(ap.UrlSource(widget.url));
-              }
-            },
+            onPressed: () => _player.playOrPause(),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -420,15 +602,18 @@ class _AudioPreviewState extends State<AudioPreview> {
                       ? _duration.inSeconds.toDouble() 
                       : 1,
                   onChanged: (value) async {
-                    await _audioPlayer.seek(Duration(seconds: value.toInt()));
+                    await _player.seek(Duration(seconds: value.toInt()));
                   },
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(_formatDuration(_position), style: theme.textTheme.muted.copyWith(fontSize: 10)),
-                    Text(_formatDuration(_duration), style: theme.textTheme.muted.copyWith(fontSize: 10)),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(_formatDuration(_position), style: theme.textTheme.muted.copyWith(fontSize: 10)),
+                      Text(_formatDuration(_duration), style: theme.textTheme.muted.copyWith(fontSize: 10)),
+                    ],
+                  ),
                 ),
               ],
             ),

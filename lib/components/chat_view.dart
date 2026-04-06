@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:rumble/utils/layout_constants.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,8 @@ import 'package:rumble/services/mumble_service.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:rumble/components/image_gallery.dart';
@@ -152,6 +155,27 @@ class _ChatViewState extends State<ChatView> {
       }
     } catch (e) {
       debugPrint('Error pasting image: $e');
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final bytes = await file.readAsBytes();
+        final html = HtmlUtils.imageToHtml(bytes);
+        if (mounted) {
+          context.read<MumbleService>().sendMessage(html);
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
     }
   }
 
@@ -506,6 +530,21 @@ class _ChatViewState extends State<ChatView> {
               ),
               child: Row(
                 children: [
+                  RumbleTooltip(
+                    message: 'Attach image',
+                    child: ShadIconButton.ghost(
+                      icon: const Icon(LucideIcons.paperclip, size: 18),
+                      onPressed: _pickAndUploadImage,
+                    ),
+                  ),
+                  RumbleTooltip(
+                    message: 'Paste image from clipboard',
+                    child: ShadIconButton.ghost(
+                      icon: const Icon(LucideIcons.clipboardPaste, size: 18),
+                      onPressed: _handlePaste,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: ShadInput(
                       controller: _controller,
