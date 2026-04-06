@@ -4,7 +4,7 @@ publish_to: 'none'
 
 # Note: The version below is a fallback. The CI/CD pipeline overwrites 
 # the build version using the git tag (e.g., v0.1.123) during releases.
-version: 0.23.0+34
+version: 0.23.1+35
 
 environment:
   sdk: ^3.11.3

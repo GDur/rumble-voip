@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.1] - 2026-04-06
+- docs: Explain multi-server identity benefit in certificate tab.
+
 ## [0.23.0] - 2026-04-06
 - feature: Implement shared automatic versioning system via githooks.
 
