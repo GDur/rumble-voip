@@ -757,6 +757,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return SafeArea(
       child: Scaffold(
         backgroundColor: theme.colorScheme.background,
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: (kDebugMode && mumbleService.isConnected)
+            ? ShadButton(
+                size: ShadButtonSize.lg,
+                onPressed: () => mumbleService.sendDebugLinks(),
+                leading: const Icon(LucideIcons.beaker, size: 18),
+                child: const Text('Send Debug Links'),
+              )
+            : null,
         body: Column(
           children: [
             if (!connectivityService.isOnline)

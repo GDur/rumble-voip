@@ -36,9 +36,9 @@ class HtmlUtils {
     return urls.toList();
   }
 
-  /// Extracts all URLs that should be considered "viewable images" in a gallery.
-  /// This includes both direct <img> tags and links to image files.
-  static List<String> extractAllViewableImages(String html) {
+  /// Extracts all URLs that should be considered "viewable media" in a gallery.
+  /// This includes images, audio, video, and PDF files.
+  static List<String> extractAllViewableMedia(String html) {
     if (html.isEmpty) return [];
     
     final images = extractImageSources(html);
@@ -49,7 +49,17 @@ class HtmlUtils {
       try {
         final uri = Uri.parse(url);
         final path = uri.path.toLowerCase();
-        if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'].any((ext) => path.endsWith(ext))) {
+        final extensions = [
+          // Images
+          '.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp',
+          // Video
+          '.mp4', '.webm', '.mov', '.m4v',
+          // Audio
+          '.mp3', '.wav', '.ogg', '.m4a', '.aac',
+          // Document
+          '.pdf'
+        ];
+        if (extensions.any((ext) => path.endsWith(ext))) {
           all.add(url);
         }
       } catch (_) {}
@@ -267,4 +277,44 @@ class HtmlUtils {
     
     return sources.toList();
   }
+
+  /// Determines the type of media for a given source URL or data URI.
+  static MediaType getMediaType(String source) {
+    if (source.startsWith('data:')) {
+      if (source.contains('image/')) return MediaType.image;
+      if (source.contains('video/')) return MediaType.video;
+      if (source.contains('audio/')) return MediaType.audio;
+      if (source.contains('application/pdf')) return MediaType.pdf;
+      return MediaType.other; // Default
+    }
+
+    try {
+      final uri = Uri.parse(source);
+      final path = uri.path.toLowerCase();
+      
+      if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'].any((ext) => path.endsWith(ext))) {
+        return MediaType.image;
+      }
+      if (['.mp4', '.webm', '.mov', '.m4v'].any((ext) => path.endsWith(ext))) {
+        return MediaType.video;
+      }
+      if (['.mp3', '.wav', '.ogg', '.m4a', '.aac'].any((ext) => path.endsWith(ext))) {
+        return MediaType.audio;
+      }
+      if (path.endsWith('.pdf')) {
+        return MediaType.pdf;
+      }
+    } catch (_) {}
+
+    return MediaType.other;
+  }
+}
+
+/// Supported media types for the gallery viewer.
+enum MediaType {
+  image,
+  video,
+  audio,
+  pdf,
+  other,
 }

@@ -54,6 +54,8 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_video: ^2.0.1
   media_kit_libs_video: ^1.0.7
+  pdfx: ^2.7.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

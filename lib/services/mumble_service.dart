@@ -31,11 +31,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   final RustAudioEngine _rustEngine;
   final DeviceLister _deviceLister;
 
-  MumbleService({
-    RustAudioEngine? rustEngine,
-    DeviceLister? deviceLister,
-  }) : _rustEngine = rustEngine ?? RustAudioEngine(),
-       _deviceLister = deviceLister ?? DefaultDeviceLister();
+  MumbleService({RustAudioEngine? rustEngine, DeviceLister? deviceLister})
+    : _rustEngine = rustEngine ?? RustAudioEngine(),
+      _deviceLister = deviceLister ?? DefaultDeviceLister();
   dumble.MumbleClient? _dumbleClient;
   bool _isConnected = false;
   String? _error;
@@ -78,14 +76,17 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     }
     return res;
   }
+
   MumbleUser? get self => _selfSession != null ? _users[_selfSession] : null;
-  int? get maxUsers => _dumbleClient?.serverInfo.config?.maxUsers ?? _currentServer?.maxUsers;
+  int? get maxUsers =>
+      _dumbleClient?.serverInfo.config?.maxUsers ?? _currentServer?.maxUsers;
 
   // UI-specific getters
-  String get currentChannelName => self?.channelId != null 
-      ? _channels.firstWhere((c) => c.id == self!.channelId).name 
+  String get currentChannelName => self?.channelId != null
+      ? _channels.firstWhere((c) => c.id == self!.channelId).name
       : 'Not Connected';
-  bool get isTalking => _isLocalPttActive || _talkingUsers.contains(_selfSession);
+  bool get isTalking =>
+      _isLocalPttActive || _talkingUsers.contains(_selfSession);
   double get currentVolume => volumeNotifier.value;
   bool get isSuppressed => self?.isSuppressed ?? false;
 
@@ -103,7 +104,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     String? playbackDeviceId,
   ) async {
     _settings = settings;
-    
+
     // Wire up Rust audio engine events
     _audioEventSubscription = _rustEngine.getEventStream().listen((event) {
       event.when(
@@ -141,7 +142,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       inputGain: inputGain,
       outputVolume: outputVolume,
     );
-    
+
     await _refreshDevices();
   }
 
@@ -157,7 +158,10 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     notifyListeners();
   }
 
-  Future<void> connect(MumbleServer server, {MumbleCertificate? certificate}) async {
+  Future<void> connect(
+    MumbleServer server, {
+    MumbleCertificate? certificate,
+  }) async {
     _error = null;
     _channels = [];
     _users.clear();
@@ -174,7 +178,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       SecurityContext? context;
       if (certificate != null) {
         context = SecurityContext();
-        context.useCertificateChainBytes(utf8.encode(certificate.certificatePem));
+        context.useCertificateChainBytes(
+          utf8.encode(certificate.certificatePem),
+        );
         context.usePrivateKeyBytes(utf8.encode(certificate.privateKeyPem));
       }
 
@@ -187,33 +193,42 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       );
 
       // DebugGING for iOS resolution and connection
-      debugPrint('[MumbleService] Attempting to connect to ${server.host}:${server.port}');
+      debugPrint(
+        '[MumbleService] Attempting to connect to ${server.host}:${server.port}',
+      );
       if (Platform.isIOS) {
         try {
           final addresses = await InternetAddress.lookup(server.host);
-          debugPrint('[MumbleService] Resolved addresses: ${addresses.map((a) => a.address).join(', ')}');
+          debugPrint(
+            '[MumbleService] Resolved addresses: ${addresses.map((a) => a.address).join(', ')}',
+          );
         } catch (dnsError) {
-          debugPrint('[MumbleService] DNS Resolution failed (but trying dumble connect anyway): $dnsError');
+          debugPrint(
+            '[MumbleService] DNS Resolution failed (but trying dumble connect anyway): $dnsError',
+          );
         }
         // Small delay as an experimental fix for some iOS networking race conditions
         await Future.delayed(const Duration(milliseconds: 100));
       }
 
-      _dumbleClient = await dumble.MumbleClient.connect(
-        options: options,
-        onBadCertificate: (cert) => true,
-        useUdp: true, 
-      ).timeout(const Duration(seconds: 10)); // Added a timeout to avoid hangs on iOS
-      
-      _isConnected = true; 
+      _dumbleClient =
+          await dumble.MumbleClient.connect(
+            options: options,
+            onBadCertificate: (cert) => true,
+            useUdp: true,
+          ).timeout(
+            const Duration(seconds: 10),
+          ); // Added a timeout to avoid hangs on iOS
+
+      _isConnected = true;
       _dumbleClient!.add(this);
-      
+
       _selfSession = _dumbleClient!.self.session;
       debugPrint('Mumble: Handshake finished. Self session: $_selfSession');
 
       // Start background service to prevent sleep
       await BackgroundService.start(serverName: server.name);
-      
+
       // Target channel to join once sync is stable
       if (_settings.rememberLastChannel && server.lastChannelId != null) {
         _targetChannelId = server.lastChannelId;
@@ -241,7 +256,6 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
       _addSystemMessage('Connected.');
       notifyListeners();
-
     } catch (e) {
       _error = e.toString();
       _isConnected = false;
@@ -267,7 +281,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     } finally {
       // Stop background service
       await BackgroundService.stop();
-      
+
       _isConnected = false;
       _currentServer = null;
       _selfSession = null;
@@ -287,11 +301,11 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
   @override
   void onUserAdded(dumble.User user) {
-     debugPrint('Mumble: User added: ${user.name} (session: ${user.session})');
-     if (!_trackedUserListeners.contains(user.session)) {
-       user.add(_GenericUserListener(this));
-       _trackedUserListeners.add(user.session);
-     }
+    debugPrint('Mumble: User added: ${user.name} (session: ${user.session})');
+    if (!_trackedUserListeners.contains(user.session)) {
+      user.add(_GenericUserListener(this));
+      _trackedUserListeners.add(user.session);
+    }
     if (user.comment == null && user.commentHash != null) {
       debugPrint('Mumble: Requesting comment for ${user.name}');
       user.requestUserComment();
@@ -305,11 +319,11 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
   @override
   void onChannelAdded(dumble.Channel channel) {
-     if (!_trackedChannelListeners.contains(channel.channelId)) {
-       channel.add(_GenericChannelListener(this));
-       _trackedChannelListeners.add(channel.channelId);
-     }
-     _syncChannels();
+    if (!_trackedChannelListeners.contains(channel.channelId)) {
+      channel.add(_GenericChannelListener(this));
+      _trackedChannelListeners.add(channel.channelId);
+    }
+    _syncChannels();
   }
 
   @override
@@ -357,17 +371,17 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   void onCryptStateChanged() {
     final crypt = _dumbleClient?.cryptState;
     if (crypt != null && _isConnected && !_audioInitialized) {
-       _rustEngine.initializeAudio(
-          host: _dumbleClient!.options.host,
-          port: _dumbleClient!.options.port,
-          key: crypt.key,
-          encryptNonce: crypt.clientNonce,
-          decryptNonce: crypt.serverNonce,
-        );
-        _audioInitialized = true;
+      _rustEngine.initializeAudio(
+        host: _dumbleClient!.options.host,
+        port: _dumbleClient!.options.port,
+        key: crypt.key,
+        encryptNonce: crypt.clientNonce,
+        decryptNonce: crypt.serverNonce,
+      );
+      _audioInitialized = true;
     }
   }
-  
+
   @override
   void onBanListReceived(List<dumble.BanEntry> bans) {}
   @override
@@ -377,6 +391,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     _addSystemMessage('Permission Denied: ${e.reason}');
     _syncUsers();
   }
+
   @override
   void onQueryUsersResult(Map<int, String> idToName) {}
   @override
@@ -390,7 +405,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
   void _syncChannels() {
     if (_dumbleClient == null) return;
-    
+
     _channels = _dumbleClient!.getChannels().values.map((c) {
       if (!_trackedChannelListeners.contains(c.channelId)) {
         c.add(_GenericChannelListener(this));
@@ -405,14 +420,14 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         isEnterRestricted: c.isEnterRestricted ?? false,
       );
     }).toList();
-    
+
     notifyListeners();
     _tryJoinTargetChannel();
   }
 
   void _tryJoinTargetChannel() {
     if (_targetChannelId == null || _dumbleClient == null) return;
-    
+
     final chan = _dumbleClient!.getChannels()[_targetChannelId!];
     if (chan != null) {
       debugPrint('Mumble: Rejoining target channel: ${_targetChannelId}');
@@ -423,10 +438,10 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
 
   void _syncUsers() {
     if (_dumbleClient == null) return;
-    
+
     _users.clear();
     final allUsers = _dumbleClient!.getUsers();
-    
+
     // Process all known users
     for (var u in allUsers.values) {
       if (!_trackedUserListeners.contains(u.session)) {
@@ -434,7 +449,7 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
         u.add(_GenericUserListener(this));
         _trackedUserListeners.add(u.session);
       }
-      
+
       // Auto-request comment/texture if missing but hash exists
       if (u.comment == null && u.commentHash != null) {
         u.requestUserComment();
@@ -442,21 +457,21 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       if (u.texture == null && u.textureHash != null) {
         u.requestUserTexture();
       }
-      
+
       _users[u.session] = _mapUser(u);
     }
-    
+
     // Process self - prioritize the one in the user map to ensure consistency
     final selfObj = _dumbleClient!.self;
     final selfFromMap = allUsers[selfObj.session] ?? selfObj;
-    
+
     if (!_trackedUserListeners.contains(selfFromMap.session)) {
       selfFromMap.add(_GenericUserListener(this));
       _trackedUserListeners.add(selfFromMap.session);
       selfFromMap.requestUserTexture();
     }
     _users[selfFromMap.session] = _mapUser(selfFromMap);
-    
+
     notifyListeners();
 
     final currentChannelId = selfFromMap.channel.channelId;
@@ -468,12 +483,41 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     }
 
     // Update last channel if it changed (and only if we are not still trying to move to a target)
-    if (_currentServer != null && _settings.rememberLastChannel && _targetChannelId == null) {
+    if (_currentServer != null &&
+        _settings.rememberLastChannel &&
+        _targetChannelId == null) {
       if (currentChannelId != _currentServer!.lastChannelId) {
         debugPrint('Mumble: Updating last joined channel to $currentChannelId');
-        _currentServer = _currentServer!.copyWith(lastChannelId: currentChannelId);
+        _currentServer = _currentServer!.copyWith(
+          lastChannelId: currentChannelId,
+        );
         onServerUpdated?.call(_currentServer!);
       }
+    }
+  }
+
+  void sendDebugLinks() {
+    final links = [
+      // audio
+      'https://samplelib.com/lib/preview/mp3/sample-15s.mp3',
+
+      // video
+      'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4',
+      'https://samplelib.com/lib/preview/webm/sample-10s.webm',
+      // 'https://upload.wikimedia.org/wikipedia/commons/transcoded/e/e3/%21PostOffice_%21mailinballot_House_passes_USPS_Rescue_Bill_%2425_billion.webm/%21PostOffice_%21mailinballot_House_passes_USPS_Rescue_Bill_%2425_billion.webm.1080p.vp9.webm',
+
+      // documents
+      'https://samplelib.com/pdf/sample-form.pdf',
+
+      // open graph / links
+      'https://www.girlgotbooks.de/products/midnight-magic-lesezeichen',
+
+      // images
+      'https://img.freepik.com/free-photo/young-sportive-couple-doing-yoga-fitness-people-summer-park_1157-40150.jpg?testa&asda',
+      'https://www.imgonline.com.ua/examples/GIF-animation.gif',
+    ];
+    for (final link in links) {
+      sendTextMessage(link);
     }
   }
 
@@ -482,7 +526,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
       session: u.session,
       name: u.name ?? 'Unknown',
       channelId: u.channel.channelId,
-      isTalking: (_isLocalPttActive && u.session == _selfSession) || _talkingUsers.contains(u.session),
+      isTalking:
+          (_isLocalPttActive && u.session == _selfSession) ||
+          _talkingUsers.contains(u.session),
       isMuted: (u.mute == true) || (u.selfMute == true),
       isDeafened: (u.deaf == true) || (u.selfDeaf == true),
       isSuppressed: u.suppress == true,
@@ -494,12 +540,14 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   }
 
   void _addSystemMessage(String content) {
-    _messages.add(ChatMessage(
-      senderName: 'System',
-      content: content,
-      timestamp: DateTime.now(),
-      isSelf: false,
-    ));
+    _messages.add(
+      ChatMessage(
+        senderName: 'System',
+        content: content,
+        timestamp: DateTime.now(),
+        isSelf: false,
+      ),
+    );
     notifyListeners();
   }
 
@@ -516,26 +564,28 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   void sendTextMessage(String message) {
     if (_dumbleClient == null) return;
     final currentChannel = _dumbleClient!.self.channel;
-    
+
     // First convert markdown to HTML
     final html = HtmlUtils.markdownToHtml(message);
-    
+
     // Then sanitize it for Mumble (e.g. handle base64 images, etc)
     final sanitizedMessage = HtmlUtils.sanitizeMumbleHtml(html);
-    
+
     _dumbleClient!.sendMessage(
       message: dumble.OutgoingTextMessage(
         message: sanitizedMessage,
         channels: [currentChannel],
       ),
     );
-    
-    _messages.add(ChatMessage(
-      senderName: _dumbleClient!.self.name ?? 'Me',
-      content: sanitizedMessage,
-      timestamp: DateTime.now(),
-      isSelf: true,
-    ));
+
+    _messages.add(
+      ChatMessage(
+        senderName: _dumbleClient!.self.name ?? 'Me',
+        content: sanitizedMessage,
+        timestamp: DateTime.now(),
+        isSelf: true,
+      ),
+    );
     notifyListeners();
   }
 
@@ -592,7 +642,9 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   /// Injects PCM samples directly into the Mumble transmission stream.
   /// Used for automated audio integrity tests.
   Future<void> debugInjectPcm(List<double> samples) async {
-    await _rustEngine.debugInjectPcm(samples: samples.map((e) => e.toDouble()).toList());
+    await _rustEngine.debugInjectPcm(
+      samples: samples.map((e) => e.toDouble()).toList(),
+    );
   }
 
   /// Starts recording the final mixed audio output from the Mumble server.
@@ -636,11 +688,21 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
     String? playbackDeviceId,
   }) async {
     final bridgeConfig = MumbleConfig(
-      outgoingAudioBitrate: outgoingAudioBitrate ?? bitrate ?? _settings.outgoingAudioBitrate,
-      outgoingAudioMsPerPacket: outgoingAudioMsPerPacket ?? msPerPacket ?? _settings.outgoingAudioMsPerPacket,
-      incomingJitterBufferMs: incomingJitterBufferMs ?? jitterBuffer ?? _settings.incomingJitterBufferMs,
-      playbackHwBufferSize: (playbackHwBufferMs ?? _settings.playbackHwBufferMs) > 0 
-          ? AudioBufferSize.fixed((playbackHwBufferMs ?? _settings.playbackHwBufferMs) * 48) // 48 samples per ms @ 48kHz
+      outgoingAudioBitrate:
+          outgoingAudioBitrate ?? bitrate ?? _settings.outgoingAudioBitrate,
+      outgoingAudioMsPerPacket:
+          outgoingAudioMsPerPacket ??
+          msPerPacket ??
+          _settings.outgoingAudioMsPerPacket,
+      incomingJitterBufferMs:
+          incomingJitterBufferMs ??
+          jitterBuffer ??
+          _settings.incomingJitterBufferMs,
+      playbackHwBufferSize:
+          (playbackHwBufferMs ?? _settings.playbackHwBufferMs) > 0
+          ? AudioBufferSize.fixed(
+              (playbackHwBufferMs ?? _settings.playbackHwBufferMs) * 48,
+            ) // 48 samples per ms @ 48kHz
           : const AudioBufferSize.default_(),
       captureHwBufferSize: const AudioBufferSize.default_(),
       captureDeviceId: captureDeviceId ?? captureDevice,
@@ -717,8 +779,14 @@ class _GenericUserListener with dumble.UserListener {
   _GenericUserListener(this.service);
 
   @override
-  void onUserChanged(dumble.User user, dumble.User? actor, dumble.UserChanges changes) {
-    debugPrint('Mumble: onUserChanged for ${user.name} (comment: ${changes.comment}, hash: ${changes.commentHash}, texture: ${changes.texture}, textureHash: ${changes.textureHash})');
+  void onUserChanged(
+    dumble.User user,
+    dumble.User? actor,
+    dumble.UserChanges changes,
+  ) {
+    debugPrint(
+      'Mumble: onUserChanged for ${user.name} (comment: ${changes.comment}, hash: ${changes.commentHash}, texture: ${changes.texture}, textureHash: ${changes.textureHash})',
+    );
     if (changes.commentHash && user.comment == null) {
       user.requestUserComment();
     }
@@ -729,11 +797,16 @@ class _GenericUserListener with dumble.UserListener {
   }
 
   @override
-  void onUserRemoved(dumble.User user, dumble.User? actor, String? reason, bool? ban) {
+  void onUserRemoved(
+    dumble.User user,
+    dumble.User? actor,
+    String? reason,
+    bool? ban,
+  ) {
     service._trackedUserListeners.remove(user.session);
     service._syncUsers();
   }
-  
+
   @override
   void onUserStats(dumble.User user, dumble.UserStats stats) {
     service._syncUsers();
@@ -756,5 +829,8 @@ class _GenericChannelListener with dumble.ChannelListener {
   }
 
   @override
-  void onChannelPermissionsReceived(dumble.Channel channel, dumble.Permission permission) {}
+  void onChannelPermissionsReceived(
+    dumble.Channel channel,
+    dumble.Permission permission,
+  ) {}
 }

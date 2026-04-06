@@ -6,7 +6,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:rumble/components/rumble_tooltip.dart';
-import 'package:rumble/components/image_gallery.dart';
+import 'package:rumble/components/media_gallery.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:media_kit/media_kit.dart';
@@ -22,49 +22,17 @@ class LinkPreview extends StatelessWidget {
     final theme = ShadTheme.of(context);
 
     // Basic check for common media types that might need different handling
-    final isVideo = _isMediaType(url, ['.mp4', '.webm', '.mov', '.mkv']);
-    final isAudio = _isMediaType(url, ['.mp3', '.wav', '.ogg', '.m4a']);
-    final isPdf = _isMediaType(url, ['.pdf']);
-    final isImage = _isMediaType(url, ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']);
+    final mediaType = HtmlUtils.getMediaType(url);
+    final isVideo = mediaType == MediaType.video;
+    final isAudio = mediaType == MediaType.audio;
+    final isPdf = mediaType == MediaType.pdf;
+    final isImage = mediaType == MediaType.image;
 
     if (isImage) {
-      return GestureDetector(
-        onTap: () => _showGallery(context, url),
-        child: _withMediaOverlay(
-          context: context,
-          url: url,
-          child: Image.network(
-            url,
-            fit: BoxFit.contain,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                height: 100,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.muted.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const CircularProgressIndicator(),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) => Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.muted.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  const Icon(LucideIcons.imageOff, size: 24),
-                  const SizedBox(height: 8),
-                  Text('Failed to load image', style: theme.textTheme.small),
-                ],
-              ),
-            ),
-          ),
-        ),
+      return _withMediaOverlay(
+        context: context,
+        url: url,
+        child: ImagePreview(url: url),
       );
     }
 
@@ -81,6 +49,14 @@ class LinkPreview extends StatelessWidget {
         context: context,
         url: url,
         child: AudioPreview(url: url),
+      );
+    }
+
+    if (isPdf) {
+      return _withMediaOverlay(
+        context: context,
+        url: url,
+        child: PdfPreview(url: url),
       );
     }
 
@@ -149,24 +125,40 @@ class LinkPreview extends StatelessWidget {
             Positioned(
               top: 8,
               right: 8,
-              child: RumbleTooltip(
-                message: url,
-                child: ShadIconButton.secondary(
-                  icon: const Icon(LucideIcons.link, size: 14),
-                  padding: EdgeInsets.zero,
-                  width: 28,
-                  height: 28,
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: url));
-                    ShadToaster.of(context).show(
-                      ShadToast(
-                        title: const Text('Copied link'),
-                        description: const Text('Media URL copied to clipboard'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RumbleTooltip(
+                    message: 'Open in gallery',
+                    child: ShadIconButton.secondary(
+                      icon: const Icon(LucideIcons.maximize, size: 14),
+                      padding: EdgeInsets.zero,
+                      width: 28,
+                      height: 28,
+                      onPressed: () => _showGallery(context, url),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  RumbleTooltip(
+                    message: url,
+                    child: ShadIconButton.secondary(
+                      icon: const Icon(LucideIcons.link, size: 14),
+                      padding: EdgeInsets.zero,
+                      width: 28,
+                      height: 28,
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: url));
+                        ShadToaster.of(context).show(
+                          ShadToast(
+                            title: const Text('Copied link'),
+                            description: const Text('Media URL copied to clipboard'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -176,36 +168,7 @@ class LinkPreview extends StatelessWidget {
   }
 
   void _showGallery(BuildContext context, String currentUrl) {
-    try {
-      final mumbleService = Provider.of<MumbleService>(context, listen: false);
-      final uniqueImages = <String>[];
-      
-      for (final msg in mumbleService.messages) {
-        final images = HtmlUtils.extractAllViewableImages(msg.content);
-        for (final src in images) {
-          if (!uniqueImages.contains(src)) {
-            uniqueImages.add(src);
-          }
-        }
-      }
-
-      final index = uniqueImages.indexOf(currentUrl);
-      ImageGalleryDialog.show(
-        context,
-        uniqueImages,
-        index >= 0 ? index : 0,
-      );
-    } catch (_) {}
-  }
-
-  bool _isMediaType(String url, List<String> extensions) {
-    try {
-      final uri = Uri.parse(url);
-      final path = uri.path.toLowerCase();
-      return extensions.any((ext) => path.endsWith(ext));
-    } catch (_) {
-      return false;
-    }
+    _showInternalGallery(context, currentUrl);
   }
 
   String _getFileName(String url) {
@@ -216,6 +179,83 @@ class LinkPreview extends StatelessWidget {
     } catch (_) {
       return url;
     }
+  }
+}
+
+void _showInternalGallery(BuildContext context, String currentUrl) {
+  try {
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+    final uniqueMedia = mumbleService.messages
+        .expand<String>((msg) => HtmlUtils.extractAllViewableMedia(msg.content))
+        .toSet()
+        .toList();
+
+    final index = uniqueMedia.indexOf(currentUrl);
+    MediaGalleryDialog.show(
+      context,
+      uniqueMedia,
+      index >= 0 ? index : 0,
+    );
+  } catch (_) {}
+}
+
+class PdfPreview extends StatelessWidget {
+  final String url;
+  const PdfPreview({super.key, required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    final fileName = url.split('/').last.split('?').first;
+    
+    return GestureDetector(
+      onTap: () => _showInternalGallery(context, url),
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.muted.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: theme.colorScheme.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.muted.withValues(alpha: 0.2),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  bottomLeft: Radius.circular(8),
+                ),
+              ),
+              child: const Icon(LucideIcons.fileText, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Text('PDF Document', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold)),
+                   const SizedBox(height: 4),
+                   Text(
+                     fileName, 
+                     style: theme.textTheme.muted.copyWith(fontSize: 11), 
+                     maxLines: 1, 
+                     overflow: TextOverflow.ellipsis
+                   ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Icon(LucideIcons.chevronRight, size: 16),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -249,11 +289,48 @@ class _VideoPreviewState extends State<VideoPreview> {
         setState(() {
           _metadata = metadata;
         });
+        if (metadata?.image == null) {
+          _generateThumbnail();
+        }
       }
     } catch (_) {
-      // Ignore metadata fetch errors
+      _generateThumbnail();
     }
   }
+
+  Future<void> _generateThumbnail() async {
+    // Attempt to get a single frame as a thumbnail for direct video files
+    Player? tempPlayer;
+    try {
+      tempPlayer = Player();
+      await tempPlayer.open(
+        Media(
+          widget.url,
+          httpHeaders: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        ),
+        play: false,
+      );
+      
+      // Wait for metadata to load so we can seek
+      await tempPlayer.stream.videoParams.first;
+      await tempPlayer.seek(const Duration(seconds: 1));
+      
+      final screenshot = await tempPlayer.screenshot();
+      if (screenshot != null && mounted) {
+        setState(() {
+          _thumbnailData = screenshot;
+        });
+      }
+    } catch (e) {
+      debugPrint('[DEBUG] VideoPreview: Failed to generate thumbnail: $e');
+    } finally {
+      await tempPlayer?.dispose();
+    }
+  }
+
+  Uint8List? _thumbnailData;
 
   Future<void> _initializePlayer() async {
     if (_isInitialized || _isInitializing) return;
@@ -275,6 +352,14 @@ class _VideoPreviewState extends State<VideoPreview> {
         debugPrint('[mpv-video] ${event.prefix}: ${event.text}');
       });
 
+      // Configure player properties
+      if (player.platform is NativePlayer) {
+        (player.platform as NativePlayer).setProperty('force-seekable', 'yes');
+        (player.platform as NativePlayer).setProperty('demuxer-readahead-secs', '15');
+        (player.platform as NativePlayer).setProperty('cache', 'yes');
+        (player.platform as NativePlayer).setProperty('cache-secs', '10');
+      }
+
       if (mounted) {
         setState(() {
           _player = player;
@@ -286,11 +371,11 @@ class _VideoPreviewState extends State<VideoPreview> {
 
       // Start loading and playing the media 
       // (play is true here because this only runs after the user explicitly taps 'Tap to load')
-      final cleanUrl = Uri.decodeFull(widget.url);
-      debugPrint('[DEBUG] VideoPreview: Opening media $cleanUrl (original: ${widget.url})');
+      final mediaUrl = widget.url;
+      debugPrint('[DEBUG] VideoPreview: Opening media $mediaUrl');
       _player!.open(
         Media(
-          cleanUrl,
+          mediaUrl,
           httpHeaders: {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
@@ -310,6 +395,13 @@ class _VideoPreviewState extends State<VideoPreview> {
 
       _player!.stream.error.listen((error) {
         debugPrint('[DEBUG] VideoPreview Player Stream Error: $error');
+        // Filter out non-fatal errors like "Cannot seek" which often happen with HTTP streams
+        // but don't prevent actually watching the video.
+        if (error.toLowerCase().contains('cannot seek') || 
+            error.toLowerCase().contains('force-seekable')) {
+          return;
+        }
+        
         if (mounted) {
           setState(() {
             _hasError = true;
@@ -347,16 +439,25 @@ class _VideoPreviewState extends State<VideoPreview> {
           decoration: BoxDecoration(
             color: theme.colorScheme.muted.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
-            image: _metadata?.image != null 
+            image: _thumbnailData != null
               ? DecorationImage(
-                  image: NetworkImage(_metadata!.image!),
+                  image: MemoryImage(_thumbnailData!),
                   fit: BoxFit.cover,
                   colorFilter: ColorFilter.mode(
                     Colors.black.withValues(alpha: 0.4),
                     BlendMode.darken,
                   ),
                 )
-              : null,
+              : (_metadata?.image != null 
+                  ? DecorationImage(
+                      image: NetworkImage(_metadata!.image!),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withValues(alpha: 0.4),
+                        BlendMode.darken,
+                      ),
+                    )
+                  : null),
           ),
           child: Stack(
             alignment: Alignment.center,
@@ -628,5 +729,112 @@ class _AudioPreviewState extends State<AudioPreview> {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return "$minutes:$seconds";
+  }
+}
+class ImagePreview extends StatefulWidget {
+  final String url;
+  const ImagePreview({super.key, required this.url});
+
+  @override
+  State<ImagePreview> createState() => _ImagePreviewState();
+}
+
+class _ImagePreviewState extends State<ImagePreview> {
+  bool _isHidden = false;
+  
+  bool get _isGif => widget.url.toLowerCase().split('?').first.endsWith('.gif');
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    
+    if (_isHidden) {
+      return GestureDetector(
+        onTap: () => setState(() => _isHidden = false),
+        child: Container(
+          height: 100,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.muted.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(LucideIcons.eyeOff, size: 20),
+              const SizedBox(height: 8),
+              Text('GIF Hidden. Click to show', style: theme.textTheme.small),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            final mumbleService = Provider.of<MumbleService>(context, listen: false);
+            final uniqueMedia = mumbleService.messages
+                .expand<String>((msg) => HtmlUtils.extractAllViewableMedia(msg.content))
+                .toSet()
+                .toList();
+
+            final index = uniqueMedia.indexOf(widget.url);
+            MediaGalleryDialog.show(
+              context,
+              uniqueMedia,
+              index >= 0 ? index : 0,
+            );
+          },
+          child: Image.network(
+            widget.url,
+            fit: BoxFit.contain,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                height: 100,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.muted.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const CircularProgressIndicator(),
+              );
+            },
+            errorBuilder: (context, error, stackTrace) => Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.muted.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  const Icon(LucideIcons.imageOff, size: 24),
+                  const SizedBox(height: 8),
+                  Text('Failed to load image', style: theme.textTheme.small),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_isGif)
+          Positioned(
+            bottom: 4,
+            left: 4,
+            child: RumbleTooltip(
+              message: 'Hide animated GIF',
+              child: ShadIconButton.secondary(
+                icon: const Icon(LucideIcons.eyeOff, size: 12),
+                padding: EdgeInsets.zero,
+                width: 24,
+                height: 24,
+                onPressed: () => setState(() => _isHidden = true),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }

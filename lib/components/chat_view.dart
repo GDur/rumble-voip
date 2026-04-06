@@ -10,7 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:rumble/components/image_gallery.dart';
+import 'package:rumble/components/media_gallery.dart';
 import 'package:rumble/components/ptt_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/components/rumble_tooltip.dart';
@@ -285,21 +285,21 @@ class _ChatViewState extends State<ChatView> {
                                         final currentMessages = context
                                             .read<MumbleService>()
                                             .messages;
-                                        final uniqueImages = currentMessages
-                                            .expand(
+                                        final uniqueMedia = currentMessages
+                                            .expand<String>(
                                               (m) =>
-                                                  HtmlUtils.extractAllViewableImages(
+                                                  HtmlUtils.extractAllViewableMedia(
                                                     m.content,
                                                   ),
                                             )
                                             .toSet()
                                             .toList();
-                                        final index = uniqueImages.indexOf(
+                                        final index = uniqueMedia.indexOf(
                                           imageData.sources.first.url,
                                         );
-                                        ImageGalleryDialog.show(
+                                        MediaGalleryDialog.show(
                                           context,
-                                          uniqueImages,
+                                          uniqueMedia,
                                           index >= 0 ? index : 0,
                                         );
                                       },
@@ -401,10 +401,10 @@ class _ChatViewState extends State<ChatView> {
                                                 final currentMessages = context
                                                     .read<MumbleService>()
                                                     .messages;
-                                                final uniqueImages = currentMessages
-                                                    .expand(
+                                                final uniqueMedia = currentMessages
+                                                    .expand<String>(
                                                       (m) =>
-                                                          HtmlUtils.extractAllViewableImages(
+                                                          HtmlUtils.extractAllViewableMedia(
                                                             m.content,
                                                           ),
                                                     )
@@ -413,13 +413,13 @@ class _ChatViewState extends State<ChatView> {
 
                                                 final currentUrl =
                                                     imageData.sources.first.url;
-                                                final index = uniqueImages.indexOf(
+                                                final index = uniqueMedia.indexOf(
                                                   currentUrl,
                                                 );
 
-                                                ImageGalleryDialog.show(
+                                                MediaGalleryDialog.show(
                                                   context,
-                                                  uniqueImages,
+                                                  uniqueMedia,
                                                   index >= 0 ? index : 0,
                                                 );
                                               },
