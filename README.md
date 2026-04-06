@@ -15,7 +15,7 @@ The goal of Rumble is to create a seamless experience across all platforms—Mob
 | Android | x | |
 | iOS (Tablet and iPhones)| x |  |
 | macOS (Apple Silicon and Intel) | x | |
-| Windows | (x)* | |
+| Windows | x | |
 | Linux | (x)* | |
 | Web (can't work) | | x |
 
