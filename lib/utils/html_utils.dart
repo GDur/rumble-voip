@@ -290,18 +290,24 @@ class HtmlUtils {
 
     try {
       final uri = Uri.parse(source);
-      final path = uri.path.toLowerCase();
+      final pathSegments = uri.pathSegments;
+      final queryParams = uri.queryParameters.values;
       
-      if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'].any((ext) => path.endsWith(ext))) {
+      final allSegments = [...pathSegments.map((s) => s.toLowerCase()), ...queryParams.map((s) => s.toLowerCase())];
+
+      if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'].any((ext) => 
+          allSegments.any((seg) => seg.endsWith(ext)))) {
         return MediaType.image;
       }
-      if (['.mp4', '.webm', '.mov', '.m4v'].any((ext) => path.endsWith(ext))) {
+      if (['.mp4', '.webm', '.mov', '.m4v'].any((ext) => 
+          allSegments.any((seg) => seg.endsWith(ext)))) {
         return MediaType.video;
       }
-      if (['.mp3', '.wav', '.ogg', '.m4a', '.aac'].any((ext) => path.endsWith(ext))) {
+      if (['.mp3', '.wav', '.ogg', '.m4a', '.aac'].any((ext) => 
+          allSegments.any((seg) => seg.endsWith(ext)))) {
         return MediaType.audio;
       }
-      if (path.endsWith('.pdf')) {
+      if (allSegments.any((seg) => seg.endsWith('.pdf'))) {
         return MediaType.pdf;
       }
     } catch (_) {}

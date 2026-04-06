@@ -499,7 +499,8 @@ class MumbleService extends ChangeNotifier with dumble.MumbleClientListener {
   void sendDebugLinks() {
     final links = [
       // audio
-      'https://samplelib.com/lib/preview/mp3/sample-15s.mp3',
+      'https://static.wikia.nocookie.net/dota2_gamepedia/images/a/ab/Vo_luna_luna_kill_10.mp3/revision/latest?cb=20201017011035',
+      // 'https://samplelib.com/lib/preview/mp3/sample-15s.mp3',
 
       // video
       'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4',
