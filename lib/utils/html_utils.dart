@@ -3,9 +3,68 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:markdown/markdown.dart' as md;
 import 'package:html2md/html2md.dart' as h2m;
+import 'package:html/parser.dart' as parser;
 
 /// Utilities for handling and sanitizing HTML content from Mumble.
 class HtmlUtils {
+  /// Extracts URLs from an HTML string that should show a rich preview.
+  /// This finds all <a> tags and filters out those that are already rendered as <img>.
+  static List<String> extractUrlsForPreview(String html) {
+    if (html.isEmpty) return [];
+
+    final document = parser.parse(html);
+    final links = document.getElementsByTagName('a');
+    final images = document.getElementsByTagName('img');
+    
+    // Collect all image sources to avoid redundant previews
+    final imageSrcs = images
+        .map((img) => img.attributes['src'])
+        .where((src) => src != null && src.startsWith('http'))
+        .toSet();
+
+    final urls = <String>{};
+    for (final link in links) {
+      final href = link.attributes['href'];
+      if (href != null && href.startsWith('http')) {
+        // If it's a direct image link that's likely already rendered, skip it
+        if (!imageSrcs.contains(href)) {
+          urls.add(href);
+        }
+      }
+    }
+
+    return urls.toList();
+  }
+
+  /// Extracts all URLs that should be considered "viewable images" in a gallery.
+  /// This includes both direct <img> tags and links to image files.
+  static List<String> extractAllViewableImages(String html) {
+    if (html.isEmpty) return [];
+    
+    final images = extractImageSources(html);
+    final previewUrls = extractUrlsForPreview(html);
+    
+    final all = [...images];
+    for (final url in previewUrls) {
+      try {
+        final uri = Uri.parse(url);
+        final path = uri.path.toLowerCase();
+        if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'].any((ext) => path.endsWith(ext))) {
+          all.add(url);
+        }
+      } catch (_) {}
+    }
+    
+    // Return unique results while preserving order as much as possible
+    final unique = <String>[];
+    for (final src in all) {
+      if (!unique.contains(src)) {
+        unique.add(src);
+      }
+    }
+    return unique;
+  }
+
   /// Some Mumble clients URL-encode or add newlines to the base64 data in data URIs.
   /// This method finds those data URIs and ensures they are properly decoded and cleaned.
   /// It also linkifies plain text URLs if they aren't already part of an <a> tag.
@@ -92,13 +151,20 @@ class HtmlUtils {
         cleanedUrl = cleanedUrl.substring(0, cleanedUrl.length - 1);
       }
       
-      // Image preview check
-      final lowerUrl = cleanedUrl.toLowerCase();
-      if (lowerUrl.endsWith('.gif') || 
-          lowerUrl.endsWith('.png') || 
-          lowerUrl.endsWith('.jpg') || 
-          lowerUrl.endsWith('.jpeg') || 
-          lowerUrl.endsWith('.webp')) {
+      // Image preview check - check the path for image extensions to handle query params
+      bool isImage = false;
+      try {
+        final uri = Uri.parse(cleanedUrl);
+        final path = uri.path.toLowerCase();
+        isImage = path.endsWith('.gif') || 
+                  path.endsWith('.png') || 
+                  path.endsWith('.jpg') || 
+                  path.endsWith('.jpeg') || 
+                  path.endsWith('.webp') ||
+                  path.endsWith('.bmp');
+      } catch (_) {}
+
+      if (isImage) {
         return '<a href="$cleanedUrl"><img src="$cleanedUrl" /></a>$suffix';
       }
 

@@ -7,11 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
-import 'package:intl/intl.dart';
 import 'package:rumble/components/image_gallery.dart';
 import 'package:rumble/components/ptt_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:rumble/components/rumble_tooltip.dart';
+import 'package:rumble/components/link_preview.dart';
 
 class ChatView extends StatefulWidget {
   const ChatView({super.key});
@@ -261,20 +261,21 @@ class _ChatViewState extends State<ChatView> {
                                         final currentMessages = context
                                             .read<MumbleService>()
                                             .messages;
-                                        final allImages = currentMessages
+                                        final uniqueImages = currentMessages
                                             .expand(
                                               (m) =>
-                                                  HtmlUtils.extractImageSources(
+                                                  HtmlUtils.extractAllViewableImages(
                                                     m.content,
                                                   ),
                                             )
+                                            .toSet()
                                             .toList();
-                                        final index = allImages.indexOf(
+                                        final index = uniqueImages.indexOf(
                                           imageData.sources.first.url,
                                         );
                                         ImageGalleryDialog.show(
                                           context,
-                                          allImages,
+                                          uniqueImages,
                                           index >= 0 ? index : 0,
                                         );
                                       },
@@ -361,83 +362,85 @@ class _ChatViewState extends State<ChatView> {
                                         padding: const EdgeInsets.only(
                                           right: 24,
                                         ),
-                                        child: HtmlWidget(
-                                          msg.content,
-                                          enableCaching: true,
-                                          textStyle: theme.textTheme.p.copyWith(
-                                            fontSize: 14,
-                                            height: 1.4,
-                                          ),
-                                          onTapImage: (imageData) {
-                                            // Extract LATEST unique images from mumbleService.messages
-                                            final currentMessages = context
-                                                .read<MumbleService>()
-                                                .messages;
-                                            final allImages = currentMessages
-                                                .expand(
-                                                  (m) =>
-                                                      HtmlUtils.extractImageSources(
-                                                        m.content,
-                                                      ),
-                                                )
-                                                .toList();
-                                            // Handle duplicates by getting unique list while preserving order
-                                            final uniqueImages = <String>[];
-                                            for (final img in allImages) {
-                                              if (!uniqueImages.contains(img)) {
-                                                uniqueImages.add(img);
-                                              }
-                                            }
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            HtmlWidget(
+                                              msg.content,
+                                              enableCaching: true,
+                                              textStyle: theme.textTheme.p.copyWith(
+                                                fontSize: 14,
+                                                height: 1.4,
+                                              ),
+                                              onTapImage: (imageData) {
+                                                final currentMessages = context
+                                                    .read<MumbleService>()
+                                                    .messages;
+                                                final uniqueImages = currentMessages
+                                                    .expand(
+                                                      (m) =>
+                                                          HtmlUtils.extractAllViewableImages(
+                                                            m.content,
+                                                          ),
+                                                    )
+                                                    .toSet()
+                                                    .toList();
 
-                                            final currentUrl =
-                                                imageData.sources.first.url;
-                                            final index = uniqueImages.indexOf(
-                                              currentUrl,
-                                            );
+                                                final currentUrl =
+                                                    imageData.sources.first.url;
+                                                final index = uniqueImages.indexOf(
+                                                  currentUrl,
+                                                );
 
-                                            ImageGalleryDialog.show(
-                                              context,
-                                              uniqueImages,
-                                              index >= 0 ? index : 0,
-                                            );
-                                          },
-                                          onTapUrl: (url) async {
-                                            final uri = Uri.parse(url);
-                                            if (await canLaunchUrl(uri)) {
-                                              await launchUrl(uri);
-                                            }
-                                            return true;
-                                          },
-                                          customStylesBuilder: (element) {
-                                            if (element.localName == 'img') {
-                                              return {
-                                                'width': 'auto',
-                                                'max-width': '100%',
-                                                'height': 'auto',
-                                                'cursor': 'pointer',
-                                                'border-radius': '8px',
-                                              };
-                                            }
-                                            if (element.localName == 'ul' ||
-                                                element.localName == 'ol') {
-                                              return {
-                                                'padding-left': '12px',
-                                                'margin-top': '4px',
-                                                'margin-bottom': '4px',
-                                                'list-style-type':
-                                                    element.localName == 'ul'
-                                                    ? 'disc'
-                                                    : 'decimal',
-                                              };
-                                            }
-                                            if (element.localName == 'li') {
-                                              return {
-                                                'margin-bottom': '4px',
-                                                'display': 'list-item',
-                                              };
-                                            }
-                                            return null;
-                                          },
+                                                ImageGalleryDialog.show(
+                                                  context,
+                                                  uniqueImages,
+                                                  index >= 0 ? index : 0,
+                                                );
+                                              },
+                                              onTapUrl: (url) async {
+                                                final uri = Uri.parse(url);
+                                                if (await canLaunchUrl(uri)) {
+                                                  await launchUrl(uri);
+                                                }
+                                                return true;
+                                              },
+                                              customStylesBuilder: (element) {
+                                                if (element.localName == 'img') {
+                                                  return {
+                                                    'width': 'auto',
+                                                    'max-width': '100%',
+                                                    'height': 'auto',
+                                                    'cursor': 'pointer',
+                                                    'border-radius': '8px',
+                                                  };
+                                                }
+                                                if (element.localName == 'ul' ||
+                                                    element.localName == 'ol') {
+                                                  return {
+                                                    'padding-left': '12px',
+                                                    'margin-top': '4px',
+                                                    'margin-bottom': '4px',
+                                                    'list-style-type':
+                                                        element.localName == 'ul'
+                                                        ? 'disc'
+                                                        : 'decimal',
+                                                  };
+                                                }
+                                                if (element.localName == 'li') {
+                                                  return {
+                                                    'margin-bottom': '4px',
+                                                    'display': 'list-item',
+                                                  };
+                                                }
+                                                return null;
+                                              },
+                                            ),
+                                            // Extract and show link previews
+                                            ...HtmlUtils.extractUrlsForPreview(msg.content)
+                                                .map((url) => LinkPreview(url: url)),
+                                          ],
                                         ),
                                       ),
                                       Positioned(

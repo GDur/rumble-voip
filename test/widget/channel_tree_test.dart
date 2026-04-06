@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:mocktail/mocktail.dart';
 import 'package:rumble/components/channel_tree.dart';
 import 'package:rumble/services/mumble_service.dart';
 import 'package:rumble/services/settings_service.dart';
@@ -63,6 +62,7 @@ void main() {
         isMuted: false,
         isDeafened: false,
         isSuppressed: false,
+        isRegistered: false,
       );
 
       await tester.pumpWidget(
@@ -117,6 +117,7 @@ void main() {
         isMuted: false,
         isDeafened: false,
         isSuppressed: false,
+        isRegistered: false,
       );
 
       settingsService.setHideEmptyChannels(true);

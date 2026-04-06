@@ -21,5 +21,6 @@ Future<void> setupTestDependencies() async {
     incomingJitterBufferMs: 0,
     playbackHwBufferSize: AudioBufferSize.default_(),
     captureHwBufferSize: AudioBufferSize.default_(),
+    echoCancellation: false,
   ));
 }

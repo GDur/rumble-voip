@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
   auto_updater_windows
   connectivity_plus
   hotkey_manager_windows

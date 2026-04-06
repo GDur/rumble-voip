@@ -9,7 +9,7 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 # Flutter-Rust Bridge
-flutter_rust_bridge = "=2.12.0"
+flutter_rust_bridge = "=2.11.1"
 
 # Async Runtime
 tokio = { version = "1.51", features = ["full"] }

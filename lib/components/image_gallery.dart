@@ -89,162 +89,172 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Main Gallery View
-            PhotoViewGallery.builder(
-              scrollPhysics: const BouncingScrollPhysics(),
-              builder: (BuildContext context, int index) {
-                final source = widget.images[index];
-                ImageProvider imageProvider;
-                if (source.startsWith('data:')) {
-                  final base64Data = source.split(',').last;
-                  imageProvider = MemoryImage(base64Decode(base64Data));
-                } else {
-                  imageProvider = NetworkImage(source);
-                }
+        body: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Stack(
+            children: [
+              // Main Gallery View
+              PhotoViewGallery.builder(
+                scrollPhysics: const BouncingScrollPhysics(),
+                builder: (BuildContext context, int index) {
+                  final source = widget.images[index];
+                  ImageProvider imageProvider;
+                  if (source.startsWith('data:')) {
+                    final base64Data = source.split(',').last;
+                    imageProvider = MemoryImage(base64Decode(base64Data));
+                  } else {
+                    imageProvider = NetworkImage(source);
+                  }
 
-                return PhotoViewGalleryPageOptions(
-                  imageProvider: imageProvider,
-                  initialScale: 1.0,
-                  minScale: PhotoViewComputedScale.contained * 0.5,
-                  maxScale: PhotoViewComputedScale.covered * 4.0,
-                  heroAttributes: PhotoViewHeroAttributes(tag: source),
-                );
-              },
-              itemCount: widget.images.length,
-              loadingBuilder: (context, event) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              backgroundDecoration: const BoxDecoration(color: Colors.transparent),
-              pageController: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
-            ),
-
-            // Top Actions
-            Positioned(
-              top: 16,
-              right: 16,
-              child: SafeArea(
-                child: ShadIconButton(
-                  icon: const Icon(LucideIcons.x, color: Colors.white),
-                  onPressed: () => Navigator.of(context).pop(),
-                  backgroundColor: Colors.black.withValues(alpha: 0.5),
+                  return PhotoViewGalleryPageOptions(
+                    imageProvider: imageProvider,
+                    initialScale: 1.0,
+                    minScale: PhotoViewComputedScale.contained * 0.5,
+                    maxScale: PhotoViewComputedScale.covered * 4.0,
+                    heroAttributes: PhotoViewHeroAttributes(tag: source),
+                    // Prevent closing when tapping the image itself
+                    onTapUp: (context, details, controllerValue) {},
+                    onTapDown: (context, details, controllerValue) {},
+                  );
+                },
+                itemCount: widget.images.length,
+                loadingBuilder: (context, event) => const Center(
+                  child: CircularProgressIndicator(),
                 ),
-              ),
-            ),
-
-            // Left Arrow
-            if (_currentIndex > 0)
-              Positioned(
-                left: 16,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: ShadIconButton(
-                    icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
-                    onPressed: _previousPage,
-                    backgroundColor: Colors.black.withValues(alpha: 0.5),
-                  ),
-                ),
+                backgroundDecoration: const BoxDecoration(color: Colors.transparent),
+                pageController: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentIndex = index;
+                  });
+                },
               ),
 
-            // Right Arrow
-            if (_currentIndex < widget.images.length - 1)
+              // UI Controls (Buttons, Thumbnails, etc.)
+              // We don't need to wrap these explicitly because they already have their own
+              // GestureDetector or Button handlers which will consume the tap event.
+
+              // Top Actions
               Positioned(
+                top: 16,
                 right: 16,
-                top: 0,
-                bottom: 0,
-                child: Center(
+                child: SafeArea(
                   child: ShadIconButton(
-                    icon: const Icon(LucideIcons.chevronRight, color: Colors.white),
-                    onPressed: _nextPage,
+                    icon: const Icon(LucideIcons.x, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
                     backgroundColor: Colors.black.withValues(alpha: 0.5),
                   ),
                 ),
               ),
 
-            // Bottom Thumbnail Row
-            Positioned(
-              bottom: 32,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${_currentIndex + 1} / ${widget.images.length}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+              // Left Arrow
+              if (_currentIndex > 0)
+                Positioned(
+                  left: 16,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: ShadIconButton(
+                      icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
+                      onPressed: _previousPage,
+                      backgroundColor: Colors.black.withValues(alpha: 0.5),
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 60,
-                      child: Center(
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: widget.images.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) {
-                            final source = widget.images[index];
-                            final isSelected = _currentIndex == index;
-                            
-                            Widget image;
-                            if (source.startsWith('data:')) {
-                              final base64Data = source.split(',').last;
-                              image = Image.memory(
-                                base64Decode(base64Data),
-                                fit: BoxFit.cover,
-                              );
-                            } else {
-                              image = Image.network(
-                                source,
-                                fit: BoxFit.cover,
-                              );
-                            }
+                  ),
+                ),
 
-                            return GestureDetector(
-                              onTap: () {
-                                _pageController.animateToPage(
-                                  index,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
+              // Right Arrow
+              if (_currentIndex < widget.images.length - 1)
+                Positioned(
+                  right: 16,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: ShadIconButton(
+                      icon: const Icon(LucideIcons.chevronRight, color: Colors.white),
+                      onPressed: _nextPage,
+                      backgroundColor: Colors.black.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+
+              // Bottom Thumbnail Row
+              Positioned(
+                bottom: 32,
+                left: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${_currentIndex + 1} / ${widget.images.length}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 60,
+                        child: Center(
+                          child: ListView.separated(
+                            shrinkWrap: true,
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: widget.images.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 8),
+                            itemBuilder: (context, index) {
+                              final source = widget.images[index];
+                              final isSelected = _currentIndex == index;
+                              
+                              Widget image;
+                              if (source.startsWith('data:')) {
+                                final base64Data = source.split(',').last;
+                                image = Image.memory(
+                                  base64Decode(base64Data),
+                                  fit: BoxFit.cover,
                                 );
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : Colors.white24,
-                                    width: isSelected ? 3 : 1,
+                              } else {
+                                image = Image.network(
+                                  source,
+                                  fit: BoxFit.cover,
+                                );
+                              }
+
+                              return GestureDetector(
+                                onTap: () {
+                                  _pageController.animateToPage(
+                                    index,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : Colors.white24,
+                                      width: isSelected ? 3 : 1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: image,
+                                  ),
                                 ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: image,
-                                ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
