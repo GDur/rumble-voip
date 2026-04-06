@@ -16,6 +16,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 class SettingsDialog extends StatefulWidget {
   final SettingsService settings;
   final MumbleService mumbleService;
+  final String? initialTab;
   final Function(BuildContext, SettingsService, {HotkeyAction? action})
   onShowHotkeyRecorder;
 
@@ -24,6 +25,7 @@ class SettingsDialog extends StatefulWidget {
     required this.settings,
     required this.mumbleService,
     required this.onShowHotkeyRecorder,
+    this.initialTab,
   });
 
   @override
@@ -41,6 +43,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   @override
   void initState() {
     super.initState();
+    _currentTab = widget.initialTab;
     // Refresh devices whenever the dialog is opened to catch new ones
     widget.mumbleService.refreshInputDevices();
     widget.mumbleService.refreshOutputDevices();

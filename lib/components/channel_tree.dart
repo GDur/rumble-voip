@@ -15,6 +15,9 @@ import 'package:rumble/src/rust/api/client.dart';
 import 'package:rumble/utils/html_utils.dart';
 import 'package:rumble/services/settings_service.dart';
 import 'package:rumble/components/rumble_tooltip.dart';
+import 'package:rumble/components/settings/settings_dialog.dart';
+import 'package:rumble/components/hotkey_recorder.dart';
+import 'package:rumble/models/hotkey_action.dart';
 
 class ChannelTree extends StatefulWidget {
   final List<MumbleChannel> channels;
@@ -255,6 +258,66 @@ class _ChannelTreeState extends State<ChannelTree> {
 
   void _clearAvatar(BuildContext context) {
     Provider.of<MumbleService>(context, listen: false).setAvatar(null);
+  }
+
+  void _showSettings(BuildContext context, {String? tab}) {
+    final settings = Provider.of<SettingsService>(context, listen: false);
+    final mumbleService = Provider.of<MumbleService>(context, listen: false);
+
+    showShadDialog(
+      context: context,
+      builder: (context) => SettingsDialog(
+        settings: settings,
+        mumbleService: mumbleService,
+        initialTab: tab,
+        onShowHotkeyRecorder: (context, settings, {action}) {
+          showShadDialog(
+            context: context,
+            builder: (context) => HotkeyRecorder(
+              settings: settings,
+              action: action ?? HotkeyAction.pushToTalk,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  ShadContextMenuItem _buildUserContextMenuItem(
+    BuildContext context, {
+    required VoidCallback onPressed,
+    required Widget leading,
+    required String label,
+    required String tooltip,
+    bool showLearnMore = false,
+  }) {
+    final theme = ShadTheme.of(context);
+    return ShadContextMenuItem(
+      onPressed: onPressed,
+      leading: leading,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showLearnMore)
+            ShadButton.link(
+              onPressed: () {
+                _showSettings(context, tab: 'certificates');
+              },
+              padding: const EdgeInsets.only(right: 8),
+              child: const Text('Learn more'),
+            ),
+          RumbleTooltip(
+            message: tooltip,
+            child: Icon(
+              LucideIcons.info,
+              size: 14,
+              color: theme.colorScheme.mutedForeground.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+      child: Text(label),
+    );
   }
 
   @override
@@ -814,43 +877,58 @@ class _ChannelTreeState extends State<ChannelTree> {
     final List<Widget> contextMenuItems = [];
 
     if (isMe && widget.self != null) {
-      contextMenuItems.addAll([
-        ShadContextMenuItem(
-          onPressed: () => _showSetNoticeDialog(context, widget.self!),
-          leading: const Icon(LucideIcons.filePenLine, size: 16),
-          child: const Text('Set Self Notice'),
-        ),
-        if (!u.isRegistered)
-          ShadContextMenuItem(
+      if (!u.isRegistered) {
+        contextMenuItems.add(
+          _buildUserContextMenuItem(
+            context,
             onPressed: () => _showRegisterDialog(context),
             leading: const Icon(
               LucideIcons.badgeCheck,
               size: 16,
               color: Color(0xFFE6C681),
             ),
-            child: const Text('Register to Server'),
+            label: 'Register to Server',
+            tooltip: 'Permanently link your identity to this name. Enables keeping avatars & notice.',
+            showLearnMore: true,
           ),
-        ShadContextMenuItem(
+        );
+      }
+      contextMenuItems.addAll([
+        _buildUserContextMenuItem(
+          context,
+          onPressed: () => _showSetNoticeDialog(context, widget.self!),
+          leading: const Icon(LucideIcons.filePenLine, size: 16),
+          label: 'Set Self Notice',
+          tooltip: 'Public personal message. Only permanent if registered.',
+        ),
+        _buildUserContextMenuItem(
+          context,
           onPressed: () => _changeAvatar(context),
           leading: const Icon(LucideIcons.image, size: 16),
-          child: const Text('Set/Change Avatar'),
+          label: 'Set/Change Avatar',
+          tooltip: 'Upload profile picture. Only permanent if registered.',
         ),
         if (u.avatar != null)
-          ShadContextMenuItem(
+          _buildUserContextMenuItem(
+            context,
             onPressed: () => _clearAvatar(context),
             leading: const Icon(LucideIcons.imageOff, size: 16),
-            child: const Text('Clear Avatar'),
+            label: 'Clear Avatar',
+            tooltip: 'Remove current profile picture.',
           ),
         const Divider(height: 1),
-        ShadContextMenuItem(
+        _buildUserContextMenuItem(
+          context,
           onPressed: () => mumbleService.toggleMute(),
           leading: Icon(
             mumbleService.isMuted ? LucideIcons.mic : LucideIcons.micOff,
             size: 16,
           ),
-          child: Text(mumbleService.isMuted ? 'Unmute' : 'Mute'),
+          label: mumbleService.isMuted ? 'Unmute' : 'Mute',
+          tooltip: 'Control whether others can hear you.',
         ),
-        ShadContextMenuItem(
+        _buildUserContextMenuItem(
+          context,
           onPressed: () => mumbleService.toggleDeafen(),
           leading: Icon(
             mumbleService.isDeafened
@@ -858,17 +936,20 @@ class _ChannelTreeState extends State<ChannelTree> {
                 : LucideIcons.headphoneOff,
             size: 16,
           ),
-          child: Text(mumbleService.isDeafened ? 'Undeafen' : 'Deafen'),
+          label: mumbleService.isDeafened ? 'Undeafen' : 'Deafen',
+          tooltip: 'Control whether you can hear others.',
         ),
       ]);
     }
 
     if (!isMe) {
       contextMenuItems.add(
-        ShadContextMenuItem(
+        _buildUserContextMenuItem(
+          context,
           onPressed: () => _showUserVolumeDialog(context, u),
           leading: const Icon(LucideIcons.volume2, size: 16),
-          child: const Text('Adjust User Volume'),
+          label: 'Adjust User Volume',
+          tooltip: 'Change playback volume for this user individually.',
         ),
       );
     }
@@ -893,6 +974,7 @@ class _ChannelTreeState extends State<ChannelTree> {
   }
 
   void _showRegisterDialog(BuildContext context) {
+    final theme = ShadTheme.of(context);
     final mumbleService = Provider.of<MumbleService>(context, listen: false);
     final self = mumbleService.self;
     if (self == null) return;
@@ -901,9 +983,32 @@ class _ChannelTreeState extends State<ChannelTree> {
       context: context,
       builder: (context) => ShadDialog(
         title: const Text('Register to Server'),
-        description: Text(
-          'Do you want to permanently register your current name "${self.name}" on this server? '
-          'This will link your current certificate with this username.',
+        description: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Do you want to permanently register your current name "${self.name}" on this server? '
+              'This will link your current certificate with this username.',
+            ),
+            const SizedBox(height: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _showSettings(context, tab: 'certificates');
+                },
+                child: Text(
+                  'Learn more about certificates...',
+                  style: theme.textTheme.small.copyWith(
+                    color: theme.colorScheme.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         actions: [
           ShadButton.outline(
