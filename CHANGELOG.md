@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.4] - 2026-08-19
+- fix: windows cmake compatibility for pdfx
+
 ## [0.23.3] - 2026-08-19
 - ci: add macos and ios build workflows
 
