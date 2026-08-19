@@ -4,12 +4,15 @@ on:
   push:
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
 
     steps:
       - uses: actions/checkout@v4
@@ -51,9 +54,9 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      # The .env file is a required asset in pubspec.yaml but is ignored by git.
+      # We create an empty one to satisfy the Flutter asset requirement.
       - name: Create .env file
-        # The .env file is a required asset in pubspec.yaml but is ignored by git.
-        # We create an empty one to satisfy the Flutter asset requirement.
         run: New-Item -Path .env -ItemType File
         working-directory: ${{ env.WORKSPACE_ROOT }}
 
@@ -61,12 +64,16 @@ jobs:
         run: flutter pub get
         working-directory: ${{ env.WORKSPACE_ROOT }}
 
-      - name: Get version from tag
+      - name: Get version
         shell: bash
         run: |
-          # Extract version from tag (e.g., v0.1.123 -> 0.1.123)
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG_NAME#v}
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG_NAME#v}
+          else
+            VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            TAG_NAME="v$VERSION"
+          fi
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
