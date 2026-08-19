@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.3] - 2026-08-19
+- ci: add macos and ios build workflows
+
 ## [0.23.2] - 2026-08-19
 - android apk release test
 
