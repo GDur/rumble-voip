@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.5] - 2026-08-19
+- fix: upgrade lucide_icons_flutter for Flutter 3.47 IconData compatibility
+
 ## [0.23.4] - 2026-08-19
 - fix: windows cmake compatibility for pdfx
 
