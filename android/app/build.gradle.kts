@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.rumbledev.rumble"
     compileSdk = 34
-    ndkVersion = "27.0.11962298"
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
