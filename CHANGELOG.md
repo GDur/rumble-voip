@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.8] - 2026-08-19
+- fix: android NDK 27.1.12297006 and workflow setup
+
 ## [0.23.7] - 2026-08-19
 - ci: test android apk build exclusively
 
