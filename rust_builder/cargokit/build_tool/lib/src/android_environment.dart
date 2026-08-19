@@ -159,11 +159,34 @@ class AndroidEnvironment {
       ranlibKey: ranlibValue,
       rustFlagsKey: rustFlagsValue,
       linkerKey: selfPath,
+      // NDK and CMake paths for native dependencies
+      'ANDROID_NDK_HOME': ndkPath,
+      'ANDROID_NDK_ROOT': ndkPath,
+      'NDK_HOME': ndkPath,
+      'CMAKE_TOOLCHAIN_FILE': path.join(ndkPath, 'build', 'cmake', 'android.toolchain.cmake'),
+      'ANDROID_ABI': target.android ?? 'arm64-v8a',
+      'ANDROID_PLATFORM': 'android-$minSdkVersion',
+      'CMAKE_MAKE_PROGRAM': _findNinjaPath(),
+      'CMAKE_GENERATOR': 'Ninja',
       // Recognized by main() so we know when we're acting as a wrapper
       '_CARGOKIT_NDK_LINK_TARGET': targetArg,
       '_CARGOKIT_NDK_LINK_CLANG': ccValue,
       'CARGOKIT_TOOL_TEMP_DIR': toolTempDir,
     };
+  }
+
+  // Finds ninja binary path across platforms
+  String _findNinjaPath() {
+    final envNinja = Platform.environment['CMAKE_MAKE_PROGRAM'];
+    if (envNinja != null && envNinja.isNotEmpty) {
+      return envNinja;
+    }
+    for (final candidate in ['/opt/homebrew/bin/ninja', '/usr/local/bin/ninja', '/usr/bin/ninja']) {
+      if (File(candidate).existsSync()) {
+        return candidate;
+      }
+    }
+    return 'ninja';
   }
 
   // Workaround for libgcc missing in NDK23, inspired by cargo-ndk

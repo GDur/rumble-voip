@@ -1,0 +1,89 @@
+name: Android Build
+
+on:
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android, armv7-linux-androideabi, i686-linux-android
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust"
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # The .env file is a required asset in pubspec.yaml but is ignored by git.
+      # We create an empty one to satisfy the Flutter asset requirement.
+      - name: Create .env file
+        run: touch .env
+
+      - name: Fetch Flutter dependencies
+        run: flutter pub get
+
+      - name: Get version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG_NAME#v}
+          else
+            VERSION=$(grep "^version: " pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)
+            TAG_NAME="v$VERSION"
+          fi
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+      - name: Build Android APK
+        run: flutter build apk --release --build-name=${{ env.APP_VERSION }} -v
+
+      - name: Package Android APK
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk rumble-android.apk
+          echo "APK_PATH=rumble-android.apk" >> $GITHUB_ENV
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rumble-android-apk
+          path: ${{ env.APK_PATH }}
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ env.APK_PATH }}
+          name: Rumble ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
