@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.2] - 2026-08-19
+- android apk release test
+
 ## [0.23.1] - 2026-04-06
 - docs: Explain multi-server identity benefit in certificate tab.
 
