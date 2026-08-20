@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.9] - 2026-08-20
+- fix: target 64-bit platforms for android release build
+
 ## [0.23.8] - 2026-08-19
 - fix: android NDK 27.1.12297006 and workflow setup
 
