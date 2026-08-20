@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.10] - 2026-08-20
+- fix: use flutter compileSdkVersion to resolve AAR metadata mismatch
+
 ## [0.23.9] - 2026-08-20
 - fix: target 64-bit platforms for android release build
 
