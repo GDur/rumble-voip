@@ -74,7 +74,7 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
       - name: Build Android APK
-        run: flutter build apk --release --build-name=${{ env.APP_VERSION }} -v
+        run: flutter build apk --release --target-platform android-arm64,android-x64 --build-name=${{ env.APP_VERSION }} -v
 
       - name: Package Android APK
         run: |
