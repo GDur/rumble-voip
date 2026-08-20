@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.rumbledev.rumble"
-    compileSdk = 34
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.1.12297006"
 
     compileOptions {
@@ -24,7 +24,7 @@ android {
         applicationId = "com.rumbledev.rumble"
         // Minimum SDK 26 for AAudio support
         minSdk = 26
-        targetSdk = 34
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         // Restrict to 64-bit architectures supported by native dependencies
